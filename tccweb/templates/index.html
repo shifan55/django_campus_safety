@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="bg-primary text-white py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">Your Voice Matters</h1>
+                <p class="lead mb-4">A safe, confidential platform to report bullying incidents, access support resources, and build a safer university community together.</p>
+                <div class="d-grid gap-3 d-md-flex justify-content-md-start">
+                    <a href="{% url 'report_anonymous' %}" class="btn btn-urgent btn-xl me-md-2">
+                        <i class="fas fa-exclamation-triangle me-2"></i>REPORT NOW
+                    </a>
+                    <a href="{% url 'awareness' %}" class="btn btn-outline-light btn-xl">
+                        <i class="fas fa-hands-helping me-2"></i>GET HELP
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="text-center">
+                    <i class="fas fa-users-line display-1 opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row text-center mb-5">
+            <div class="col-lg-12">
+                <h2 class="mb-3">How We Help</h2>
+                <p class="text-muted">Our platform provides comprehensive support for students facing bullying situations</p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card quick-access-card h-100 shadow-lg" onclick="location.href='{% url 'report_anonymous' %}'">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon text-white rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; background-color: var(--safe-campus-urgent);">
+                            <i class="fas fa-shield-alt fs-1"></i>
+                        </div>
+                        <h4 class="card-title">Report Incident</h4>
+                        <p class="card-text">Report incidents safely and anonymously. Your privacy is protected throughout the entire process.</p>
+                        <span class="btn btn-urgent btn-sm">Start Report</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card quick-access-card h-100 shadow-lg" onclick="location.href='{% url 'awareness' %}'">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon text-white rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; background-color: var(--safe-campus-safe);">
+                            <i class="fas fa-hands-helping fs-1"></i>
+                        </div>
+                        <h4 class="card-title">Get Support</h4>
+                        <p class="card-text">Connect with trained counselors and support staff who understand and can help with bullying situations.</p>
+                        <span class="btn btn-outline-success btn-sm">Find Help</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card quick-access-card h-100 shadow-lg" onclick="location.href='{% url 'awareness' %}'">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon text-white rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; background-color: var(--safe-campus-primary);">
+                            <i class="fas fa-graduation-cap fs-1"></i>
+                        </div>
+                        <h4 class="card-title">Learn More</h4>
+                        <p class="card-text">Access resources, articles, and materials to learn about bullying prevention and available support options.</p>
+                        <span class="btn btn-outline-primary btn-sm">Explore</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Recent Resources Section -->
+{% if recent_resources %}
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center mb-5">
+                <h2>Latest Support Resources</h2>
+                <p class="text-muted">Stay informed with our latest educational content and support materials</p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            {% for resource in recent_resources %}
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge
+                                {% if resource.resource_type == 'article' %}
+                                    bg-primary
+                                {% elif resource.resource_type == 'video' %}
+                                    bg-success
+                                {% else %}
+                                    bg-info
+                                {% endif %}
+                                me-2">
+                                {{ resource.resource_type|title }}
+                            </span>
+
+                                {{ resource.resource_type|title }}
+                            </span>
+                            <span class="badge bg-secondary">{{ resource.category|title }}</span>
+                        </div>
+                        <h5 class="card-title">{{ resource.title }}</h5>
+                        <p class="card-text text-muted">{{ resource.content|truncatechars:100 }}...</p>
+                        <small class="text-muted">
+                            <i class="fas fa-calendar me-1"></i>{{ resource.created_at|date:'%F %d, %Y' }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="{% url 'awareness' %}" class="btn btn-primary">
+                View All Resources <i class="fas fa-arrow-right ms-1"></i>
+            </a>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Call to Action -->
+<section class="py-5 bg-primary text-white">
+    <div class="container text-center">
+        <h2 class="mb-3">Need Help Right Now?</h2>
+        <p class="lead mb-4">If you or someone you know is in immediate danger, don't wait. Contact emergency services or campus security immediately.</p>
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <i class="fas fa-phone-alt fa-2x me-3"></i>
+                            <div>
+                                <a href="tel:1990" class="btn">
+                                <h5 class="mb-0">Emergency</h5>
+                                <p class="mb-0">1990</p></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <i class="fas fa-envelope fa-2x me-3"></i>
+                            <div>
+                                <a href="mailto:support@university.edu" class="btn">
+                                <h5 class="mb-0">Campus Support</h5>
+                                <p class="mb-0">support@university.edu</p></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

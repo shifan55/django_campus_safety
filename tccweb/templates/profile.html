@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - Safe Campus{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- Profile Header -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-white text-primary rounded-circle p-2 me-3">
+                            <i class="fas fa-user fa-lg"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-0">{{ user.username }}</h4>
+                            <p class="mb-0 opacity-75">{{ user.email }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Account Information</h6>
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td><strong>Role:</strong></td>
+                                    <td>
+                                        <span class="badge
+                                            {% if user.role and user.role.value == 'student' %} bg-primary
+                                            {% elif user.role and user.role.value == 'staff' %} bg-success
+                                            {% else %} bg-warning
+                                            {% endif %}">
+                                            {{ user.role.value|title }}
+                                        </span>
+
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Member Since:</strong></td>
+                                    <td>{{ user.created_at.strftime}}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Account Status:</strong></td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check-circle me-1"></i>Active
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Security</h6>
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-shield-alt text-success me-2"></i>
+                                <span>Google Authentication Enabled</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-lock text-success me-2"></i>
+                                <span>Secure Connection (HTTPS)</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-user-secret text-success me-2"></i>
+                                <span>Anonymous Reporting Available</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Privacy Settings -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-shield me-2"></i>Privacy & Safety
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Report Preferences</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
+                                <label class="form-check-label" for="emailNotifications">
+                                    Email notifications for report updates
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="anonymousDefault" checked>
+                                <label class="form-check-label" for="anonymousDefault">
+                                    Submit reports anonymously by default
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="supportResources" checked>
+                                <label class="form-check-label" for="supportResources">
+                                    Show support resources in dashboard
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6>Data & Privacy</h6>
+                            <p class="text-muted small mb-3">
+                                We are committed to protecting your privacy. Your personal information is encrypted and stored securely.
+                            </p>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-info btn-sm">
+                                    <i class="fas fa-download me-1"></i>Download My Data
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-file-alt me-1"></i>Privacy Policy
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Support Resources -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-life-ring me-2"></i>Support & Resources
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 border rounded">
+                                <i class="fas fa-phone-alt text-danger fa-lg me-3"></i>
+                                <div>
+                                    <h6 class="mb-1">Emergency Hotline</h6>
+                                    <p class="mb-0 text-muted small">24/7 crisis support</p>
+                                    <strong>1990</strong>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 border rounded">
+                                <i class="fas fa-envelope text-primary fa-lg me-3"></i>
+                                <div>
+                                    <h6 class="mb-1">Campus Support</h6>
+                                    <p class="mb-0 text-muted small">Professional counseling</p>
+                                    <strong>support@university.edu</strong>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 border rounded">
+                                <i class="fas fa-comments text-success fa-lg me-3"></i>
+                                <div>
+                                    <h6 class="mb-1">Peer Support</h6>
+                                    <p class="mb-0 text-muted small">Student support groups</p>
+                                    <strong>ext. 2345</strong>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 border rounded">
+                                <i class="fas fa-book-open text-info fa-lg me-3"></i>
+                                <div>
+                                    <h6 class="mb-1">Resources</h6>
+                                    <p class="mb-0 text-muted small">Educational materials</p>
+                                    <a href="{% url 'awareness' %}" class="text-decoration-none">
+                                        <strong>Browse Resources</strong>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cogs me-2"></i>Account Management
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Quick Actions</h6>
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'dashboard' %}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-tachometer-alt me-1"></i>Go to Dashboard
+                                </a>
+                                <a href="{% url 'report_anonymous' %}" class="btn btn-success btn-sm">
+                                    <i class="fas fa-plus me-1"></i>Submit New Report
+                                </a>
+                                <a href="{% url 'awareness' %}" class="btn btn-info btn-sm">
+                                    <i class="fas fa-graduation-cap me-1"></i>Browse Resources
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6>Account Settings</h6>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary btn-sm" onclick="saveSettings()">
+                                    <i class="fas fa-save me-1"></i>Save Preferences
+                                </button>
+                                <button class="btn btn-outline-warning btn-sm" onclick="resetSettings()">
+                                    <i class="fas fa-undo me-1"></i>Reset to Defaults
+                                </button>
+                                <a href="{% url 'account_logout' %}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-sign-out-alt me-1"></i>Sign Out
+                                </a>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function saveSettings() {
+    // Collect form data
+    const settings = {
+        emailNotifications: document.getElementById('emailNotifications').checked,
+        anonymousDefault: document.getElementById('anonymousDefault').checked,
+        supportResources: document.getElementById('supportResources').checked
+    };
+    
+    // In a full implementation, this would save to the backend
+    console.log('Saving settings:', settings);
+    
+    // Show success message
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show';
+    alert.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>Settings saved successfully!
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container');
+    container.insertBefore(alert, container.firstChild);
+}
+
+function resetSettings() {
+    if (confirm('Are you sure you want to reset all settings to defaults?')) {
+        document.getElementById('emailNotifications').checked = true;
+        document.getElementById('anonymousDefault').checked = true;
+        document.getElementById('supportResources').checked = true;
+        
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-info alert-dismissible fade show';
+        alert.innerHTML = `
+            <i class="fas fa-info-circle me-2"></i>Settings reset to defaults.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        const container = document.querySelector('.container');
+        container.insertBefore(alert, container.firstChild);
+    }
+}
+</script>
+{% endblock %}

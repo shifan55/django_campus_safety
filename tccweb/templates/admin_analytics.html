@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Awareness Hub - Safe Campus{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h1 class="mb-3">Manage Awareness Content</h1>
+  <form method="post" class="mb-4">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn btn-primary" type="submit">Add Resource</button>
+  </form>
+  <div class="table-responsive">
+    <table class="table table-striped">
+      <thead>
+        <tr><th>Title</th><th>Type</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for res in resources %}
+        <tr>
+          <td>{{ res.title }}</td>
+          <td>{{ res.get_resource_type_display }}</td>
+          <td>
+            <form method="post" action="?delete={{ res.id }}" style="display:inline;">
+              {% csrf_token %}
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" class="text-center">No resources.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

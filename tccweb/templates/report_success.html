@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Report Submitted - Safe Campus{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="text-center">
+                <div class="mb-4">
+                    <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                </div>
+                
+                <h1 class="mb-3">Thank You</h1>
+                <p class="lead mb-4">Your report has been submitted successfully. We take all reports seriously and will investigate this matter appropriately.</p>
+                
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">Report Reference</h5>
+                        <p class="card-text">
+                            <strong>Report ID:</strong> #{{ report.id }}<br>
+                            <strong>Submitted:</strong> {{ report.created_at|date:"F d, Y \\a\\t h:i A" }}<br>
+                            <strong>Status:</strong> <span class="badge bg-warning">{{ report.status.value.replace.title }}</span>
+                        </p>
+                        {% if not report.is_anonymous %}
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Since you provided contact information, we may reach out to you if we need additional details.
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <h6 class="mb-2"><i class="fas fa-clock me-2"></i>What Happens Next?</h6>
+                    <ul class="mb-0 text-start">
+                        <li>Your report will be reviewed by trained staff within 24-48 hours</li>
+                        <li>If immediate action is needed, appropriate measures will be taken</li>
+                        <li>All information will be handled confidentially and professionally</li>
+                        {% if report.support_needed %}
+                        <li><strong>Support services will contact you soon</strong> since you indicated needing immediate support</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                
+                {% if report.support_needed %}
+                <div class="alert alert-warning">
+                    <h6 class="mb-2"><i class="fas fa-hands-helping me-2"></i>Immediate Support Available</h6>
+                    <p class="mb-2">You indicated that you need immediate support. Here are resources available right now:</p>
+                    <div class="row text-start">
+                        <div class="col-sm-6">
+                            <strong>Emergency:</strong> 1990<br>
+                            <strong>Campus Counseling:</strong> ext. 2345
+                        </div>
+                        <div class="col-sm-6">
+                            <strong>Email Support:</strong> support@university.edu<br>
+                            <strong>Walk-in Hours:</strong> Mon-Fri 9AM-5PM
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                    <a href="{% url 'index' %}" class="btn btn-primary">
+                        <i class="fas fa-home me-1"></i>Return Home
+                    </a>
+                    <a href="{% url 'awareness' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-book-open me-1"></i>Browse Support Resources
+                    </a>
+                </div>
+                
+                <div class="mt-4">
+                    <small class="text-muted">
+                        <i class="fas fa-shield-alt me-1"></i>
+                        Your privacy and safety are our top priorities. If you have any concerns about this report or need additional support, please don't hesitate to contact us.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

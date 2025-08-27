@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Case Assignment - Safe Campus{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h1 class="mb-3">Case Assignment</h1>
+  <div class="table-responsive">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Assigned To</th>
+          <th>Update</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for report in reports %}
+        <tr>
+          <td>{{ report.id }}</td>
+          <td>{{ report.get_incident_type_display }}</td>
+          <td>{{ report.status }}</td>
+          <td>{% if report.assigned_to %}{{ report.assigned_to.username }}{% else %}Unassigned{% endif %}</td>
+          <td>
+            <form method="post" class="d-flex align-items-center">
+              {% csrf_token %}
+              <input type="hidden" name="report_id" value="{{ report.id }}">
+              <select name="assigned_to" class="form-select form-select-sm me-1">
+                <option value="">--</option>
+                {% for u in users %}
+                <option value="{{ u.id }}" {% if report.assigned_to_id == u.id %}selected{% endif %}>{{ u.username }}</option>
+                {% endfor %}
+              </select>
+              <select name="status" class="form-select form-select-sm me-1">
+                {% for val,label in statuses %}
+                <option value="{{ val }}" {% if report.status == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              <button class="btn btn-primary btn-sm" type="submit">Save</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center">No reports.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

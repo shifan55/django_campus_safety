@@ -1,0 +1,6 @@
+Django>=5.0,<6
+pip install django-widget-tweaks
+
+in the nav bar Home, Admin Dashboard, Profile, Logout and Dark/Light mode.
+
+other nav links like  Admin Dashboard,  Reports, Case Assignment, Analytics, Awareness Hub, User Management add to side nav bar

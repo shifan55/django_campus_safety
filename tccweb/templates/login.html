@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% load socialaccount %}
+
+{% block title %}Login - Safe Campus{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="text-center mb-4">
+                <i class="fas fa-shield-alt text-primary" style="font-size: 3rem;"></i>
+                <h2 class="mt-3">Safe Campus</h2>
+                <p class="text-muted">Sign in to access your dashboard and report incidents</p>
+            </div>
+            
+            <div class="card shadow">
+                <div class="card-body p-4">
+                    <h4 class="text-center mb-4">Sign In</h4>
+                    
+                    <!-- Local Login Form -->
+                    <form method="POST" class="mb-4">
+                        {% csrf_token %}
+                        {{ form.hidden_tag }}
+                        
+                        <div class="mb-3">
+                            {{ form.username.label }}
+                            {{ form.username }}
+                            {% if form.username.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.username.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.password.label }}
+                            {{ form.password }}
+                            {% if form.password.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.password.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            {{ form.remember_me }}
+                            {{ form.remember_me.label }}
+                        </div>
+                        
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-urgent btn-lg">
+                                <i class="fas fa-sign-in-alt me-2"></i>LOGIN
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="text-center mb-3">
+                        <span class="text-muted">OR</span>
+                    </div>
+                    
+                    <!-- Google OAuth Login -->
+                    <div class="d-grid mb-4">
+                        <a href="{% provider_login_url 'google' process='login' %}" class="btn btn-outline-primary btn-lg">
+                        <i class="fab fa-google me-2"></i> Continue with Google</a>
+                    </div>
+                    
+                    <div class="text-center mb-4">
+                        <p class="mb-0">Don't have an account?</p>
+                        <a href="{% url 'register' %}" class="btn btn-link">
+                            <i class="fas fa-user-plus me-1"></i>Create Account
+                        </a>
+                    </div>
+                    
+                    <div class="text-center">
+                        <hr class="my-4">
+                        <p class="text-muted mb-3">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Secure authentication using your university Google account
+                        </p>
+                    </div>
+                    
+                    <!-- Information Section -->
+                    <div class="alert alert-info">
+                        <h6 class="mb-2"><i class="fas fa-lock me-2"></i>Why do we need authentication?</h6>
+                        <ul class="mb-0 small">
+                            <li>Access your personal dashboard</li>
+                            <li>Track your submitted reports</li>
+                            <li>Connect with support services</li>
+                            <li>Secure access to sensitive features</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <p class="mb-2">
+                            <strong>Don't need an account?</strong>
+                        </p>
+                        <a href="{% url 'report_anonymous' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-user-secret me-1"></i>Report Anonymously
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Privacy Notice -->
+            <div class="text-center mt-4">
+                <small class="text-muted">
+                    <i class="fas fa-shield-alt me-1"></i>
+                    Your privacy and security are our top priorities. We use industry-standard encryption and security measures to protect your information.
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row text-center mb-4">
+            <div class="col-lg-12">
+                <h3>What You Can Access After Signing In</h3>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 bg-dark text-light border-0 shadow text-center">
+                    <div class="card-body">
+                        <div class="bg-primary text-white rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <i class="fas fa-tachometer-alt fa-lg"></i>
+                        </div>
+                        <h5 class="card-title">Personal Dashboard</h5>
+                        <p class="card-text">View your reports, track status, and access personalized resources.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card h-100 bg-dark text-light border-0 shadow text-center">
+                    <div class="card-body">
+                        <div class="bg-success text-white rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <i class="fas fa-user-friends fa-lg"></i>
+                        </div>
+                        <h5 class="card-title">Support Services</h5>
+                        <p class="card-text">Connect directly with counselors and support staff.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card h-100 bg-dark text-light border-0 shadow text-center">
+                    <div class="card-body">
+                        <div class="bg-info text-white rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <i class="fas fa-clipboard-list fa-lg"></i>
+                        </div>
+                    <h5 class="card-title">Report Management</h5>
+                    <p class="card-text">Submit non-anonymous reports and follow up on progress.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Anonymous Option Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h3 class="mb-3">Need to Report Something Now?</h3>
+                <p class="lead mb-4">If you need to report an incident but don't want to create an account, you can submit an anonymous report immediately.</p>
+                
+                <div class="card border-primary">
+                    <div class="card-body p-4">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-user-secret me-2"></i>Anonymous Reporting
+                        </h5>
+                        <p class="mb-3">
+                            Report incidents safely without revealing your identity. No account required, completely confidential.
+                        </p>
+                        <a href="{% url 'report_anonymous' %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-shield-alt me-2"></i>Submit Anonymous Report
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
