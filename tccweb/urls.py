@@ -1,26 +1,25 @@
+"""
+URL configuration for tccweb project.
 
+The `urlpatterns` list routes URLs to views. For more information please see:
+    https://docs.djangoproject.com/en/5.2/topics/http/urls/
+Examples:
+Function views
+    1. Add an import:  from my_app import views
+    2. Add a URL to urlpatterns:  path('', views.home, name='home')
+Class-based views
+    1. Add an import:  from other_app.views import Home
+    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
+Including another URLconf
+    1. Import the include() function: from django.urls import include, path
+    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+"""
 from django.contrib import admin
 from django.urls import path, include
-from tccweb.core import views
-from django.contrib.auth import views as auth_views
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('', views.index, name='index'),
-    path('login/', views.login_view, name='login'),
-    path('logout/', views.logout_view, name='logout'),
-    path('register/', views.register, name='register'),
-    path('report-anonymous/', views.report_anonymous, name='report_anonymous'),
-    path('submit-report/', views.submit_report, name='submit_report'),
-    path('report-success/<int:report_id>/', views.report_success, name='report_success'),
-    path('awareness/', views.awareness, name='awareness'),
-    path('dashboard/', views.dashboard, name='dashboard'),
-    path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
-    path("accounts/", include("allauth.urls")),
-    path("profile/", views.profile_view, name="profile"),
-    path('admin/reports/', views.admin_reports, name='admin_reports'),
-    path('admin/case-assignment/', views.admin_case_assignment, name='admin_case_assignment'),
-    path('admin/analytics/', views.admin_analytics, name='admin_analytics'),
-    path('admin/awareness/', views.admin_awareness, name='admin_awareness'),
-    path('admin/users/', views.admin_user_management, name='admin_user_management'),
+    path("admin/", admin.site.urls),
+    path('', include('tccweb.user_portal.urls')),
+    path('portal/', include('tccweb.admin_portal.urls')),
+    path('accounts/', include('allauth.urls')),
 ]

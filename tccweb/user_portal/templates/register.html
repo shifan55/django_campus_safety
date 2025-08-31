@@ -40,17 +40,17 @@
                         </div>
 
                         <div class="mb-3">
-                            {{ form.password1.label_tag }}
-                            {{ form.password1|add_class:"form-control" }}
-                            {% for error in form.password1.errors %}
+                            {{ form.password.label_tag }}
+                            {{ form.password|add_class:"form-control" }}
+                            {% for error in form.password.errors %}
                                 <div class="invalid-feedback d-block">{{ error }}</div>
                             {% endfor %}
                         </div>
                         
                         <div class="mb-4">
-                            {{ form.password2.label_tag }}
-                            {{ form.password2|add_class:"form-control" }}
-                            {% for error in form.password2.errors %}
+                            {{ form.password_confirm.label_tag }}
+                            {{ form.password_confirm|add_class:"form-control" }}
+                            {% for error in form.password_confirm.errors %}
                                 <div class="invalid-feedback d-block">{{ error }}</div>
                             {% endfor %}
                         </div>
