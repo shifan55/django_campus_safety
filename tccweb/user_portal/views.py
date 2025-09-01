@@ -1,7 +1,8 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from tccweb.core.models import Report, EducationalResource, SupportContact
 from tccweb.core.forms import LoginForm, RegistrationForm, AnonymousReportForm, ReportForm
 
@@ -16,6 +17,17 @@ def awareness(request):
     contacts = SupportContact.objects.filter(is_available=True).order_by('name')
     return render(request, 'awareness.html', {'resources': resources, 'contacts': contacts})
 
+def resource_detail(request, resource_id):
+    """Return JSON details for a single educational resource."""
+    resource = get_object_or_404(EducationalResource, id=resource_id, is_public=True)
+    data = {
+        "id": resource.id,
+        "title": resource.title,
+        "content": resource.content,
+        "url": resource.url,
+        "resource_type": resource.resource_type,
+    }
+    return JsonResponse(data)
 
 def login_view(request):
     if request.method == 'POST':
@@ -30,6 +42,8 @@ def login_view(request):
                 login(request, user)
                 if not form.cleaned_data.get("remember_me"):
                     request.session.set_expiry(0)
+                if user.is_staff:
+                    return redirect('admin_dashboard')
                 return redirect('index')
             messages.error(request, 'Invalid credentials.')
     else:

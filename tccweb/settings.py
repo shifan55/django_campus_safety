@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os, environ
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,7 +28,7 @@ SECRET_KEY = 'django-insecure-)gkah(aiqf&$$i+g+$e0gawvjz&kor-1^aj$0$!6ix0cipf1m3
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DEBUG", default=True)
 
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1", "localhost", "192.168.8.164"])
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "192.168.8.164"]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8000",
@@ -81,6 +82,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                "tccweb.user_portal.context_processors.google_maps_key",
             ],
         "builtins": [
             "tccweb.core.templatetags.text_extras",
@@ -145,6 +147,8 @@ LOGIN_URL = '/login/'
 STATIC_URL = "/statics/"
 STATICFILES_DIRS = [BASE_DIR / "tccweb" / "static"]  # adjust to the actual source directory
 STATIC_ROOT = BASE_DIR / "staticfiles"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -158,6 +162,7 @@ AUTHENTICATION_BACKENDS = [
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 
+GOOGLE_MAPS_API_KEY = "AIzaSyBN6w7HpFxu2BIPiLkXkaXVtX376u-nP1E"
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "APP": {
@@ -187,14 +192,9 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "no-repl
 
 # Minimal allauth config so it won't block flows
 
-ACCOUNT_AUTHENTICATION_METHOD = "email"
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_EMAIL_VERIFICATION = "optional"  # or "none" to completely skip verification in dev
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = "http"    # "https" in production behind TLS
-ACCOUNT_SIGNUP_FIELDS = ["email", "username", "password1", "password2"]
 
 ACCOUNT_SIGNUP_FIELDS = ["email"]
-ACCOUNT_LOGIN_METHODS = ["email"]
+ACCOUNT_LOGIN_METHODS = {"email"}
 
-DEFAULT_FROM_EMAIL = "2"

@@ -2,6 +2,19 @@
 
 {% block title %}Support & Resources - Safe Campus{% endblock %}
 
+{% block extra_head %}
+<style>
+    /* Add subtle hover effect for resource cards */
+    .resource-item .card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .resource-item .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <!-- Header Section -->
 <section class="bg-primary text-white py-5">
@@ -23,19 +36,29 @@
                 <h5 class="mb-0">Filter Resources</h5>
             </div>
             <div class="col-md-6">
-                <div class="d-flex gap-2 flex-wrap">
-                    <select class="form-select form-select-sm" id="categoryFilter" onchange="filterResources()">
-                        <option value="all">All Categories</option>
-                        <option value="prevention">Prevention</option>
-                        <option value="support">Support</option>
-                        <option value="awareness">Awareness</option>
-                    </select>
-                    <select class="form-select form-select-sm" id="typeFilter" onchange="filterResources()">
-                        <option value="all">All Types</option>
-                        <option value="article">Articles</option>
-                        <option value="video">Videos</option>
-                        <option value="quiz">Quizzes</option>
-                    </select>
+                <div class="d-flex gap-2 flex-wrap justify-content-end">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="fas fa-tags"></i></span>
+                        <select class="form-select" id="categoryFilter" onchange="filterResources()">
+                            <option value="all">All Categories</option>
+                            <option value="prevention">Prevention</option>
+                            <option value="support">Support</option>
+                            <option value="awareness">Awareness</option>
+                        </select>
+                    </div>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="fas fa-shapes"></i></span>
+                        <select class="form-select" id="typeFilter" onchange="filterResources()">
+                            <option value="all">All Types</option>
+                            <option value="article">Articles</option>
+                            <option value="video">Videos</option>
+                            <option value="quiz">Quizzes</option>
+                        </select>
+                    </div>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="searchFilter" placeholder="Search..." onkeyup="filterResources()">
+                    </div>
                 </div>
             </div>
         </div>
@@ -43,7 +66,7 @@
 </section>
 
 <!-- Support Contacts Section -->
-{% if support_contacts %}
+{% if contacts %}
 <section class="py-5">
     <div class="container">
         <div class="row mb-4">
@@ -54,7 +77,7 @@
         </div>
         
         <div class="row g-4">
-            {% for contact in support_contacts %}
+            {% for contact in contacts %}
             <div class="col-md-6 col-lg-4">
                 <div class="card h-100">
                     <div class="card-body">
@@ -99,64 +122,21 @@
 </section>
 {% endif %}
 
-<!-- Emergency Resources -->
-<section class="py-5 bg-danger text-white">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-8 mx-auto text-center">
-                <h2 class="mb-3"><i class="fas fa-exclamation-triangle me-2"></i>Emergency Resources</h2>
-                <p class="lead mb-4">If you or someone you know is in immediate danger, contact these services immediately:</p>
-                
-                <div class="row g-4">
-                    <div class="col-md-3">
-                        <div class="text-center">
-                            <a href="tel:1990" class="btn"><i class="fas fa-phone-alt fa-2x mb-2"></i>
-                            <h5>Emergency</h5>
-                            <p class="mb-0"><strong>1990</strong></p></a>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="text-center">
-                           <a href="tel:1234" class="btn"> <i class="fas fa-shield-alt fa-2x mb-2"></i>
-                            <h5>Campus Security</h5>
-                            <p class="mb-0"><strong>ext. 1234</strong></p></a>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="text-center">
-                           <a href="tel:1991" class="btn"> <i class="fas fa-heart fa-2x mb-2"></i>
-                            <h5>Crisis Hotline</h5>
-                            <p class="mb-0"><strong>1991</strong></p></a>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="text-center">
-                           <a href="tel:1990" class="btn"> <i class="fas fa-user-md fa-2x mb-2"></i>
-                            <h5>Medical Emergency</h5>
-                            <p class="mb-0"><strong>1990</strong></p></a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Educational Resources -->
+<!-- Recovery Resources -->
 <section class="py-5">
     <div class="container">
         <div class="row mb-4">
             <div class="col-12">
-                <h2 class="mb-3"><i class="fas fa-graduation-cap me-2 text-primary"></i>Educational Resources</h2>
-                <p class="text-muted">Learn about bullying prevention, recognition, and response strategies.</p>
+                <h2 class="mb-3"><i class="fas fa-hand-holding-heart me-2 text-primary"></i>Recovery Resources</h2>
+                <p class="text-muted">Find materials that support healing and resilience after incidents.</p>
             </div>
         </div>
         
         {% if resources %}
         <div class="row g-4" id="resourcesContainer">
             {% for resource in resources %}
-            <div class="col-md-6 col-lg-4 resource-item" 
-                 data-category="{{ resource.category }}" 
+            <div class="col-md-6 col-lg-4 resource-item"
+                 data-category="{{ resource.category }}"
                  data-type="{{ resource.resource_type }}">
                 <div class="card h-100">
                     <div class="card-body">
@@ -183,7 +163,7 @@
                         
                         <div class="mt-auto">
                             <small class="text-muted">
-                                <i class="fas fa-calendar me-1"></i>{{ resource.created_at.strftime }}
+                                <i class="fas fa-calendar me-1"></i>{{ resource.created_at|date:"M d, Y" }}
                             </small>
                             {% if resource.created_by %}
                             <br><small class="text-muted">
@@ -205,11 +185,55 @@
         <div class="text-center py-5">
             <i class="fas fa-book-open text-muted" style="font-size: 3rem;"></i>
             <h4 class="mt-3 text-muted">No Resources Available</h4>
-            <p class="text-muted">Educational resources will be added soon. Check back later!</p>
+            <p class="text-muted">Recovery resources will be added soon. Check back later!</p>
         </div>
         {% endif %}
     </div>
 </section>
+
+<!-- Emergency Resources -->
+<section class="py-5 bg-danger text-white">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2 class="mb-3"><i class="fas fa-exclamation-triangle me-2"></i>Emergency Resources</h2>
+                <p class="lead mb-4">If you or someone you know is in immediate danger, contact these services immediately:</p>
+
+                <div class="row g-4">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <a href="tel:119" class="btn"><i class="fas fa-phone-alt fa-2x mb-2"></i>
+                            <h5>Emergency</h5>
+                            <p class="mb-0"><strong>119</strong></p></a>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                           <a href="tel:(011)7999000" class="btn"> <i class="fas fa-shield-alt fa-2x mb-2"></i>
+                            <h5>Campus Hotline</h5>
+                            <p class="mb-0"><strong>(011)7999000</strong></p></a>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                           <a href="tel:1926" class="btn"> <i class="fas fa-heart fa-2x mb-2"></i>
+                            <h5>Crisis Hotline</h5>
+                            <p class="mb-0"><strong>1926</strong></p></a>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                           <a href="tel:1990" class="btn"> <i class="fas fa-user-md fa-2x mb-2"></i>
+                            <h5>Medical Emergency</h5>
+                            <p class="mb-0"><strong>1990</strong></p></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 
 <!-- Quick Tips Section -->
 <section class="py-5 bg-light">
@@ -287,16 +311,20 @@
 function filterResources() {
     const categoryFilter = document.getElementById('categoryFilter').value;
     const typeFilter = document.getElementById('typeFilter').value;
+    const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
     const resources = document.querySelectorAll('.resource-item');
     
     resources.forEach(function(resource) {
         const category = resource.getAttribute('data-category');
         const type = resource.getAttribute('data-type');
+        const title = resource.querySelector('.card-title').textContent.toLowerCase();
         
         const categoryMatch = categoryFilter === 'all' || category === categoryFilter;
         const typeMatch = typeFilter === 'all' || type === typeFilter;
         
-        if (categoryMatch && typeMatch) {
+        const searchMatch = title.includes(searchFilter);
+
+        if (categoryMatch && typeMatch && searchMatch) {
             resource.style.display = 'block';
         } else {
             resource.style.display = 'none';
@@ -305,18 +333,24 @@ function filterResources() {
 }
 
 function viewResource(resourceId) {
-    // This would typically fetch resource content via AJAX
-    // For now, we'll show a placeholder modal
-    const modal = new bootstrap.Modal(document.getElementById('resourceModal'));
-    document.getElementById('resourceModalTitle').textContent = 'Resource Content';
-    document.getElementById('resourceModalBody').innerHTML = `
-        <div class="text-center py-4">
-            <i class="fas fa-file-alt text-muted" style="font-size: 3rem;"></i>
-            <h5 class="mt-3">Resource Content</h5>
-            <p class="text-muted">This would display the full content of resource #${resourceId}. In a full implementation, this would load the actual resource content.</p>
-        </div>
-    `;
-    modal.show();
+        fetch(`/resource/${resourceId}/`)
+        .then(response => response.json())
+        .then(data => {
+            const modal = new bootstrap.Modal(document.getElementById('resourceModal'));
+            document.getElementById('resourceModalTitle').textContent = data.title;
+            let bodyHtml = '';
+            if (data.content) {
+                bodyHtml += `<p>${data.content}</p>`;
+            }
+            if (data.url) {
+                bodyHtml += `<a href="${data.url}" target="_blank" class="btn btn-primary mt-3">Open Resource</a>`;
+            }
+            document.getElementById('resourceModalBody').innerHTML = bodyHtml;
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error fetching resource:', error);
+        });
 }
 </script>
 {% endblock %}

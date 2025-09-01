@@ -18,6 +18,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Add fade-in animation to main content
     document.querySelector('main')?.classList.add('fade-in');
+
+    // Setup back-to-top button
+    setupBackToTop();
 });
 
 /**
@@ -197,6 +200,26 @@ function initializeAccessibility() {
     
     // Focus management for modals
     setupModalFocus();
+}
+
+/**
+ * Back to top button functionality
+ */
+function setupBackToTop() {
+    const btn = document.getElementById('back-to-top');
+    if (!btn) return;
+
+    window.addEventListener('scroll', function() {
+        if (window.pageYOffset > 300) {
+            btn.style.display = 'flex';
+        } else {
+            btn.style.display = 'none';
+        }
+    });
+
+    btn.addEventListener('click', function() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
 }
 
 /**

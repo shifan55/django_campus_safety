@@ -1,6 +1,7 @@
 from django import forms
+from django.forms import inlineformset_factory
 from django.contrib.auth.models import User
-from .models import Report, ReportType, EducationalResource
+from .models import Report, ReportType, EducationalResource, Quiz, QuizQuestion
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import get_user_model
 
@@ -108,15 +109,41 @@ class AnonymousReportForm(forms.Form):
 class EducationalResourceForm(forms.ModelForm):
     class Meta:
         model = EducationalResource
-        fields = ["title", "content", "url", "resource_type", "category", "is_public"]
+        fields = ["title", "content", "url", "file", "resource_type", "category", "is_public"]
         widgets = {
             "title": forms.TextInput(attrs={"class": "form-control"}),
             "content": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "url": forms.URLInput(attrs={"class": "form-control"}),
+            "file": forms.FileInput(attrs={"class": "form-control", "accept": "video/*,.pdf,.doc,.docx"}),
             "resource_type": forms.Select(attrs={"class": "form-select"}),
             "category": forms.TextInput(attrs={"class": "form-control"}),
             "is_public": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
+
+
+class QuizForm(forms.ModelForm):
+    class Meta:
+        model = Quiz
+        fields = ["title"]
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "form-control"}),
+        }
+
+
+QuizQuestionFormSet = inlineformset_factory(
+    Quiz,
+    QuizQuestion,
+    fields=["text", "option_a", "option_b", "option_c", "option_d", "correct_option"],
+    extra=1,
+    widgets={
+        "text": forms.TextInput(attrs={"class": "form-control"}),
+        "option_a": forms.TextInput(attrs={"class": "form-control"}),
+        "option_b": forms.TextInput(attrs={"class": "form-control"}),
+        "option_c": forms.TextInput(attrs={"class": "form-control"}),
+        "option_d": forms.TextInput(attrs={"class": "form-control"}),
+        "correct_option": forms.Select(attrs={"class": "form-select"}),
+    },
+)
 
 class ReportForm(forms.ModelForm):
     

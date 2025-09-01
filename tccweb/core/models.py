@@ -54,11 +54,13 @@ class EducationalResource(models.Model):
         ("article", "Article"),
         ("video", "Video"),
         ("guide", "Guide"),
+        ("quiz", "Quiz"),
     ]
     
     title = models.CharField(max_length=200)
     content = models.TextField(blank=True)
     url = models.URLField(blank=True)
+    file = models.FileField(upload_to="resources/", blank=True, null=True)
     resource_type = models.CharField(max_length=20, choices=RESOURCE_TYPES, default="article")
     category = models.CharField(max_length=50, blank=True)
     is_public = models.BooleanField(default=True)
@@ -67,6 +69,39 @@ class EducationalResource(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class Quiz(models.Model):
+    """A quiz consisting of multiple questions."""
+
+    title = models.CharField(max_length=200)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="quizzes")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+
+class QuizQuestion(models.Model):
+    """Individual question belonging to a Quiz."""
+
+    OPTION_CHOICES = [
+        ("A", "A"),
+        ("B", "B"),
+        ("C", "C"),
+        ("D", "D"),
+    ]
+
+    quiz = models.ForeignKey(Quiz, related_name="questions", on_delete=models.CASCADE)
+    text = models.CharField(max_length=255)
+    option_a = models.CharField(max_length=200)
+    option_b = models.CharField(max_length=200)
+    option_c = models.CharField(max_length=200, blank=True)
+    option_d = models.CharField(max_length=200, blank=True)
+    correct_option = models.CharField(max_length=1, choices=OPTION_CHOICES)
+
+    def __str__(self):
+        return self.text
 
 class SupportContact(models.Model):
     name = models.CharField(max_length=100)

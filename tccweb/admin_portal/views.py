@@ -4,9 +4,16 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import user_passes_test
 from django.db.models import Count
 from django.db.models.functions import TruncMonth
-from tccweb.core.models import Report, EducationalResource, ReportType, ReportStatus
-from tccweb.core.forms import EducationalResourceForm
+from tccweb.core.models import Report, EducationalResource, ReportType, ReportStatus, Quiz
+from tccweb.core.forms import EducationalResourceForm, QuizForm, QuizQuestionFormSet
+from django.contrib.auth.decorators import login_required, user_passes_test
 
+try:
+    from tccweb.core.models import Quiz  # or wherever your Quiz model is
+except Exception:
+    Quiz = None
+
+@login_required
 @user_passes_test(lambda u: u.is_superuser or u.is_staff)
 def admin_dashboard(request):
     total_reports = Report.objects.count()
@@ -42,7 +49,7 @@ def admin_dashboard(request):
     }
     return render(request, 'admin_dashboard.html', ctx)
 
-
+@login_required
 @user_passes_test(lambda u: u.is_superuser or u.is_staff)
 def admin_reports(request):
     reports = Report.objects.select_related('reporter', 'assigned_to').all()
@@ -65,7 +72,7 @@ def admin_reports(request):
     }
     return render(request, 'admin_reports.html', ctx)
 
-
+@login_required
 @user_passes_test(lambda u: u.is_superuser or u.is_staff)
 def admin_case_assignment(request):
     reports = Report.objects.select_related('assigned_to').all()
@@ -87,7 +94,7 @@ def admin_case_assignment(request):
         {'reports': reports, 'users': users, 'statuses': ReportStatus.choices},
     )
 
-
+@login_required
 @user_passes_test(lambda u: u.is_superuser or u.is_staff)
 def admin_analytics(request):
     monthly_qs = (
@@ -107,28 +114,56 @@ def admin_analytics(request):
         {'monthly_stats': monthly_stats, 'type_stats': type_stats, 'reports': locations},
     )
 
-
+@login_required
 @user_passes_test(lambda u: u.is_superuser or u.is_staff)
 def admin_awareness(request):
-    resources = EducationalResource.objects.all()
+    resources = EducationalResource.objects.all().order_by('-created_at')
+    try:
+        quizzes = Quiz.objects.all().order_by('-created_at')
+    except Exception:
+        quizzes = []
+
+    # default forms
+    form = EducationalResourceForm()
+    quiz_form = QuizForm()
+    question_formset = QuizQuestionFormSet(prefix='questions')
+
     if request.method == 'POST':
-        if request.GET.get('delete'):
-            resource = get_object_or_404(EducationalResource, id=request.GET['delete'])
-            resource.delete()
-            messages.success(request, 'Resource deleted.')
-            return redirect('admin_awareness')
-        form = EducationalResourceForm(request.POST)
-        if form.is_valid():
-            res = form.save(commit=False)
-            res.created_by = request.user
-            res.save()
-            messages.success(request, 'Resource added.')
-            return redirect('admin_awareness')
-    else:
-        form = EducationalResourceForm()
-    return render(request, 'admin_awareness.html', {'form': form, 'resources': resources})
+        form_type = request.POST.get('form_type')
 
+        if form_type == 'resource':
+            form = EducationalResourceForm(request.POST, request.FILES)
+            if form.is_valid():
+                res = form.save(commit=False)
+                if not getattr(res, 'created_by_id', None):
+                    res.created_by = request.user
+                res.save()
+                messages.success(request, 'Resource added.')
+                return redirect('admin_awareness')
 
+        elif form_type == 'quiz':
+            quiz_form = QuizForm(request.POST)
+            question_formset = QuizQuestionFormSet(request.POST, prefix='questions')
+            if quiz_form.is_valid() and question_formset.is_valid():
+                quiz = quiz_form.save(commit=False)
+                if not getattr(quiz, 'created_by_id', None):
+                    quiz.created_by = request.user
+                quiz.save()
+                question_formset.instance = quiz
+                question_formset.save()
+                messages.success(request, 'Quiz created.')
+                return redirect('admin_awareness')
+
+    context = {
+        'form': form,
+        'resources': resources,
+        'quiz_form': quiz_form,
+        'question_formset': question_formset,
+        'quizzes': quizzes,
+    }
+    return render(request, 'admin_awareness.html', context)
+
+@login_required
 @user_passes_test(lambda u: u.is_superuser or u.is_staff)
 def admin_user_management(request):
     users = User.objects.all().order_by('username')

@@ -1,14 +1,146 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% block title %}Manage Awareness Content - Safe Campus{% endblock %}
 {% block content %}
-<h1>Admin Awareness</h1>
-<form method="post">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">Save</button>
-</form>
-<ul>
-  {% for resource in resources %}
-    <li>{{ resource.title }}</li>
-  {% endfor %}
-</ul>
+
+<div class="container py-4">
+  <div class="row">
+    <div class="col-lg-5">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+          <h2 class="h5 mb-0"><i class="fas fa-plus-circle me-2"></i>Add Resource</h2>
+        </div>
+        <div class="card-body">
+          <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="resource">
+            {{ form.as_p }}
+            <div class="d-grid">
+              <button type="submit" class="btn btn-success">
+                <i class="fas fa-save me-1"></i>Save
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+          <h2 class="h5 mb-0"><i class="fas fa-question-circle me-2"></i>Create Quiz</h2>
+        </div>
+        <div class="card-body">
+          <form method="post" class="needs-validation" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="quiz">
+            {{ quiz_form.as_p }}
+            <div id="question-formset">
+              {{ question_formset.management_form }}
+              {% for qform in question_formset %}
+                <div class="question-form mb-3">
+                  {{ qform.text.label_tag }} {{ qform.text }}
+                  <div class="row mt-2">
+                    <div class="col-sm-6 mb-2">
+                      {{ qform.option_a.label_tag }} {{ qform.option_a }}
+                    </div>
+                    <div class="col-sm-6 mb-2">
+                      {{ qform.option_b.label_tag }} {{ qform.option_b }}
+                    </div>
+                    <div class="col-sm-6 mb-2">
+                      {{ qform.option_c.label_tag }} {{ qform.option_c }}
+                    </div>
+                    <div class="col-sm-6 mb-2">
+                      {{ qform.option_d.label_tag }} {{ qform.option_d }}
+                    </div>
+                    <div class="col-sm-4">
+                      {{ qform.correct_option.label_tag }} {{ qform.correct_option }}
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+              <div class="question-form mb-3 d-none empty-form">
+                {{ question_formset.empty_form.text.label_tag }} {{ question_formset.empty_form.text }}
+                <div class="row mt-2">
+                  <div class="col-sm-6 mb-2">
+                    {{ question_formset.empty_form.option_a.label_tag }} {{ question_formset.empty_form.option_a }}
+                  </div>
+                  <div class="col-sm-6 mb-2">
+                    {{ question_formset.empty_form.option_b.label_tag }} {{ question_formset.empty_form.option_b }}
+                  </div>
+                  <div class="col-sm-6 mb-2">
+                    {{ question_formset.empty_form.option_c.label_tag }} {{ question_formset.empty_form.option_c }}
+                  </div>
+                  <div class="col-sm-6 mb-2">
+                    {{ question_formset.empty_form.option_d.label_tag }} {{ question_formset.empty_form.option_d }}
+                  </div>
+                  <div class="col-sm-4">
+                    {{ question_formset.empty_form.correct_option.label_tag }} {{ question_formset.empty_form.correct_option }}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <button id="add-question" class="btn btn-sm btn-outline-secondary">Add Question</button>
+            </div>
+            <div class="d-grid">
+              <button type="submit" class="btn btn-success">
+                <i class="fas fa-save me-1"></i>Save Quiz
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-7">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-secondary text-white">
+          <h2 class="h5 mb-0"><i class="fas fa-book-open me-2"></i>Existing Resources</h2>
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for resource in resources %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>{{ resource.title }}</span>
+              <span>
+                {% if resource.file %}
+                  <a href="{{ resource.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-download"></i></a>
+                {% elif resource.url %}
+                  <a href="{{ resource.url }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-external-link-alt"></i></a>
+                {% endif %}
+              </span>
+            </li>
+          {% empty %}
+            <li class="list-group-item text-muted">No resources yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-header bg-secondary text-white">
+          <h2 class="h5 mb-0"><i class="fas fa-question-circle me-2"></i>Existing Quizzes</h2>
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for quiz in quizzes %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>{{ quiz.title }}</span>
+              <span class="badge bg-light text-dark">{{ quiz.questions.count }} questions</span>
+            </li>
+          {% empty %}
+            <li class="list-group-item text-muted">No quizzes yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+document.getElementById('add-question').addEventListener('click', function(e){
+  e.preventDefault();
+  const totalForms = document.getElementById('id_questions-TOTAL_FORMS');
+  const currentCount = parseInt(totalForms.value);
+  const newForm = document.querySelector('.empty-form').cloneNode(true);
+  newForm.classList.remove('d-none', 'empty-form');
+  newForm.innerHTML = newForm.innerHTML.replace(/__prefix__/g, currentCount);
+  document.getElementById('question-formset').appendChild(newForm);
+  totalForms.value = currentCount + 1;
+});
+</script>
 {% endblock %}

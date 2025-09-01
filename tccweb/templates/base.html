@@ -34,38 +34,68 @@
             
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'index' %}">Home</a>
-                    </li>
-                    <li class="nav-item">
+                    {% if user.is_authenticated %}
+                        {% if user.is_superuser %}
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}" href="{% url 'admin_dashboard' %}">Admin Dashboard</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'admin_reports' %}active{% endif %}" href="{% url 'admin_reports' %}">Reports</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'admin_case_assignment' %}active{% endif %}" href="{% url 'admin_case_assignment' %}">Case Assignment</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'admin_analytics' %}active{% endif %}" href="{% url 'admin_analytics' %}">Analytics</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'admin_awareness' %}active{% endif %}" href="{% url 'admin_awareness' %}">Awareness Hub</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'admin_user_management' %}active{% endif %}" href="{% url 'admin_user_management' %}">User Management</a>
+                            </li>
+                        {% elif user.is_staff %}
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Dashboard</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'dashboard' %}#cases">My Cases</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'awareness' %}active{% endif %}" href="{% url 'awareness' %}">Awareness Hub</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'dashboard' %}#messages">Messages</a>
+                            </li>
+                        {% else %}
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'index' %}">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'submit_report' %}active{% endif %}" href="{% url 'submit_report' %}">Report</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Dashboard</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.resolver_match.url_name == 'awareness' %}active{% endif %}" href="{% url 'awareness' %}">Awareness Hub</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'awareness' %}#support">Support</a>
+                            </li>
+                        {% endif %}
+                    {% else %}
 
-                        <a class="nav-link {% if request.resolver_match.url_name == 'report_anonymous' %}active{% endif %}" href="{% url 'report_anonymous' %}">Report Incident</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'awareness' %}active{% endif %}" href="{% url 'awareness' %}">Get Support</a>
-                    </li>
-
-                    {% if user.is_authenticated and user.is_staff or user.is_superuser or user.role.value == "admin" %}
                         <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}" href="{% url 'admin_dashboard' %}">Admin Dashboard</a>
+                            <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'index' %}">Home</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'admin_reports' %}active{% endif %}" href="{% url 'admin_reports' %}">Reports</a>
+                            <a class="nav-link {% if request.resolver_match.url_name == 'report_anonymous' %}active{% endif %}" href="{% url 'report_anonymous' %}">Report</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'admin_case_assignment' %}active{% endif %}" href="{% url 'admin_case_assignment' %}">Case Assignment</a>
+                            <a class="nav-link {% if request.resolver_match.url_name == 'awareness' %}active{% endif %}" href="{% url 'awareness' %}">Awareness Hub</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'admin_analytics' %}active{% endif %}" href="{% url 'admin_analytics' %}">Analytics</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'admin_awareness' %}active{% endif %}" href="{% url 'admin_awareness' %}">Awareness Hub</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'admin_user_management' %}active{% endif %}" href="{% url 'admin_user_management' %}">User Management</a>
-                        </li>
-                    {% endif %}
-
+                        {% endif %}
                 </ul>
                 
                 <ul class="navbar-nav">
@@ -77,38 +107,20 @@
                     </li>
                     
                     {% if user.is_authenticated %}
-                        {% if user.is_staff or user.is_superuser or user.role.value == 'admin' %}
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'profile' %}">Profile</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'logout' %}">Logout</a>
-                            </li>
-                        {% else %}
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
-                                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
-                                </a>
-                            </li>
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                    <i class="fas fa-user me-1"></i>{{ user.username }}
-                                </a>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="{%  url 'profile' %}">Profile</a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
-                                </ul>
-                            </li>
-                        {% endif %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'profile' %}">Profile</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+                        </li>
                             
                         
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'login' %}active{% endif %}"  href="{% url 'login' %}"> <i class="fas fa-sign-in-alt me-1"></i>Login</a>
+                            <a class="nav-link {% if request.resolver_match.url_name == 'login' %}active{% endif %}" href="{% url 'login' %}"><i class="fas fa-sign-in-alt me-1"></i>Login</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'register' %}active{% endif %}" href="{% url 'register' %}"> <i class="fas fa-user-plus me-1"></i>Register</a>
+                            <a class="nav-link {% if request.resolver_match.url_name == 'register' %}active{% endif %}" href="{% url 'register' %}"><i class="fas fa-user-plus me-1"></i>Register</a>
                         </li>
                     {% endif %}
                 </ul>
@@ -166,6 +178,12 @@
             </div>
         </div>
     </footer>
+
+    <!-- Back to top button -->
+    <button type="button" id="back-to-top" class="btn btn-primary rounded-circle" aria-label="Back to top">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

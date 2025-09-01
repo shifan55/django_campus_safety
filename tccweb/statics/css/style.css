@@ -473,3 +473,21 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Back to top button */
+#back-to-top {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 45px;
+  height: 45px;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1030;
+  border-radius: 50%;
+}
+
+#back-to-top:hover {
+  transform: scale(1.1);
+}

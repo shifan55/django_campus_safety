@@ -10,6 +10,7 @@ urlpatterns = [
     path('submit-report/', views.submit_report, name='submit_report'),
     path('report-success/<int:report_id>/', views.report_success, name='report_success'),
     path('awareness/', views.awareness, name='awareness'),
+    path('resource/<int:resource_id>/', views.resource_detail, name='resource_detail'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('profile/', views.profile_view, name='profile'),
 ]
