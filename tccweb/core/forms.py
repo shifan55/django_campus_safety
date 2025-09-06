@@ -3,8 +3,6 @@ from django.forms import inlineformset_factory
 from django.contrib.auth.models import User
 from .models import Report, ReportType, EducationalResource, Quiz, QuizQuestion
 from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth import get_user_model
-
 
 class LoginForm(forms.Form):
     """Authentication form with Bootstrap styling and better UX."""
@@ -82,11 +80,39 @@ class RegistrationForm(forms.ModelForm):
         return cleaned
 
 class AnonymousReportForm(forms.Form):
-    incident_type = forms.ChoiceField(choices=ReportType.choices,widget=forms.Select(attrs={"class": "form-select"}))
-    description = forms.CharField(widget=forms.Textarea(attrs={"rows": 6, "class": "form-control"}))
-    incident_date = forms.DateField(widget=forms.DateInput(attrs={'class': 'form-control','type': 'date' }))
+    incident_type = forms.ChoiceField(
+        choices=ReportType.choices,
+        widget=forms.Select(attrs={"class": "form-select"})
+    )
+    description = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 6, "class": "form-control", "id": "description"})
+    )
+    incident_date = forms.DateField(
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
 
-    location = forms.CharField(required=True, widget=forms.TextInput(attrs={"class": "form-control"}))
+    location = forms.CharField(
+        required=True,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "id": "location",
+                "placeholder": "Enter or search location",
+            }
+        ),
+    )
+
+    latitude = forms.FloatField(
+        required=False,
+        widget=forms.HiddenInput(attrs={"id": "latitude"})
+    )
+
+
+    latitude = forms.FloatField(
+        required=False,
+        widget=forms.HiddenInput(attrs={"id": "latitude"})
+    )
+
     
     witness_present = forms.BooleanField(
         required=False,
@@ -101,9 +127,10 @@ class AnonymousReportForm(forms.Form):
         widget=forms.CheckboxInput(attrs={"class": "form-check-input", "id": "support_needed"})
     )
 
+    # keep field in form but hide it from the user
     is_anonymous = forms.BooleanField(
         required=False,
-        widget=forms.CheckboxInput(attrs={"class": "form-check-input", "id": "is_anonymous"})
+        widget=forms.HiddenInput(attrs={"id": "is_anonymous"})
     )
 
 class EducationalResourceForm(forms.ModelForm):
@@ -169,7 +196,7 @@ class ReportForm(forms.ModelForm):
     )
     is_anonymous = forms.BooleanField(
         required=False,
-        widget=forms.CheckboxInput(attrs={"class": "form-check-input", "id": "is_anonymous"})
+        widget=forms.HiddenInput(attrs={"id": "is_anonymous"})
     )
     
     class Meta:
@@ -190,11 +217,18 @@ class ReportForm(forms.ModelForm):
             'description': forms.Textarea(attrs={
                 'class': 'form-control', 'rows': 5, 'id': 'description', 'required': 'required'
             }),
-            'location': forms.TextInput(attrs={'class': 'form-control', 'id': 'location', 'required': 'required'}),
-            'reporter_name': forms.TextInput(attrs={'class': 'form-control', 'id': 'reporter_name'}),
-            'reporter_email': forms.EmailInput(attrs={'class': 'form-control', 'id': 'reporter_email'}),
-            'reporter_phone': forms.TextInput(attrs={'class': 'form-control', 'id': 'reporter_phone'}),
-            'is_anonymous': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'is_anonymous'}),
+            'location': forms.TextInput(attrs={
+                'class': 'form-control',
+                'id': 'location',
+                'placeholder': 'Enter location or select on map',
+                'required': 'required'
+            }),
+            'latitude': forms.HiddenInput(attrs={'id': 'latitude'}),
+            'longitude': forms.HiddenInput(attrs={'id': 'longitude'}),
+            'reporter_name': forms.HiddenInput(attrs={'id': 'reporter_name'}),
+            'reporter_email': forms.HiddenInput(attrs={'id': 'reporter_email'}),
+            'reporter_phone': forms.HiddenInput(attrs={'id': 'reporter_phone'}),
+            'is_anonymous': forms.HiddenInput(attrs={'id': 'is_anonymous'}),
             'witness_present': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'witness_present'}),
             'previous_incidents': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'previous_incidents'}),
             'support_needed': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'support_needed'}),
@@ -229,4 +263,3 @@ class ReportForm(forms.ModelForm):
             cleaned['reporter_phone'] = ''
 
         return cleaned
-

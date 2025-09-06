@@ -88,6 +88,9 @@ function initMap() {
     }
 }
 
+// Ensure Google callback can find initMap
+window.initMap = initMap;
+
 /**
  * Setup autocomplete for location input
  * @param {HTMLInputElement} input - The location input field
@@ -252,6 +255,28 @@ function clearMapSelection() {
 }
 
 /**
+ * Center map on the user's current location
+ */
+function useCurrentLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const userLocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                handleMapClick(userLocation);
+                map.setCenter(userLocation);
+                map.setZoom(17);
+            },
+            function(error) {
+                console.warn('Geolocation error:', error);
+            }
+        );
+    }
+}
+
+/**
  * Initialize map in modal
  * @param {number} lat - Latitude
  * @param {number} lng - Longitude
@@ -368,6 +393,16 @@ document.addEventListener('DOMContentLoaded', function() {
     if (clearMapBtn) {
         clearMapBtn.addEventListener('click', clearMapSelection);
     }
+
+    const useLocationBtn = document.getElementById('useLocationBtn');
+    if (useLocationBtn) {
+        useLocationBtn.addEventListener('click', useCurrentLocation);
+    }
+
+        // Fallback: initialize map when Google Maps has already loaded
+    if (!map && window.google && window.google.maps) {
+        initMap();
+    }
 });
 
 // Expose functions globally for use in templates
@@ -375,6 +410,7 @@ window.MapFunctions = {
     initMap,
     initModalMap,
     clearMapSelection,
+    useCurrentLocation,
     getLocationDescription,
     validateMapSelection,
     handleMapClick

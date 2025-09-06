@@ -15,7 +15,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize accessibility features
     initializeAccessibility();
-    
+  
+    // Setup navbar behaviour and active state
+    setupNavbar();
+
     // Add fade-in animation to main content
     document.querySelector('main')?.classList.add('fade-in');
 
@@ -187,6 +190,41 @@ function showSaveIndicator() {
         indicator.style.display = 'none';
     }, 2000);
 }
+
+/**
+ * Handle navbar interactions: highlight current page and
+ * collapse the menu after a selection on mobile devices.
+ */
+function setupNavbar() {
+    const navbar = document.getElementById('navbarNav');
+    if (!navbar) {
+        return;
+    }
+
+    const links = navbar.querySelectorAll('.nav-link');
+
+    // If no link is marked active server-side, highlight based on URL path
+    if (!navbar.querySelector('.nav-link.active')) {
+        const currentPath = window.location.pathname;
+        for (const link of links) {
+            const linkPath = link.getAttribute('href');
+            if (linkPath && linkPath.split('#')[0] === currentPath) {
+                link.classList.add('active');
+                break;
+            }
+        }
+    }
+
+    // Collapse navbar when a link is clicked (useful on mobile)
+    links.forEach(function(link) {
+        link.addEventListener('click', function() {
+            if (navbar.classList.contains('show')) {
+                new bootstrap.Collapse(navbar, { toggle: false }).hide();
+            }
+        });
+    });
+}
+
 
 /**
  * Initialize accessibility features

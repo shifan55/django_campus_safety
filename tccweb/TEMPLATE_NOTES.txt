@@ -1,8 +1,0 @@
-These templates were copied from the Flask app.
-You may need to update:
-- url_for(...) -> {% url 'name' %} in links and forms
-- flashed messages -> Django messages (already wired)
-- form rendering: replace Flask-WTF fields with Django form tags (views supply 'form')
-
-Start pages wired:
-index.html, awareness.html, login.html, register.html, report_anonymous.html, submit_report.html, report_success.html.

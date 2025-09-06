@@ -4,9 +4,7 @@
 {% block title %}Report an Incident - Safe Campus{% endblock %}
 
 {% block extra_head %}
-  <script async defer 
-          src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places&callback=initMap">
-  </script>
+
 {% endblock %}
 
 {% block content %}
@@ -71,7 +69,7 @@
                             <div class="mb-3">
                                 <label for="{{ form.location.id_for_label }}" class="form-label">Location</label>
                                 {{ form.location }}
-                                <div class="form-text">Click on the map below to mark the exact location (optional)</div>
+                                <div class="form-text">Use the field or map below to specify where this occurred.</div>
                                 {% if form.location.errors %}
                                     <div class="text-danger small mt-1">
                                         {% for error in form.location.errors %}{{ error }}{% endfor %}
@@ -81,8 +79,17 @@
                             
                             <!-- Map Container -->
                             <div class="mb-3">
-                                <div id="map" style="height: 300px; border-radius: 8px;" class="border"></div>
-                                <div class="form-text">Click on the map to set the incident location. This helps administrators understand patterns and improve campus safety.</div>
+                                <div id="map" style="height: 300px; border-radius: 8px;" class="border mb-2"></div>
+                                <div class="d-flex justify-content-end mb-2">
+                                    
+                                    <button type="button" id="useLocationBtn" class="btn btn-sm btn-outline-primary me-2">
+                                        <i class="fas fa-location-arrow me-1"></i>Use My Location
+                                    </button>
+                                    <button type="button" id="clearMapBtn" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-times me-1"></i>Clear
+                                    </button>
+                                </div>
+                            <!--  <div class="form-text">Click or search to set the incident location. This helps administrators understand patterns and improve campus safety.</div>  -->    
                             </div>
                             
                             <!-- Hidden coordinates -->
@@ -204,16 +211,31 @@
 
 {% block extra_scripts %}
 <script src="{% static 'js/maps.js' %}"></script>
+<script
+  src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&callback=initMap&libraries=places&loading=async"
+  defer
+></script>
+
+<script>
+  function initMap() {
+    const center = { lat: 6.9271, lng: 79.8612 }; // Colombo example
+    const map = new google.maps.Map(document.getElementById("map"), {
+      center, zoom: 13,
+    });
+    new google.maps.Marker({ position: center, map });
+  }
+</script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Toggle contact info
     const anonymousCheckbox = document.getElementById('is_anonymous');
     const contactInfo = document.getElementById('contactInfo');
+    const emailInput = document.getElementById('reporter_email');
     
     function toggleContactInfo() {
         const anon = anonymousCheckbox.checked;
         contactInfo.style.display = anon ? 'none' : 'block';
-        if (emailInput) {
         if (anon) {
             emailInput.removeAttribute('required');
         } else {

@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from tccweb.core.models import Report, EducationalResource, SupportContact
 from tccweb.core.forms import LoginForm, RegistrationForm, AnonymousReportForm, ReportForm
+from django.conf import settings
 
 
 def index(request):
@@ -79,12 +80,18 @@ def report_anonymous(request):
                 description=form.cleaned_data['description'],
                 incident_date=form.cleaned_data['incident_date'],
                 location=form.cleaned_data.get('location', ''),
-                is_anonymous=True
+                latitude=form.cleaned_data.get('latitude'),
+                longitude=form.cleaned_data.get('longitude'),
+                is_anonymous=True,
             )
             return redirect('report_success', report_id=report.id)
     else:
         form = AnonymousReportForm()
-    return render(request, 'report_anonymous.html', {'form': form})
+        context = {
+        'form': form,
+        'GOOGLE_MAPS_API_KEY': getattr(settings, 'GOOGLE_MAPS_API_KEY', ''),
+    }
+    return render(request, 'report_anonymous.html', context)
 
 
 @login_required
@@ -92,6 +99,7 @@ def dashboard(request):
     return render(request, 'dashboard.html')
 
 
+@login_required
 def submit_report(request):
     if request.method == 'POST':
         form = ReportForm(request.POST)
@@ -102,7 +110,13 @@ def submit_report(request):
             report.save()
             return redirect('report_success', report_id=report.id)
     else:
-        form = ReportForm()
+        initial = {
+            'reporter_name': request.user.get_full_name() or request.user.username,
+            'reporter_email': request.user.email,
+        }
+        if hasattr(request.user, 'profile'):
+            initial['reporter_phone'] = getattr(request.user.profile, 'phone', '')
+        form = ReportForm(initial=initial)
     return render(request, 'submit_report.html', {'form': form})
 
 
@@ -113,3 +127,4 @@ def report_success(request, report_id):
 @login_required
 def profile_view(request):
     return render(request, 'profile.html', {'user': request.user})
+

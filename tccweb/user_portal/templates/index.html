@@ -2,17 +2,17 @@
 
 {% block content %}
 <!-- Hero Section -->
-<section class="bg-primary text-white py-5">
+<section class="bg-primary text-white py-5 fade-in-up">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-lg-6">
                 <h1 class="display-4 fw-bold mb-4">Your Voice Matters</h1>
                 <p class="lead mb-4">A safe, confidential platform to report bullying incidents, access support resources, and build a safer university community together.</p>
                 <div class="d-grid gap-3 d-md-flex justify-content-md-start">
-                    <a href="{% url 'report_anonymous' %}" class="btn btn-urgent btn-xl me-md-2">
+                    <a href="{% url 'report_anonymous' %}" class="btn btn-priority-high btn-urgent btn-xl me-md-2">
                         <i class="fas fa-exclamation-triangle me-2"></i>REPORT NOW
                     </a>
-                    <a href="{% url 'awareness' %}" class="btn btn-outline-light btn-xl">
+                    <a href="{% url 'awareness' %}" class="btn btn-priority-low btn-xl">
                         <i class="fas fa-hands-helping me-2"></i>GET HELP
                     </a>
                 </div>
@@ -38,40 +38,40 @@
         
         <div class="row g-4">
             <div class="col-md-4">
-                <div class="card quick-access-card h-100 shadow-lg" onclick="location.href='{% url 'report_anonymous' %}'">
+                <div class="card quick-access-card h-100 shadow-lg fade-in-up" onclick="location.href='{% url 'report_anonymous' %}'">
                     <div class="card-body text-center p-4">
                         <div class="feature-icon text-white rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; background-color: var(--safe-campus-urgent);">
                             <i class="fas fa-shield-alt fs-1"></i>
                         </div>
                         <h4 class="card-title">Report Incident</h4>
                         <p class="card-text">Report incidents safely and anonymously. Your privacy is protected throughout the entire process.</p>
-                        <span class="btn btn-urgent btn-sm">Start Report</span>
+                        <span class="btn btn-priority-high btn-urgent btn-sm">Start Report</span>
                     </div>
                 </div>
             </div>
             
             <div class="col-md-4">
-                <div class="card quick-access-card h-100 shadow-lg" onclick="location.href='{% url 'awareness' %}'">
+                <div class="card quick-access-card h-100 shadow-lg fade-in-up" onclick="location.href='{% url 'awareness' %}'">
                     <div class="card-body text-center p-4">
                         <div class="feature-icon text-white rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; background-color: var(--safe-campus-safe);">
                             <i class="fas fa-hands-helping fs-1"></i>
                         </div>
                         <h4 class="card-title">Get Support</h4>
                         <p class="card-text">Connect with trained counselors and support staff who understand and can help with bullying situations.</p>
-                        <span class="btn btn-outline-success btn-sm">Find Help</span>
+                       <span class="btn btn-priority-low btn-sm">Find Help</span>
                     </div>
                 </div>
             </div>
             
             <div class="col-md-4">
-                <div class="card quick-access-card h-100 shadow-lg" onclick="location.href='{% url 'awareness' %}'">
+                <div class="card quick-access-card h-100 shadow-lg fade-in-up" onclick="location.href='{% url 'awareness' %}'">
                     <div class="card-body text-center p-4">
                         <div class="feature-icon text-white rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; background-color: var(--safe-campus-primary);">
                             <i class="fas fa-graduation-cap fs-1"></i>
                         </div>
                         <h4 class="card-title">Learn More</h4>
                         <p class="card-text">Access resources, articles, and materials to learn about bullying prevention and available support options.</p>
-                        <span class="btn btn-outline-primary btn-sm">Explore</span>
+                       <span class="btn btn-priority-medium btn-sm">Explore</span>
                     </div>
                 </div>
             </div>
@@ -81,7 +81,7 @@
 
 <!-- Recent Resources Section -->
 {% if recent_resources %}
-<section class="py-5 bg-light">
+<section class="py-5 bg-light fade-in-up">
     <div class="container">
         <div class="row">
             <div class="col-lg-8 mx-auto text-center mb-5">
@@ -124,7 +124,7 @@
         </div>
         
         <div class="text-center mt-4">
-            <a href="{% url 'awareness' %}" class="btn btn-primary">
+            <a href="{% url 'awareness' %}" class="btn btn-priority-medium">
                 View All Resources <i class="fas fa-arrow-right ms-1"></i>
             </a>
         </div>
@@ -133,7 +133,7 @@
 {% endif %}
 
 <!-- Call to Action -->
-<section class="py-5 bg-primary text-white">
+<section class="py-5 bg-primary text-white fade-in-up">
     <div class="container text-center">
         <h2 class="mb-3">Need Help Right Now?</h2>
         <p class="lead mb-4">If you or someone you know is in immediate danger, don't wait. Contact emergency services or campus security immediately.</p>
@@ -144,7 +144,7 @@
                         <div class="d-flex align-items-center justify-content-center">
                             <i class="fas fa-phone-alt fa-2x me-3"></i>
                             <div>
-                                <a href="tel:1990" class="btn">
+                                <a href="tel:1990" class="btn btn-priority-high">
                                 <h5 class="mb-0">Emergency</h5>
                                 <p class="mb-0">1990</p></a>
                             </div>
@@ -154,7 +154,7 @@
                         <div class="d-flex align-items-center justify-content-center">
                             <i class="fas fa-envelope fa-2x me-3"></i>
                             <div>
-                                <a href="mailto:support@university.edu" class="btn">
+                                <a href="mailto:support@university.edu" class="btn btn-priority-medium">
                                 <h5 class="mb-0">Campus Support</h5>
                                 <p class="mb-0">support@university.edu</p></a>
                             </div>

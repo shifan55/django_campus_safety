@@ -25,6 +25,7 @@
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.6;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Navigation enhancements */
@@ -38,6 +39,22 @@ body {
   font-weight: 600;
   background-color: rgba(255, 255, 255, 0.2);
   border-radius: 4px;
+}
+
+/* Subtle hover for navigation links */
+.nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+[data-bs-theme="light"] .nav-link:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Slightly darker whites for light mode */
+[data-bs-theme="light"] {
+  --bs-body-bg: #f4f4f4;
+  --bs-light-rgb: 244, 244, 244;
 }
 
 /* Theme toggle button styling */
@@ -73,6 +90,20 @@ body {
 .card:hover {
   box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
   transform: translateY(-2px);
+}
+
+/* Fade-in animation for landing elements */
+.fade-in-up {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Report form enhancements */
@@ -159,23 +190,74 @@ body {
 
 /* Quick Access & Accessibility Improvements for Impatient Users */
 
-/* Urgent action buttons - highly visible */
+/* Button transitions */
+.btn {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+/* Priority button variants */
+.btn-priority-high, 
 .btn-urgent {
   background-color: var(--safe-campus-urgent) !important;
   border-color: var(--safe-campus-urgent) !important;
   color: var(--safe-campus-text-urgent) !important;
   font-weight: 700;
+}
+
+}
+
+.btn-priority-high:hover,
+.btn-urgent:hover,
+.btn-priority-high:focus,
+.btn-urgent:focus {
+  background-color: #e6005c !important;
+  border-color: #e6005c !important;
+  color: var(--safe-campus-text-urgent) !important;
+  box-shadow: 0 6px 12px rgba(255, 0, 102, 0.4);
+}
+
+.btn-priority-medium {
+  background-color: var(--safe-campus-warning) !important;
+  border-color: var(--safe-campus-warning) !important;
+  color: #000 !important;
+  font-weight: 600;
+}
+
+.btn-priority-medium:hover,
+.btn-priority-medium:focus {
+  background-color: #e68900 !important;
+  border-color: #e68900 !important;
+  color: #000 !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-priority-low {
+  background-color: var(--safe-campus-safe) !important;
+  border-color: var(--safe-campus-safe) !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+
+.btn-priority-low:hover,
+.btn-priority-low:focus {
+  background-color: #00b85d !important;
+  border-color: #00b85d !important;
+  color: #fff !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Urgent action buttons - highly visible */
+.btn-urgent {
   font-size: 1.1rem;
   padding: 0.75rem 1.5rem;
   box-shadow: 0 4px 8px rgba(255, 0, 102, 0.3);
   animation: pulse-urgent 2s infinite;
 }
 
-.btn-urgent:hover, .btn-urgent:focus {
-  background-color: #e6005c !important;
-  border-color: #e6005c !important;
+.btn-urgent:hover,
+.btn-urgent:focus {
   transform: scale(1.05);
-  box-shadow: 0 6px 12px rgba(255, 0, 102, 0.4);
 }
 
 /* Pulse animation for urgent buttons */
@@ -474,20 +556,33 @@ body {
   }
 }
 
-/* Back to top button */
-#back-to-top {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 45px;
-  height: 45px;
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 1030;
-  border-radius: 50%;
+/* Smooth theme transitions */
+body, .navbar, .nav-link, .navbar-brand, .card, .btn, footer, .alert {
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-#back-to-top:hover {
-  transform: scale(1.1);
+#theme-icon {
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+#theme-icon.rotate {
+  transform: rotate(360deg);
+}
+
+/* Light mode overrides for elements using dark utility classes */
+[data-bs-theme="light"] .bg-dark {
+  background-color: var(--bs-light) !important;
+}
+
+[data-bs-theme="light"] .text-light {
+  color: var(--bs-dark) !important;
+}
+
+[data-bs-theme="light"] .btn-outline-light {
+  color: var(--bs-dark) !important;
+  border-color: var(--bs-dark) !important;
+}
+
+[data-bs-theme="light"] #theme-icon {
+  color: var(--bs-dark) !important;
 }
