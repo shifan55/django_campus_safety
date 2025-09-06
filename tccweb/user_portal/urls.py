@@ -13,4 +13,5 @@ urlpatterns = [
     path('resource/<int:resource_id>/', views.resource_detail, name='resource_detail'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('profile/', views.profile_view, name='profile'),
+    path('set-theme/', views.set_theme, name='set_theme'),
 ]

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load socialaccount %}
+{% load widget_tweaks %}
 
 {% block title %}Login - Safe Campus{% endblock %}
 
@@ -18,31 +19,31 @@
                     <h4 class="text-center mb-4">Sign In</h4>
                     
                     <!-- Local Login Form -->
-                    <form method="POST" class="mb-4">
+                    <form method="POST" class="mb-4" novalidate>
                         {% csrf_token %}
-                        {{ form.hidden_tag }}
+                        {{ form.non_field_errors }}
                         
                         <div class="mb-3">
-                            {{ form.username.label }}
-                            {{ form.username }}
+                            {{ form.username.label_tag }}
                             {% if form.username.errors %}
-                                <div class="invalid-feedback">
-                                    {% for error in form.username.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
+                                {% render_field form.username class+=" is-invalid" %}
+                                {% for error in form.username.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            {% else %}
+                                {{ form.username }}
                             {% endif %}
                         </div>
                         
                         <div class="mb-3">
-                            {{ form.password.label }}
-                            {{ form.password }}
+                            {{ form.password.label_tag }}
                             {% if form.password.errors %}
-                                <div class="invalid-feedback">
-                                    {% for error in form.password.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
+                                {% render_field form.password class+=" is-invalid" %}
+                                {% for error in form.password.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            {% else %}
+                                {{ form.password }}
                             {% endif %}
                         </div>
                         

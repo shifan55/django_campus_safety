@@ -12,6 +12,38 @@
         transform: translateY(-4px);
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
     }
+
+        /* Dark mode friendly filter section */
+    .filter-section .input-group-text {
+        background-color: var(--bs-tertiary-bg);
+        color: var(--bs-body-color);
+    }
+
+    /* Highlight links for better visibility */
+    .contact-info a,
+    .emergency-links a {
+        color: inherit;
+        text-decoration: underline;
+    }
+        /* Dark mode friendly filter section with better contrast */
+    .filter-section {
+        background-color: var(--bs-body-bg);
+        color: var(--bs-body-color);
+    }
+    .filter-section .input-group-text,
+    .filter-section .form-select,
+    .filter-section .form-control {
+        background-color: var(--bs-tertiary-bg);
+        color: var(--bs-body-color);
+        border-color: var(--bs-border-color);
+    }
+
+    /* Highlight links for better visibility */
+    .contact-info a,
+    .emergency-links a {
+        color: inherit;
+        text-decoration: underline;
+    }
 </style>
 {% endblock %}
 
@@ -29,7 +61,7 @@
 </section>
 
 <!-- Filter Section -->
-<section class="py-4 bg-light">
+<section class="py-4 bg-body-tertiary filter-section">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-6">
@@ -38,8 +70,8 @@
             <div class="col-md-6">
                 <div class="d-flex gap-2 flex-wrap justify-content-end">
                     <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="fas fa-tags"></i></span>
-                        <select class="form-select" id="categoryFilter" onchange="filterResources()">
+<label class="input-group-text" for="categoryFilter"><i class="fas fa-tags" aria-hidden="true"></i><span class="visually-hidden">Category</span></label>
+                        <select class="form-select" id="categoryFilter" aria-label="Filter by category" onchange="filterResources()">
                             <option value="all">All Categories</option>
                             <option value="prevention">Prevention</option>
                             <option value="support">Support</option>
@@ -47,8 +79,8 @@
                         </select>
                     </div>
                     <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="fas fa-shapes"></i></span>
-                        <select class="form-select" id="typeFilter" onchange="filterResources()">
+                        <label class="input-group-text" for="typeFilter"><i class="fas fa-shapes" aria-hidden="true"></i><span class="visually-hidden">Type</span></label>
+                        <select class="form-select" id="typeFilter" aria-label="Filter by type" onchange="filterResources()">
                             <option value="all">All Types</option>
                             <option value="article">Articles</option>
                             <option value="video">Videos</option>
@@ -56,8 +88,8 @@
                         </select>
                     </div>
                     <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="fas fa-search"></i></span>
-                        <input type="text" class="form-control" id="searchFilter" placeholder="Search..." onkeyup="filterResources()">
+                        <label class="input-group-text" for="searchFilter"><i class="fas fa-search" aria-hidden="true"></i><span class="visually-hidden">Search</span></label>
+                        <input type="text" class="form-control" id="searchFilter" placeholder="Search..." aria-label="Search resources" onkeyup="filterResources()">
                     </div>
                 </div>
             </div>
@@ -67,7 +99,7 @@
 
 <!-- Support Contacts Section -->
 {% if contacts %}
-<section class="py-5">
+<section class="py-5" id="support-team">
     <div class="container">
         <div class="row mb-4">
             <div class="col-12">
@@ -98,12 +130,12 @@
                         <div class="contact-info">
                             <p class="mb-1">
                                 <i class="fas fa-envelope me-2 text-muted"></i>
-                                <a href="mailto:{{ contact.email }}" class="text-decoration-none">{{ contact.email }}</a>
+                                 <a href="mailto:{{ contact.email }}">{{ contact.email }}</a>
                             </p>
                             {% if contact.phone %}
                             <p class="mb-1">
                                 <i class="fas fa-phone me-2 text-muted"></i>
-                                <a href="tel:{{ contact.phone }}" class="text-decoration-none">{{ contact.phone }}</a>
+                                <a href="tel:{{ contact.phone }}">{{ contact.phone }}</a>
                             </p>
                             {% endif %}
                             {% if contact.office_hours %}
@@ -120,6 +152,15 @@
         </div>
     </div>
 </section>
+
+<section class="py-5">
+    <div class="container text-center">
+        <i class="fas fa-user-friends text-muted" style="font-size: 3rem;"></i>
+        <h4 class="mt-3 text-muted">No Support Contacts Available</h4>
+        <p class="text-muted">Contact information will be added soon. Check back later!</p>
+    </div>
+</section>
+
 {% endif %}
 
 <!-- Recovery Resources -->
@@ -132,70 +173,77 @@
             </div>
         </div>
         
-        {% if resources %}
-        <div class="row g-4" id="resourcesContainer">
-            {% for resource in resources %}
-            <div class="col-md-6 col-lg-4 resource-item"
-                 data-category="{{ resource.category }}"
-                 data-type="{{ resource.resource_type }}">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                        <span class="badge 
-                            {% if resource.resource_type == 'article' %}bg-primary
-                            {% elif resource.resource_type == 'video' %}bg-success
-                            {% else %}bg-info
-                            {% endif %}">
-                            <i class="fas 
-                            {% if resource.resource_type == 'article' %}fa-file-alt
-                            {% elif resource.resource_type == 'video' %}fa-play
-                            {% else %}fa-question-circle
-                            {% endif %} me-1"></i>
-                            {{ resource.resource_type|title }}
-                        </span>
+        <div id="resourcesLoading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status" aria-label="Loading resources">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
 
-                        <span class="badge bg-secondary">{{ resource.category|title }}</span>
-                        </div>
+                        <div id="resourcesContent" class="d-none">
+            {% if resources %}
+            <div class="row g-4" id="resourcesContainer">
+                {% for resource in resources %}
+                <div class="col-md-6 col-lg-4 resource-item"
+                     data-category="{{ resource.category }}"
+                     data-type="{{ resource.resource_type }}">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge
+                                {% if resource.resource_type == 'article' %}bg-primary
+                                {% elif resource.resource_type == 'video' %}bg-success
+                                {% else %}bg-info
+                                {% endif %}">
+                                <i class="fas
+                                {% if resource.resource_type == 'article' %}fa-file-alt
+                                {% elif resource.resource_type == 'video' %}fa-play
+                                {% else %}fa-question-circle
+                                {% endif %} me-1"></i>
+                                {{ resource.resource_type|title }}
+                            </span>
 
-                        
+                            <span class="badge bg-secondary">{{ resource.category|title }}</span>
+                            </div>
+
                         <h5 class="card-title">{{ resource.title }}</h5>
-                        <p class="card-text text-muted">{{ resource.content|striptags|truncatechars:150 }}</p>
-                        
-                        <div class="mt-auto">
-                            <small class="text-muted">
-                                <i class="fas fa-calendar me-1"></i>{{ resource.created_at|date:"M d, Y" }}
-                            </small>
-                            {% if resource.created_by %}
-                            <br><small class="text-muted">
-                                <i class="fas fa-user me-1"></i>{{ resource.created_by.username }}
-                            </small>
+                            <p class="card-text text-muted">{{ resource.content|striptags|truncatechars:150 }}</p>
+
+                            <div class="mt-auto">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>{{ resource.created_at|date:"M d, Y" }}
+                                </small>
+                                {% if resource.created_by %}
+                                <br><small class="text-muted">
+                                    <i class="fas fa-user me-1"></i>{{ resource.created_by.username }}
+                                </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            {% if resource.url %}
+                                <a class="btn btn-outline-primary btn-sm" href="{{ resource.url }}" target="_blank" rel="noopener">
+                                    <i class="fas fa-external-link-alt me-1"></i>Open Resource
+                                </a>
+                            {% else %}
+                                <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
+                                        data-bs-target="#resourceModal" data-title="{{ resource.title|escapejs }}"
+                                        data-content="{{ resource.content|escapejs }}">
+                                    <i class="fas fa-eye me-1"></i>View Resource
+                                </button>
                             {% endif %}
                         </div>
                     </div>
-                    <div class="card-footer bg-transparent">
-                        {% if resource.url %}
-                            <a class="btn btn-outline-primary btn-sm" href="{{ resource.url }}" target="_blank" rel="noopener">
-                                <i class="fas fa-external-link-alt me-1"></i>Open Resource
-                            </a>
-                        {% else %}
-                            <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
-                                    data-bs-target="#resourceModal" data-title="{{ resource.title|escapejs }}"
-                                    data-content="{{ resource.content|escapejs }}">
-                                <i class="fas fa-eye me-1"></i>View Resource
-                            </button>
-                        {% endif %}
-                    </div>
                 </div>
+                {% endfor %}
             </div>
-            {% endfor %}
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-book-open text-muted" style="font-size: 3rem;"></i>
+                <h4 class="mt-3 text-muted">No Resources Available</h4>
+                <p class="text-muted">Recovery resources will be added soon. Check back later!</p>
+            </div>
+            {% endif %}
         </div>
-        {% else %}
-        <div class="text-center py-5">
-            <i class="fas fa-book-open text-muted" style="font-size: 3rem;"></i>
-            <h4 class="mt-3 text-muted">No Resources Available</h4>
-            <p class="text-muted">Recovery resources will be added soon. Check back later!</p>
-        </div>
-        {% endif %}
     </div>
 </section>
 
@@ -244,7 +292,7 @@
 
 
 <!-- Quick Tips Section -->
-<section class="py-5 bg-light">
+<section class="py-5 bg-body-tertiary">
     <div class="container">
         <div class="row">
             <div class="col-lg-8 mx-auto">
@@ -252,7 +300,7 @@
                 
                 <div class="row g-4">
                     <div class="col-md-6">
-                        <div class="card h-100 border-0 bg-white">
+                        <div class="card h-100 border-0 bg-body">
                             <div class="card-body">
                                 <h5 class="text-primary mb-3"><i class="fas fa-eye me-2"></i>Recognizing Bullying</h5>
                                 <ul class="list-unstyled">
@@ -266,7 +314,7 @@
                     </div>
                     
                     <div class="col-md-6">
-                        <div class="card h-100 border-0 bg-white">
+                        <div class="card h-100 border-0 bg-body">
                             <div class="card-body">
                                 <h5 class="text-success mb-3"><i class="fas fa-shield-alt me-2"></i>What You Can Do</h5>
                                 <ul class="list-unstyled">
@@ -345,8 +393,17 @@ document.getElementById('resourceModal').addEventListener('show.bs.modal', funct
     const title = button.getAttribute('data-title');
     const content = button.getAttribute('data-content');
     document.getElementById('resourceModalTitle').textContent = title;
-    document.getElementById('resourceModalBody').innerHTML = content
-        });
+    document.getElementById('resourceModalBody').innerHTML = content;
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    const loading = document.getElementById('resourcesLoading');
+    const content = document.getElementById('resourcesContent');
+    if (loading && content) {
+        loading.classList.add('d-none');
+        content.classList.remove('d-none');
+    }
+});
 
 </script>
 {% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Report Submitted{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm text-center">
+                <div class="card-body">
+                    <p class="display-1 text-success mb-3" aria-hidden="true">
+                        <i class="fas fa-check-circle"></i>
+                    </p>
+                    <h2 class="card-title mb-3">Report Submitted</h2>
+                    <p class="card-text">
+                        Thank you for helping keep campus safe. Your report has been
+                        received and will be reviewed by our safety team.
+                    </p>
+                    <p class="card-text">
+                        Your tracking ID is <strong>{{ report_id }}</strong>. Keep this
+                        number in a safe place so you can reference or update your
+                        report later.
+                    </p>
+                    <div class="text-start mx-auto" style="max-width: 400px;">
+                        <ul class="list-unstyled mb-3">
+                            <li>
+                                If you provided contact details, a staff member may reach out
+                                for more information.
+                            </li>
+                            <li>
+                                Registered users can follow progress from the
+                                <a href="{% url 'dashboard' %}">dashboard</a>.
+                            </li>
+                            <li>
+                                For immediate threats, call emergency services or visit the
+                                <a href="{% url 'awareness' %}">resource center</a>.
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="mt-4">
+                        <a href="{% url 'index' %}" class="btn btn-primary me-2">Home</a>
+                        <a href="{% url 'submit_report' %}" class="btn btn-outline-primary">Submit Another</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

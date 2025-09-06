@@ -3,6 +3,8 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from tccweb.core.models import Report, EducationalResource, SupportContact
 from tccweb.core.forms import LoginForm, RegistrationForm, AnonymousReportForm, ReportForm
 from django.conf import settings
@@ -84,6 +86,7 @@ def report_anonymous(request):
                 longitude=form.cleaned_data.get('longitude'),
                 is_anonymous=True,
             )
+            messages.success(request, 'Report submitted successfully.')
             return redirect('report_success', report_id=report.id)
     else:
         form = AnonymousReportForm()
@@ -105,9 +108,13 @@ def submit_report(request):
         form = ReportForm(request.POST)
         if form.is_valid():
             report = form.save(commit=False)
-            report.reporter = request.user
-            report.is_anonymous = False
+            if form.cleaned_data.get('is_anonymous'):
+                report.reporter = None
+            else:
+                report.reporter = request.user
+            report.is_anonymous = form.cleaned_data.get('is_anonymous')
             report.save()
+            messages.success(request, 'Report submitted successfully.')
             return redirect('report_success', report_id=report.id)
     else:
         initial = {
@@ -128,3 +135,17 @@ def report_success(request, report_id):
 def profile_view(request):
     return render(request, 'profile.html', {'user': request.user})
 
+@csrf_exempt
+@require_POST
+def set_theme(request):
+    """Persist the user's theme preference in the session."""
+    try:
+        import json
+        data = json.loads(request.body.decode('utf-8'))
+        theme = data.get('theme')
+        if theme in ['light', 'dark']:
+            request.session['theme'] = theme
+            return JsonResponse({'status': 'ok'})
+    except Exception:
+        pass
+    return JsonResponse({'status': 'error'}, status=400)

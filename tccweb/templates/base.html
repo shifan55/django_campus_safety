@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 {% load static %}
-<html lang="en" data-bs-theme="dark">
+<html lang="en" data-bs-theme="{{ request.session.theme|default:'dark' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -55,35 +55,38 @@
                             <li class="nav-item">
                                 <a class="nav-link {% if request.resolver_match.url_name == 'admin_user_management' %}active{% endif %}" href="{% url 'admin_user_management' %}">User Management</a>
                             </li>
-                        {% elif user.is_staff %}
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Dashboard</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'dashboard' %}#cases">My Cases</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.resolver_match.url_name == 'awareness' %}active{% endif %}" href="{% url 'awareness' %}">Awareness Hub</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'dashboard' %}#messages">Messages</a>
-                            </li>
+                        
                         {% else %}
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'index' %}">Home</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.resolver_match.url_name == 'submit_report' %}active{% endif %}" href="{% url 'submit_report' %}">Report</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Dashboard</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.resolver_match.url_name == 'awareness' %}active{% endif %}" href="{% url 'awareness' %}">Awareness Hub</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'awareness' %}#support">Support</a>
-                            </li>
+                            {% if user.profile.is_staff %}
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Dashboard</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}#cases">My Cases</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.resolver_match.url_name == 'awareness' %}active{% endif %}" href="{% url 'awareness' %}">Awareness Hub</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}#messages">Messages</a>
+                                </li>
+                            {% else %}
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'index' %}">Home</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.resolver_match.url_name == 'submit_report' %}active{% endif %}" href="{% url 'submit_report' %}">Report</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Dashboard</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.resolver_match.url_name == 'awareness' %}active{% endif %}" href="{% url 'awareness' %}">Awareness Hub</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {% if request.resolver_match.url_name == 'awareness' %}active{% endif %}" href="{% url 'awareness' %}#support">Support</a>
+                                </li>
+                            {% endif %}
                         {% endif %}
                     {% else %}
 
@@ -102,8 +105,9 @@
                 <ul class="navbar-nav">
                     <!-- Theme Toggle Button -->
                     <li class="nav-item">
-                        <button class="btn btn-outline-light me-2" id="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">
+                        <button class="btn btn-outline-light me-2 d-flex align-items-center" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" aria-pressed="false">
                             <i class="fas fa-sun" id="theme-icon"></i>
+                            <span id="theme-label" class="ms-2">Dark</span>
                         </button>
                     </li>
                     
@@ -194,23 +198,21 @@
     
     <!-- Theme Toggle Script -->
     <script>
-        // Theme management
-        function getPreferredTheme() {
-            const storedTheme = localStorage.getItem('theme');
-            if (storedTheme) {
-                return storedTheme;
-            }
-            return 'dark'; // Default to dark theme
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
         }
 
-        function setTheme(theme) {
+        function setTheme(theme, persist = true) {
             document.documentElement.setAttribute('data-bs-theme', theme);
-            localStorage.setItem('theme', theme);
             
-            // Update icon
+            
+            // Update icon elements
             const icon = document.getElementById('theme-icon');
             const toggleBtn = document.getElementById('theme-toggle');
             const navbar = document.querySelector('.navbar');
+            const label = document.getElementById('theme-label');
             if (icon) {
                 icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
                 icon.classList.add('rotate');
@@ -219,10 +221,25 @@
             if (toggleBtn) {
                 toggleBtn.classList.toggle('btn-outline-light', theme === 'dark');
                 toggleBtn.classList.toggle('btn-outline-dark', theme === 'light');
+                toggleBtn.setAttribute('aria-pressed', theme === 'dark');
+            }
+            if (label) {
+                label.textContent = theme === 'dark' ? 'Dark' : 'Light';
             }
             if (navbar) {
                 navbar.classList.toggle('navbar-dark', theme === 'dark');
                 navbar.classList.toggle('navbar-light', theme === 'light');
+            }
+
+            if (persist) {
+                fetch('{% url "set_theme" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ theme })
+                });
             }
         }
 
@@ -234,8 +251,8 @@
 
         // Initialize theme on page load
         document.addEventListener('DOMContentLoaded', function() {
-            const preferredTheme = getPreferredTheme();
-            setTheme(preferredTheme);
+            const preferredTheme = '{{ request.session.theme|default:"dark" }}';
+            setTheme(preferredTheme, false);
         });
     </script>
     

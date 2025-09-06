@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load widget_tweaks %}
 
 {% block title %}Submit a Report - Safe Campus{% endblock %}
 
@@ -18,8 +19,9 @@
                     <p class="mb-0 mt-2">Please provide details of the incident. Your information helps keep our campus safe.</p>
                 </div>
                 <div class="card-body p-4">
-                    <form method="POST" id="reportForm">
+                    <form method="POST" id="reportForm" novalidate>
                         {% csrf_token %}
+                        {{ form.non_field_errors }}
 
                         <!-- Incident Details -->
                         <div class="mb-4">
@@ -27,18 +29,34 @@
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="{{ form.incident_type.id_for_label }}" class="form-label">Type of Incident <span class="text-danger">*</span></label>
-                                    {{ form.incident_type }}
+
+                                    {% if form.incident_type.errors %}
+                                        {% render_field form.incident_type class+=" is-invalid" %}
+                                    {% else %}
+                                        {{ form.incident_type }}
+                                    {% endif %}
                                     <div class="text-danger small mt-1">{% for error in form.incident_type.errors %}{{ error }}{% endfor %}</div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label for="{{ form.incident_date.id_for_label }}" class="form-label">When did this occur? <span class="text-danger">*</span></label>
-                                    {{ form.incident_date }}
+
+                                    {% if form.incident_date.errors %}
+                                        {% render_field form.incident_date class+=" is-invalid" %}
+                                    {% else %}
+                                        {{ form.incident_date }}
+                                    {% endif %}
                                     <div class="text-danger small mt-1">{% for error in form.incident_date.errors %}{{ error }}{% endfor %}</div>
                                 </div>
                             </div>
                             <div class="mb-3">
                                 <label for="{{ form.description.id_for_label }}" class="form-label">Detailed Description <span class="text-danger">*</span></label>
-                                {{ form.description }}
+                                
+                                {% if form.description.errors %}
+                                    {% render_field form.description class+=" is-invalid" %}
+                                {% else %}
+                                    {{ form.description }}
+                                {% endif %}
+
                                 <div class="form-text">Please provide as much detail as possible.</div>
                                 {% if form.description.errors %}
                                     <div class="text-danger small mt-1">{% for error in form.description.errors %}{{ error }}{% endfor %}</div>
@@ -46,7 +64,13 @@
                             </div>
                             <div class="mb-3">
                                 <label for="{{ form.location.id_for_label }}" class="form-label">Location</label>
-                                {{ form.location }}
+                                
+                                {% if form.location.errors %}
+                                    {% render_field form.location class+=" is-invalid" %}
+                                {% else %}
+                                    {{ form.location }}
+                                {% endif %}
+
                                 <div class="form-text">Click on the map below to mark the exact location (optional).</div>
                                 {% if form.location.errors %}
                                     <div class="text-danger small mt-1">{% for error in form.location.errors %}{{ error }}{% endfor %}</div>

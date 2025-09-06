@@ -58,7 +58,7 @@
                         </div>
                         <h4 class="card-title">Get Support</h4>
                         <p class="card-text">Connect with trained counselors and support staff who understand and can help with bullying situations.</p>
-                       <span class="btn btn-priority-low btn-sm">Find Help</span>
+                        <span class="btn btn-outline-success btn-sm">Find Help</span>
                     </div>
                 </div>
             </div>
@@ -71,7 +71,7 @@
                         </div>
                         <h4 class="card-title">Learn More</h4>
                         <p class="card-text">Access resources, articles, and materials to learn about bullying prevention and available support options.</p>
-                       <span class="btn btn-priority-medium btn-sm">Explore</span>
+                        <span class="btn btn-outline-primary btn-sm">Explore</span>
                     </div>
                 </div>
             </div>
@@ -81,7 +81,7 @@
 
 <!-- Recent Resources Section -->
 {% if recent_resources %}
-<section class="py-5 bg-light fade-in-up">
+<section class="py-5 bg-body-tertiary" id="latest-resources">
     <div class="container">
         <div class="row">
             <div class="col-lg-8 mx-auto text-center mb-5">
@@ -90,41 +90,43 @@
             </div>
         </div>
         
-        <div class="row g-4">
+        <div class="row g-4" id="resourcesContainer">
             {% for resource in recent_resources %}
-            <div class="col-md-4">
+            <div class="col-md-6 col-lg-4 resource-item"
+                 data-category="{{ resource.category }}"
+                 data-type="{{ resource.resource_type }}">
                 <div class="card h-100">
                     <div class="card-body">
-                        <div class="d-flex align-items-center mb-2">
-                            <span class="badge
-                                {% if resource.resource_type == 'article' %}
-                                    bg-primary
-                                {% elif resource.resource_type == 'video' %}
-                                    bg-success
-                                {% else %}
-                                    bg-info
-                                {% endif %}
-                                me-2">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge 
+                                {% if resource.resource_type == 'article' %}bg-primary
+                                {% elif resource.resource_type == 'video' %}bg-success
+                                {% else %}bg-info
+                                {% endif %}">
+                                <i class="fas 
+                                {% if resource.resource_type == 'article' %}fa-file-alt
+                                {% elif resource.resource_type == 'video' %}fa-play
+                                {% else %}fa-question-circle
+                                {% endif %} me-1"></i>
                                 {{ resource.resource_type|title }}
                             </span>
 
-                                {{ resource.resource_type|title }}
-                            </span>
                             <span class="badge bg-secondary">{{ resource.category|title }}</span>
+                            </div>
+                            <h5 class="card-title">{{ resource.title }}</h5>
+                            <p class="card-text text-muted">{{ resource.content|truncatechars:100 }}...</p>
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>{{ resource.created_at|date:"M d, Y" }}
+                            </small>
                         </div>
-                        <h5 class="card-title">{{ resource.title }}</h5>
-                        <p class="card-text text-muted">{{ resource.content|truncatechars:100 }}...</p>
-                        <small class="text-muted">
-                            <i class="fas fa-calendar me-1"></i>{{ resource.created_at|date:'%F %d, %Y' }}
-                        </small>
-                    </div>
+                    
                 </div>
             </div>
             {% endfor %}
         </div>
         
         <div class="text-center mt-4">
-            <a href="{% url 'awareness' %}" class="btn btn-priority-medium">
+            <a href="{% url 'awareness' %}" class="btn btn-primary">
                 View All Resources <i class="fas fa-arrow-right ms-1"></i>
             </a>
         </div>
@@ -144,7 +146,7 @@
                         <div class="d-flex align-items-center justify-content-center">
                             <i class="fas fa-phone-alt fa-2x me-3"></i>
                             <div>
-                                <a href="tel:1990" class="btn btn-priority-high">
+                                <a href="tel:1990" class="btn">
                                 <h5 class="mb-0">Emergency</h5>
                                 <p class="mb-0">1990</p></a>
                             </div>
@@ -154,7 +156,7 @@
                         <div class="d-flex align-items-center justify-content-center">
                             <i class="fas fa-envelope fa-2x me-3"></i>
                             <div>
-                                <a href="mailto:support@university.edu" class="btn btn-priority-medium">
+                                <a href="mailto:support@university.edu" class="btn">
                                 <h5 class="mb-0">Campus Support</h5>
                                 <p class="mb-0">support@university.edu</p></a>
                             </div>

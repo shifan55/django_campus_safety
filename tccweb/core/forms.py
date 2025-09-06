@@ -127,7 +127,20 @@ class AnonymousReportForm(forms.Form):
         widget=forms.CheckboxInput(attrs={"class": "form-check-input", "id": "support_needed"})
     )
 
-    # keep field in form but hide it from the user
+    reporter_name = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "form-control", "id": "reporter_name"})
+    )
+    reporter_email = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(attrs={"class": "form-control", "id": "reporter_email"})
+    )
+    reporter_phone = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "form-control", "id": "reporter_phone"})
+    )
+
+    # allow users to choose anonymity
     is_anonymous = forms.BooleanField(
         required=False,
         widget=forms.HiddenInput(attrs={"id": "is_anonymous"})
@@ -196,6 +209,7 @@ class ReportForm(forms.ModelForm):
     )
     is_anonymous = forms.BooleanField(
         required=False,
+        label="Submit this report anonymously",
         widget=forms.HiddenInput(attrs={"id": "is_anonymous"})
     )
     
