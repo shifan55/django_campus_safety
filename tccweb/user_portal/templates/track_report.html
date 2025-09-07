@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load ui_extras %}
+
+{% block title %}Track Report - Safe Campus{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h3 class="mb-3">Check Report Status</h3>
+                    <form method="post" class="mb-4">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="tracking_code" class="form-label">Tracking Code</label>
+                            <input type="text" class="form-control" id="tracking_code" name="tracking_code" required>
+                            <div class="form-text">Enter the code you received after submitting your report.</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Check Status</button>
+                    </form>
+                    {% if report %}
+                    <hr>
+                    <h5>Report Status: <span class="badge bg-{{ report.status|status_badge }}">{{ report.status|humanize_enum }}</span></h5>
+                    <p class="mb-0"><strong>Incident Type:</strong> {{ report.get_incident_type_display }}</p>
+                    <p><strong>Submitted:</strong> {{ report.created_at|date:"Y-m-d H:i" }}</p>
+                    {% endif %}
+                    {% for message in messages %}
+                    <div class="alert alert-danger mt-3">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

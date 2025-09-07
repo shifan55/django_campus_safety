@@ -155,39 +155,32 @@
                             </div>
                         </div>
                         
-                        <!-- Anonymity Choice -->
+                        <!-- Optional Contact Information -->
                         <div class="mb-4">
-                            <h5 class="border-bottom pb-2 mb-3">Privacy Options</h5>
-                            
-                            <div class="form-check form-switch mb-3">
-                                {{ form.is_anonymous }}
-                                <label class="form-check-label" for="{{ form.is_anonymous.id_for_label }}">
-                                    <strong>Submit this report anonymously</strong>
-                                </label>
-                                <div class="form-text">When enabled, your identity will not be recorded or shared with anyone.</div>
+                            <h5 class="border-bottom pb-2 mb-3">Contact Information (Optional)</h5>
+
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Providing contact information lets our team follow up if more details are needed. You will still remain anonymous to everyone else.
                             </div>
                             
-                            <div id="contactInfo" style="display: none;">
-                                <div class="alert alert-warning">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    <strong>Optional Contact Information:</strong> Providing your contact information allows us to follow up with you and provide support.
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.reporter_name.id_for_label }}" class="form-label">Your Name</label>
+                                    {{ form.reporter_name }}
+                                    <div class="form-text">{{ form.reporter_name.help_text }}</div>
                                 </div>
                                 
-                                <div class="row">
-                                    <div class="col-md-4 mb-3">
-                                        <label for="{{ form.reporter_name.id_for_label }}" class="form-label">Your Name</label>
-                                        {{ form.reporter_name }}
-                                    </div>
-                                    
-                                    <div class="col-md-4 mb-3">
-                                        <label for="{{ form.reporter_email.id_for_label }}" class="form-label">Your Email</label>
-                                        {{ form.reporter_email }}
-                                    </div>
-                                    
-                                    <div class="col-md-4 mb-3">
-                                        <label for="{{ form.reporter_phone.id_for_label }}" class="form-label">Your Phone</label>
-                                        {{ form.reporter_phone }}
-                                    </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.reporter_email.id_for_label }}" class="form-label">Your Email</label>
+                                    {{ form.reporter_email }}
+                                    <div class="form-text">{{ form.reporter_email.help_text }}</div>
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.reporter_phone.id_for_label }}" class="form-label">Your Phone</label>
+                                    {{ form.reporter_phone }}
+                                    <div class="form-text">{{ form.reporter_phone.help_text }}</div>
                                 </div>
                             </div>
                         </div>
@@ -251,25 +244,7 @@
 </script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Toggle contact info
-    const anonymousCheckbox = document.getElementById('is_anonymous');
-    const contactInfo = document.getElementById('contactInfo');
-    const emailInput = document.getElementById('reporter_email');
-    
-    function toggleContactInfo() {
-        const anon = anonymousCheckbox.checked;
-        contactInfo.style.display = anon ? 'none' : 'block';
-        if (anon) {
-            emailInput.removeAttribute('required');
-        } else {
-            emailInput.setAttribute('required', 'required');
-        }
-        }
-    }
-    anonymousCheckbox.addEventListener('change', toggleContactInfo);
-    toggleContactInfo();
-    
+document.addEventListener('DOMContentLoaded', function() {  
     // Validate description
     document.getElementById('reportForm').addEventListener('submit', function(e) {
         const description = document.getElementById('description').value.trim();

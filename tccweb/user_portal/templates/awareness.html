@@ -68,30 +68,40 @@
                 <h5 class="mb-0">Filter Resources</h5>
             </div>
             <div class="col-md-6">
-                <div class="d-flex gap-2 flex-wrap justify-content-end">
+                <form method="get" class="d-flex gap-2 flex-wrap justify-content-end" role="search">
                     <div class="input-group input-group-sm">
-<label class="input-group-text" for="categoryFilter"><i class="fas fa-tags" aria-hidden="true"></i><span class="visually-hidden">Category</span></label>
-                        <select class="form-select" id="categoryFilter" aria-label="Filter by category" onchange="filterResources()">
-                            <option value="all">All Categories</option>
-                            <option value="prevention">Prevention</option>
-                            <option value="support">Support</option>
-                            <option value="awareness">Awareness</option>
+                        <label class="input-group-text" for="categoryFilter"><i class="fas fa-tags" aria-hidden="true"></i><span class="visually-hidden">Category</span></label>
+                        <select class="form-select" id="categoryFilter" name="category" aria-label="Filter by category" onchange="this.form.submit()">
+                            <option value="all" {% if category == 'all' %}selected{% endif %}>All Categories</option>
+                            <option value="prevention" {% if category == 'prevention' %}selected{% endif %}>Prevention</option>
+                            <option value="support" {% if category == 'support' %}selected{% endif %}>Support</option>
+                            <option value="awareness" {% if category == 'awareness' %}selected{% endif %}>Awareness</option>
                         </select>
                     </div>
                     <div class="input-group input-group-sm">
                         <label class="input-group-text" for="typeFilter"><i class="fas fa-shapes" aria-hidden="true"></i><span class="visually-hidden">Type</span></label>
-                        <select class="form-select" id="typeFilter" aria-label="Filter by type" onchange="filterResources()">
-                            <option value="all">All Types</option>
-                            <option value="article">Articles</option>
-                            <option value="video">Videos</option>
-                            <option value="quiz">Quizzes</option>
+                        <select class="form-select" id="typeFilter" name="type" aria-label="Filter by type" onchange="this.form.submit()">
+                            <option value="all" {% if type == 'all' %}selected{% endif %}>All Types</option>
+                            <option value="article" {% if type == 'article' %}selected{% endif %}>Articles</option>
+                            <option value="video" {% if type == 'video' %}selected{% endif %}>Videos</option>
+                            <option value="quiz" {% if type == 'quiz' %}selected{% endif %}>Quizzes</option>
                         </select>
                     </div>
                     <div class="input-group input-group-sm">
                         <label class="input-group-text" for="searchFilter"><i class="fas fa-search" aria-hidden="true"></i><span class="visually-hidden">Search</span></label>
-                        <input type="text" class="form-control" id="searchFilter" placeholder="Search..." aria-label="Search resources" onkeyup="filterResources()">
+                        <input type="text" class="form-control" id="searchFilter" name="q" value="{{ query }}" placeholder="Search..." aria-label="Search resources">
                     </div>
-                </div>
+                    <div class="input-group input-group-sm">
+                        <label class="input-group-text" for="sortFilter"><i class="fas fa-sort" aria-hidden="true"></i><span class="visually-hidden">Sort</span></label>
+                        <select class="form-select" id="sortFilter" name="sort" aria-label="Sort resources" onchange="this.form.submit()">
+                            <option value="-created_at" {% if sort == '-created_at' %}selected{% endif %}>Newest</option>
+                            <option value="created_at" {% if sort == 'created_at' %}selected{% endif %}>Oldest</option>
+                            <option value="title" {% if sort == 'title' %}selected{% endif %}>Title A-Z</option>
+                            <option value="-title" {% if sort == '-title' %}selected{% endif %}>Title Z-A</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                </form>
             </div>
         </div>
     </div>
@@ -152,7 +162,7 @@
         </div>
     </div>
 </section>
-
+{% else %}
 <section class="py-5">
     <div class="container text-center">
         <i class="fas fa-user-friends text-muted" style="font-size: 3rem;"></i>
@@ -160,7 +170,6 @@
         <p class="text-muted">Contact information will be added soon. Check back later!</p>
     </div>
 </section>
-
 {% endif %}
 
 <!-- Recovery Resources -->
@@ -205,7 +214,7 @@
                             <span class="badge bg-secondary">{{ resource.category|title }}</span>
                             </div>
 
-                        <h5 class="card-title">{{ resource.title }}</h5>
+                            <h5 class="card-title">{{ resource.title }}</h5>
                             <p class="card-text text-muted">{{ resource.content|striptags|truncatechars:150 }}</p>
 
                             <div class="mt-auto">
@@ -224,10 +233,15 @@
                                 <a class="btn btn-outline-primary btn-sm" href="{{ resource.url }}" target="_blank" rel="noopener">
                                     <i class="fas fa-external-link-alt me-1"></i>Open Resource
                                 </a>
-                            {% else %}
+                            {% elif resource.file %}
                                 <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
                                         data-bs-target="#resourceModal" data-title="{{ resource.title|escapejs }}"
-                                        data-content="{{ resource.content|escapejs }}">
+                                        data-file="{{ resource.file.url|escapejs }}">
+                                    <i class="fas fa-download me-1"></i>Download Resource
+                                </button>
+                            {% else %}
+                                <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
+                                        data-bs-target="#resourceModal" data-resource-id="{{ resource.id }}">
                                     <i class="fas fa-eye me-1"></i>View Resource
                                 </button>
                             {% endif %}
@@ -236,6 +250,25 @@
                 </div>
                 {% endfor %}
             </div>
+
+            {% if resources.has_other_pages %}
+            <nav aria-label="Resource pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if resources.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?q={{ query }}&category={{ category }}&type={{ type }}&sort={{ sort }}&page={{ resources.previous_page_number }}">Previous</a>
+                    </li>
+                    {% endif %}
+                    <li class="page-item disabled"><span class="page-link">Page {{ resources.number }} of {{ resources.paginator.num_pages }}</span></li>
+                    {% if resources.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?q={{ query }}&category={{ category }}&type={{ type }}&sort={{ sort }}&page={{ resources.next_page_number }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
             {% else %}
             <div class="text-center py-5">
                 <i class="fas fa-book-open text-muted" style="font-size: 3rem;"></i>
@@ -361,39 +394,37 @@
     </div>
 </div>
 {% endblock %}
-
+<script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
 {% block extra_scripts %}
 <script>
-function filterResources() {
-    const categoryFilter = document.getElementById('categoryFilter').value;
-    const typeFilter = document.getElementById('typeFilter').value;
-    const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
-    const resources = document.querySelectorAll('.resource-item');
-    
-    resources.forEach(function(resource) {
-        const category = resource.getAttribute('data-category');
-        const type = resource.getAttribute('data-type');
-        const title = resource.querySelector('.card-title').textContent.toLowerCase();
-        
-        const categoryMatch = categoryFilter === 'all' || category === categoryFilter;
-        const typeMatch = typeFilter === 'all' || type === typeFilter;
-        
-        const searchMatch = title.includes(searchFilter);
-
-        if (categoryMatch && typeMatch && searchMatch) {
-            resource.style.display = 'block';
-        } else {
-            resource.style.display = 'none';
-        }
-    });
-}
-
 document.getElementById('resourceModal').addEventListener('show.bs.modal', function (event) {
     const button = event.relatedTarget;
-    const title = button.getAttribute('data-title');
-    const content = button.getAttribute('data-content');
-    document.getElementById('resourceModalTitle').textContent = title;
-    document.getElementById('resourceModalBody').innerHTML = content;
+    const resourceId = button.getAttribute('data-resource-id');
+    const titleEl = document.getElementById('resourceModalTitle');
+    const bodyEl = document.getElementById('resourceModalBody');
+    titleEl.textContent = 'Loading...';
+    bodyEl.innerHTML = '<p class="text-center">Loading...</p>';
+    fetch(`/resource/${resourceId}/`)
+        .then(response => response.json())
+        .then(data => {
+            titleEl.textContent = data.title;
+            if (data.content) {
+                bodyEl.innerHTML = data.content;
+            } else if (data.file) {
+                const fileLower = data.file.toLowerCase();
+                if (fileLower.endsWith('.pdf')) {
+                    bodyEl.innerHTML = `<iframe src="${data.file}" class="w-100" style="height:500px;" frameborder="0"></iframe>`;
+                } else {
+                    bodyEl.innerHTML = `<a href="${data.file}" target="_blank" rel="noopener">Download File</a>`;
+                }
+            } else {
+                bodyEl.innerHTML = '<p>No content available.</p>';
+            }
+        })
+        .catch(() => {
+            titleEl.textContent = 'Error';
+            bodyEl.innerHTML = '<p>Could not load resource.</p>';
+        });
 });
 
 document.addEventListener('DOMContentLoaded', function () {

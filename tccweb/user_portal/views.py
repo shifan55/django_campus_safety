@@ -5,6 +5,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.core.paginator import Paginator
+from django.db.models import Q
 from tccweb.core.models import Report, EducationalResource, SupportContact
 from tccweb.core.forms import LoginForm, RegistrationForm, AnonymousReportForm, ReportForm
 from django.conf import settings
@@ -16,9 +18,39 @@ def index(request):
 
 
 def awareness(request):
-    resources = EducationalResource.objects.filter(is_public=True).order_by('-created_at')
+    resources = EducationalResource.objects.filter(is_public=True)
+
+    category = request.GET.get('category')
+    resource_type = request.GET.get('type')
+    query = request.GET.get('q')
+    sort = request.GET.get('sort', '-created_at')
+
+    if category and category != 'all':
+        resources = resources.filter(category=category)
+    if resource_type and resource_type != 'all':
+        resources = resources.filter(resource_type=resource_type)
+    if query:
+        resources = resources.filter(Q(title__icontains=query) | Q(content__icontains=query))
+
+    allowed_sorts = ['title', '-title', 'created_at', '-created_at']
+    if sort not in allowed_sorts:
+        sort = '-created_at'
+    resources = resources.order_by(sort)
+
+    paginator = Paginator(resources, 6)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     contacts = SupportContact.objects.filter(is_available=True).order_by('name')
-    return render(request, 'awareness.html', {'resources': resources, 'contacts': contacts})
+    context = {
+        'resources': page_obj,
+        'contacts': contacts,
+        'category': category or 'all',
+        'type': resource_type or 'all',
+        'query': query or '',
+        'sort': sort,
+    }
+    return render(request, 'awareness.html', context)
 
 def resource_detail(request, resource_id):
     """Return JSON details for a single educational resource."""
@@ -76,6 +108,13 @@ def register(request):
 def report_anonymous(request):
     if request.method == 'POST':
         form = AnonymousReportForm(request.POST)
+    else:
+        form = AnonymousReportForm()
+    context = {
+        'form': form,
+        'GOOGLE_MAPS_API_KEY': getattr(settings, 'GOOGLE_MAPS_API_KEY', ''),
+    }
+    if request.method == 'POST':
         if form.is_valid():
             report = Report.objects.create(
                 incident_type=form.cleaned_data['incident_type'],
@@ -84,22 +123,44 @@ def report_anonymous(request):
                 location=form.cleaned_data.get('location', ''),
                 latitude=form.cleaned_data.get('latitude'),
                 longitude=form.cleaned_data.get('longitude'),
+                reporter_name=form.cleaned_data.get('reporter_name', ''),
+                reporter_email=form.cleaned_data.get('reporter_email', ''),
+                reporter_phone=form.cleaned_data.get('reporter_phone', ''),
                 is_anonymous=True,
             )
             messages.success(request, 'Report submitted successfully.')
-            return redirect('report_success', report_id=report.id)
-    else:
-        form = AnonymousReportForm()
-        context = {
-        'form': form,
-        'GOOGLE_MAPS_API_KEY': getattr(settings, 'GOOGLE_MAPS_API_KEY', ''),
-    }
+            return redirect('report_success', tracking_code=report.tracking_code)
     return render(request, 'report_anonymous.html', context)
 
 
 @login_required
 def dashboard(request):
-    return render(request, 'dashboard.html')
+    query = request.GET.get('q')
+    sort = request.GET.get('sort', '-created_at')
+
+    if request.user.is_staff:
+        reports_qs = Report.objects.filter(assigned_to=request.user)
+    else:
+        reports_qs = Report.objects.filter(reporter=request.user)
+
+    if query:
+        reports_qs = reports_qs.filter(description__icontains=query)
+
+    allowed_sorts = ['incident_type', 'status', 'created_at', '-created_at']
+    if sort not in allowed_sorts:
+        sort = '-created_at'
+    reports_qs = reports_qs.order_by(sort)
+
+    paginator = Paginator(reports_qs, 10)
+    page_number = request.GET.get('page')
+    user_reports = paginator.get_page(page_number)
+
+    context = {
+        'user_reports': user_reports,
+        'query': query or '',
+        'sort': sort,
+    }
+    return render(request, 'dashboard.html', context)
 
 
 @login_required
@@ -115,7 +176,7 @@ def submit_report(request):
             report.is_anonymous = form.cleaned_data.get('is_anonymous')
             report.save()
             messages.success(request, 'Report submitted successfully.')
-            return redirect('report_success', report_id=report.id)
+            return redirect('report_success', tracking_code=report.tracking_code)
     else:
         initial = {
             'reporter_name': request.user.get_full_name() or request.user.username,
@@ -127,8 +188,19 @@ def submit_report(request):
     return render(request, 'submit_report.html', {'form': form})
 
 
-def report_success(request, report_id):
-    return render(request, 'report_success.html', {'report_id': report_id})
+def track_report(request):
+    report = None
+    if request.method == 'POST':
+        code = request.POST.get('tracking_code', '').strip()
+        try:
+            report = Report.objects.get(tracking_code=code)
+        except Report.DoesNotExist:
+            messages.error(request, 'No report found with that tracking code.')
+    return render(request, 'track_report.html', {'report': report})
+
+
+def report_success(request, tracking_code):
+    return render(request, 'report_success.html', {'tracking_code': tracking_code})
 
 
 @login_required

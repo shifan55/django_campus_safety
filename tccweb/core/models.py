@@ -2,6 +2,11 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
+import uuid
+
+def generate_tracking_code():
+    """Generate a short unique tracking code for anonymous lookups."""
+    return uuid.uuid4().hex[:10].upper()
 
 class ReportType(models.TextChoices):
     BULLYING = 'bullying', 'Bullying'
@@ -33,6 +38,7 @@ class Report(models.Model):
     reporter_name = models.CharField(max_length=100, blank=True, null=True)
     reporter_email = models.EmailField(blank=True, null=True)
     reporter_phone = models.CharField(max_length=20, blank=True, null=True)
+    tracking_code = models.CharField(max_length=12, unique=True, default=generate_tracking_code, editable=False)
 
     status = models.CharField(max_length=50, choices=ReportStatus.choices, default=ReportStatus.PENDING)
 
