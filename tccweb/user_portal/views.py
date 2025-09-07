@@ -84,10 +84,13 @@ def report_anonymous(request):
                 location=form.cleaned_data.get('location', ''),
                 latitude=form.cleaned_data.get('latitude'),
                 longitude=form.cleaned_data.get('longitude'),
+                reporter_name=form.cleaned_data.get('reporter_name', ''),
+                reporter_email=form.cleaned_data.get('reporter_email', ''),
+                reporter_phone=form.cleaned_data.get('reporter_phone', ''),
                 is_anonymous=True,
             )
             messages.success(request, 'Report submitted successfully.')
-            return redirect('report_success', report_id=report.id)
+            return redirect('report_success', tracking_code=report.tracking_code)
     else:
         form = AnonymousReportForm()
         context = {
@@ -115,7 +118,7 @@ def submit_report(request):
             report.is_anonymous = form.cleaned_data.get('is_anonymous')
             report.save()
             messages.success(request, 'Report submitted successfully.')
-            return redirect('report_success', report_id=report.id)
+            return redirect('report_success', tracking_code=report.tracking_code)
     else:
         initial = {
             'reporter_name': request.user.get_full_name() or request.user.username,
@@ -127,8 +130,19 @@ def submit_report(request):
     return render(request, 'submit_report.html', {'form': form})
 
 
-def report_success(request, report_id):
-    return render(request, 'report_success.html', {'report_id': report_id})
+def track_report(request):
+    report = None
+    if request.method == 'POST':
+        code = request.POST.get('tracking_code', '').strip()
+        try:
+            report = Report.objects.get(tracking_code=code)
+        except Report.DoesNotExist:
+            messages.error(request, 'No report found with that tracking code.')
+    return render(request, 'track_report.html', {'report': report})
+
+
+def report_success(request, tracking_code):
+    return render(request, 'report_success.html', {'tracking_code': tracking_code})
 
 
 @login_required

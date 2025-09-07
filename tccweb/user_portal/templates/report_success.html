@@ -17,8 +17,8 @@
                         received and will be reviewed by our safety team.
                     </p>
                     <p class="card-text">
-                        Your tracking ID is <strong>{{ report_id }}</strong>. Keep this
-                        number in a safe place so you can reference or update your
+                        Your tracking code is <strong>{{ tracking_code }}</strong>. Keep this
+                        code in a safe place so you can check the status of your
                         report later.
                     </p>
                     <div class="text-start mx-auto" style="max-width: 400px;">
@@ -28,8 +28,8 @@
                                 for more information.
                             </li>
                             <li>
-                                Registered users can follow progress from the
-                                <a href="{% url 'dashboard' %}">dashboard</a>.
+                                You can check the status of this report anytime on the
+                                <a href="{% url 'track_report' %}">tracking page</a> using your code.
                             </li>
                             <li>
                                 For immediate threats, call emergency services or visit the

@@ -129,21 +129,18 @@ class AnonymousReportForm(forms.Form):
 
     reporter_name = forms.CharField(
         required=False,
+        help_text="Optional. Provide if you are comfortable sharing your name.",
         widget=forms.TextInput(attrs={"class": "form-control", "id": "reporter_name"})
     )
     reporter_email = forms.EmailField(
         required=False,
+        help_text="Optional. We'll use this only to follow up about your report.",
         widget=forms.EmailInput(attrs={"class": "form-control", "id": "reporter_email"})
     )
     reporter_phone = forms.CharField(
         required=False,
+        help_text="Optional. A phone number in case we need more information.",
         widget=forms.TextInput(attrs={"class": "form-control", "id": "reporter_phone"})
-    )
-
-    # allow users to choose anonymity
-    is_anonymous = forms.BooleanField(
-        required=False,
-        widget=forms.HiddenInput(attrs={"id": "is_anonymous"})
     )
 
 class EducationalResourceForm(forms.ModelForm):

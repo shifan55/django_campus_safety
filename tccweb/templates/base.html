@@ -74,12 +74,15 @@
                                 <li class="nav-item">
                                     <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'index' %}">Home</a>
                                 </li>
-                                <li class="nav-item">
-                                    <a class="nav-link {% if request.resolver_match.url_name == 'submit_report' %}active{% endif %}" href="{% url 'submit_report' %}">Report</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Dashboard</a>
-                                </li>
+                                  <li class="nav-item">
+                                      <a class="nav-link {% if request.resolver_match.url_name == 'submit_report' %}active{% endif %}" href="{% url 'submit_report' %}">Report</a>
+                                  </li>
+                                  <li class="nav-item">
+                                      <a class="nav-link {% if request.resolver_match.url_name == 'track_report' %}active{% endif %}" href="{% url 'track_report' %}">Track</a>
+                                  </li>
+                                  <li class="nav-item">
+                                      <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Dashboard</a>
+                                  </li>
                                 <li class="nav-item">
                                     <a class="nav-link {% if request.resolver_match.url_name == 'awareness' %}active{% endif %}" href="{% url 'awareness' %}">Awareness Hub</a>
                                 </li>
@@ -95,6 +98,9 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {% if request.resolver_match.url_name == 'report_anonymous' %}active{% endif %}" href="{% url 'report_anonymous' %}">Report</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'track_report' %}active{% endif %}" href="{% url 'track_report' %}">Track</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {% if request.resolver_match.url_name == 'awareness' %}active{% endif %}" href="{% url 'awareness' %}">Awareness Hub</a>
