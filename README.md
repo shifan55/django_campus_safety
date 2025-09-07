@@ -21,7 +21,8 @@ python manage.py runserver
 - `/register` -> register
 - `/report-anonymous` -> anonymous report
 - `/submit-report` -> authenticated report (requires login)
-- `/report-success/<id>` -> success page
+- `/report-success/<tracking_code>` -> success page
+- `/track-report` -> check report status using tracking code
 - `/awareness` -> resources/contacts
 
 Static files live under `tccweb/static`. Templates under `tccweb/templates`.
