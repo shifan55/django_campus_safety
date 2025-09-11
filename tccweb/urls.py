@@ -24,6 +24,7 @@ urlpatterns = [
     path('', include('tccweb.user_portal.urls')),
     path('portal/', include('tccweb.admin_portal.urls')),
     path('accounts/', include('allauth.urls')),
+    path('counselor/', include('tccweb.counselor_portal.urls')),
 ]
 
 if settings.DEBUG:

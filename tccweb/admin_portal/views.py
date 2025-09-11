@@ -7,6 +7,9 @@ from django.db.models.functions import TruncMonth
 from tccweb.core.models import Report, EducationalResource, ReportType, ReportStatus, Quiz
 from tccweb.core.forms import EducationalResourceForm, QuizForm, QuizQuestionFormSet
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.http import HttpResponse
+import csv
+from .forms import CounselorCreationForm
 
 try:
     from tccweb.core.models import Quiz  # or wherever your Quiz model is
@@ -52,11 +55,11 @@ def admin_dashboard(request):
 @login_required
 @user_passes_test(lambda u: u.is_superuser or u.is_staff)
 def admin_reports(request):
-    reports = Report.objects.select_related('reporter', 'assigned_to').all()
-    incident_type = request.GET.get('type')
-    status = request.GET.get('status')
-    start = request.GET.get('start')
-    end = request.GET.get('end')
+    reports = Report.objects.select_related("reporter", "assigned_to").all()
+    incident_type = request.GET.get("type")
+    status = request.GET.get("status")
+    start = request.GET.get("start")
+    end = request.GET.get("end")
     if incident_type:
         reports = reports.filter(incident_type=incident_type)
     if status:
@@ -65,12 +68,31 @@ def admin_reports(request):
         reports = reports.filter(created_at__date__gte=start)
     if end:
         reports = reports.filter(created_at__date__lte=end)
+    
+    if request.GET.get("export") == "csv":
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = "attachment; filename=reports.csv"
+        writer = csv.writer(response)
+        writer.writerow(["ID", "Type", "Status", "Reporter", "Submitted"])
+        for r in reports:
+            reporter = "Anonymous" if r.is_anonymous else (r.reporter.username if r.reporter else "")
+            writer.writerow([
+                r.id,
+                r.get_incident_type_display(),
+                r.status,
+                reporter,
+                r.created_at.strftime("%Y-%m-%d"),
+            ])
+        return response
+
+    locations = reports.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
     ctx = {
-        'reports': reports,
-        'types': ReportType.choices,
-        'statuses': ReportStatus.choices,
+        "reports": reports,
+        "types": ReportType.choices,
+        "statuses": ReportStatus.choices,
+        "locations": locations,
     }
-    return render(request, 'admin_reports.html', ctx)
+    return render(request, "admin_reports.html", ctx)
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser or u.is_staff)
@@ -81,10 +103,13 @@ def admin_case_assignment(request):
         report_id = request.POST.get('report_id')
         assigned_to = request.POST.get('assigned_to')
         status = request.POST.get('status')
+        notes = request.POST.get('notes')
         report = get_object_or_404(Report, id=report_id)
         report.assigned_to_id = assigned_to or None
         if status:
             report.status = status
+        if notes is not None:
+            report.counselor_notes = notes
         report.save()
         messages.success(request, 'Report updated.')
         return redirect('admin_case_assignment')
@@ -164,18 +189,32 @@ def admin_awareness(request):
     return render(request, 'admin_awareness.html', context)
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser or u.is_staff)
+@user_passes_test(lambda u: u.is_superuser)
 def admin_user_management(request):
-    users = User.objects.all().order_by('username')
+    counselors = User.objects.filter(is_staff=True, is_superuser=False).order_by('username')
+    students = User.objects.filter(is_staff=False).order_by('username')
+    form = CounselorCreationForm()
+    form = CounselorCreationForm()
     if request.method == 'POST':
-        uid = request.POST.get('user_id')
-        action = request.POST.get('action')
-        target = get_object_or_404(User, id=uid)
-        if action == 'approve':
-            target.is_staff = True
-        elif action == 'revoke':
-            target.is_staff = False
-        target.save()
-        messages.success(request, 'User updated.')
-        return redirect('admin_user_management')
-    return render(request, 'admin_user_management.html', {'users': users})
+        if request.POST.get('form_type') == 'create':
+            form = CounselorCreationForm(request.POST)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Counselor account created.')
+                return redirect('admin_user_management')
+        else:
+            uid = request.POST.get('user_id')
+            action = request.POST.get('action')
+            target = get_object_or_404(User, id=uid)
+            if action == 'approve':
+                target.is_staff = True
+            elif action == 'revoke':
+                target.is_staff = False
+            target.save()
+            messages.success(request, 'User updated.')
+            return redirect('admin_user_management')
+    return render(
+        request,
+        'admin_user_management.html',
+        {'counselors': counselors, 'students': students, 'form': form},
+    )

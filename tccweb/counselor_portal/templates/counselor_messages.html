@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Messages{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Recent Messages</h2>
+    <ul class="list-group">
+        {% for msg in messages %}
+            <li class="list-group-item">
+                <a href="{% url 'counselor_case_detail' msg.report.id %}">Report #{{ msg.report.id }}</a> -
+                <strong>{{ msg.sender.username }}</strong>: {{ msg.message|truncatewords:20 }}
+                <br><small class="text-muted">{{ msg.timestamp }}</small>
+            </li>
+        {% empty %}
+            <li class="list-group-item">No messages.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

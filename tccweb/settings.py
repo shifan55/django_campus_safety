@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'tccweb.core',
     'tccweb.admin_portal',
     'tccweb.user_portal',
+    'tccweb.counselor_portal',
     "django.contrib.sites",
     "widget_tweaks",
         # Allauth

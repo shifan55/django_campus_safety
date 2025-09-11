@@ -49,6 +49,7 @@ class Report(models.Model):
         on_delete=models.SET_NULL,
     )
 
+    counselor_notes = models.TextField(blank=True)
     
     def __str__(self):
         return f"{self.get_incident_type_display()} on {self.incident_date:%Y-%m-%d}"

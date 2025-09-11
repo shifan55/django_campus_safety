@@ -62,6 +62,8 @@ def resource_detail(request, resource_id):
         "url": resource.url,
         "resource_type": resource.resource_type,
     }
+    if resource.file:
+        data["file"] = resource.file.url
     return JsonResponse(data)
 
 def login_view(request):

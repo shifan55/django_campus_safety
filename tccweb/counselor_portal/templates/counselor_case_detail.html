@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}Case Detail{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Report #{{ report.id }}</h2>
+    <p><strong>Type:</strong> {{ report.get_incident_type_display }}</p>
+    <p><strong>Status:</strong> {{ report.get_status_display }}</p>
+
+    <hr>
+    <h3>Case Notes</h3>
+    <form method="post" class="mb-3">
+        {% csrf_token %}
+        {{ note_form.as_p }}
+        <button class="btn btn-primary" name="add_note">Add Note</button>
+    </form>
+    <ul class="list-group mb-4">
+        {% for note in notes %}
+            <li class="list-group-item">
+                <small class="text-muted">{{ note.created_at }}</small><br>
+                {{ note.note|linebreaksbr }}
+            </li>
+        {% empty %}
+            <li class="list-group-item">No notes yet.</li>
+        {% endfor %}
+    </ul>
+
+    <h3>Messages</h3>
+    {% if report.reporter %}
+    <form method="post" class="mb-3">
+        {% csrf_token %}
+        {{ msg_form.as_p }}
+        <button class="btn btn-secondary" name="send_msg">Send</button>
+    </form>
+    {% else %}
+    <p class="text-muted">Reporter is anonymous; messaging disabled.</p>
+    {% endif %}
+    <ul class="list-group">
+        {% for message in messages %}
+            <li class="list-group-item">
+                <strong>{{ message.sender.username }}:</strong> {{ message.message|linebreaksbr }}
+                <br><small class="text-muted">{{ message.timestamp }}</small>
+            </li>
+        {% empty %}
+            <li class="list-group-item">No messages.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

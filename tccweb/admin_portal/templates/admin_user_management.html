@@ -1,36 +1,97 @@
 {% extends "base.html" %}
+{% load widget_tweaks %}
 {% block title %}User Management - Safe Campus{% endblock %}
 {% block content %}
 <div class="container py-4">
   <h1 class="mb-3">User Management</h1>
-  <div class="table-responsive">
-    <table class="table table-striped">
-      <thead>
-        <tr><th>Username</th><th>Email</th><th>Staff</th><th>Action</th></tr>
-      </thead>
-      <tbody>
-        {% for u in users %}
-        <tr>
-          <td>{{ u.username }}</td>
-          <td>{{ u.email }}</td>
-          <td>{{ u.is_staff }}</td>
-          <td>
-            <form method="post" class="d-inline">
-              {% csrf_token %}
-              <input type="hidden" name="user_id" value="{{ u.id }}">
-              {% if u.is_staff %}
-              <button class="btn btn-warning btn-sm" name="action" value="revoke">Revoke</button>
-              {% else %}
-              <button class="btn btn-success btn-sm" name="action" value="approve">Approve</button>
-              {% endif %}
-            </form>
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="4" class="text-center">No users.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Counselor Panel</h5>
+          <form method="post" class="mb-4">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="create">
+            {{ form.non_field_errors }}
+            <div class="row">
+              {% for field in form %}
+              <div class="col-md-6 mb-3">
+                {{ field.label_tag }}
+                {% if field.errors %}
+                  {% render_field field class+="form-control is-invalid" %}
+                  {% for error in field.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                  {% endfor %}
+                {% else %}
+                  {{ field|add_class:"form-control" }}
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary">Create Counselor</button>
+            </div>
+          </form>
+          <h6>Existing Counselors</h6>
+          <div class="table-responsive">
+            <table class="table table-striped">
+              <thead>
+                <tr><th>Username</th><th>Email</th><th>Action</th></tr>
+              </thead>
+              <tbody>
+                {% for u in counselors %}
+                <tr>
+                  <td>{{ u.username }}</td>
+                  <td>{{ u.email }}</td>
+                  <td>
+                    <form method="post" class="d-inline">
+                      {% csrf_token %}
+                      <input type="hidden" name="user_id" value="{{ u.id }}">
+                      <button class="btn btn-warning btn-sm" name="action" value="revoke">Revoke</button>
+                    </form>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="text-center">No counselors.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Admin Panel</h5>
+          <div class="table-responsive">
+            <table class="table table-striped">
+              <thead>
+                <tr><th>Username</th><th>Email</th><th>Action</th></tr>
+              </thead>
+              <tbody>
+                {% for u in students %}
+                <tr>
+                  <td>{{ u.username }}</td>
+                  <td>{{ u.email }}</td>
+                  <td>
+                    <form method="post" class="d-inline">
+                      {% csrf_token %}
+                      <input type="hidden" name="user_id" value="{{ u.id }}">
+                      <button class="btn btn-success btn-sm" name="action" value="approve">Approve</button>
+                    </form>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="text-center">No pending users.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}

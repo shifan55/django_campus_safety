@@ -394,37 +394,52 @@
     </div>
 </div>
 {% endblock %}
-<script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
 {% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
 <script>
 document.getElementById('resourceModal').addEventListener('show.bs.modal', function (event) {
     const button = event.relatedTarget;
     const resourceId = button.getAttribute('data-resource-id');
+    const fileAttr = button.getAttribute('data-file');
+    const titleAttr = button.getAttribute('data-title') || 'Resource';
     const titleEl = document.getElementById('resourceModalTitle');
     const bodyEl = document.getElementById('resourceModalBody');
     titleEl.textContent = 'Loading...';
     bodyEl.innerHTML = '<p class="text-center">Loading...</p>';
-    fetch(`/resource/${resourceId}/`)
-        .then(response => response.json())
-        .then(data => {
-            titleEl.textContent = data.title;
-            if (data.content) {
-                bodyEl.innerHTML = data.content;
-            } else if (data.file) {
-                const fileLower = data.file.toLowerCase();
-                if (fileLower.endsWith('.pdf')) {
-                    bodyEl.innerHTML = `<iframe src="${data.file}" class="w-100" style="height:500px;" frameborder="0"></iframe>`;
+
+    function displayFile(url) {
+        const lower = url.toLowerCase();
+        if (lower.endsWith('.pdf')) {
+            bodyEl.innerHTML = `<iframe src="${url}" class="w-100" style="height:500px;" frameborder="0"></iframe>`;
+        } else {
+            bodyEl.innerHTML = `<a href="${url}" target="_blank" rel="noopener">Download File</a>`;
+        }
+    }
+
+    if (fileAttr) {
+        titleEl.textContent = titleAttr;
+        displayFile(fileAttr);
+    } else if (resourceId) {
+        fetch(`/resource/${resourceId}/`)
+            .then(response => response.json())
+            .then(data => {
+                titleEl.textContent = data.title;
+                if (data.content) {
+                    bodyEl.innerHTML = DOMPurify.sanitize(data.content);
+                } else if (data.file) {
+                    displayFile(data.file);
                 } else {
-                    bodyEl.innerHTML = `<a href="${data.file}" target="_blank" rel="noopener">Download File</a>`;
+                    bodyEl.innerHTML = '<p>No content available.</p>';
                 }
-            } else {
-                bodyEl.innerHTML = '<p>No content available.</p>';
-            }
-        })
-        .catch(() => {
-            titleEl.textContent = 'Error';
-            bodyEl.innerHTML = '<p>Could not load resource.</p>';
-        });
+                        })
+            .catch(() => {
+                titleEl.textContent = 'Error';
+                bodyEl.innerHTML = '<p>Could not load resource.</p>';
+            });
+    } else {
+        titleEl.textContent = 'Error';
+        bodyEl.innerHTML = '<p>Invalid resource.</p>';
+    }
 });
 
 document.addEventListener('DOMContentLoaded', function () {

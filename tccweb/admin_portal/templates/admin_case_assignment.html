@@ -36,6 +36,7 @@
                 <option value="{{ val }}" {% if report.status == val %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
               </select>
+              <input type="text" name="notes" value="{{ report.counselor_notes }}" class="form-control form-control-sm me-1" placeholder="Notes">
               <button class="btn btn-primary btn-sm" type="submit">Save</button>
             </form>
           </td>
