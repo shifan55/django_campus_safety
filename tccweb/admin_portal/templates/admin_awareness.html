@@ -111,6 +111,19 @@
             <li class="list-group-item text-muted">No resources yet.</li>
           {% endfor %}
         </ul>
+        {% if resources.has_other_pages %}
+        <nav aria-label="Resource pagination" class="mt-3">
+          <ul class="pagination justify-content-center">
+            {% if resources.has_previous %}
+            <li class="page-item"><a class="page-link" href="?resource_page={{ resources.previous_page_number }}&quiz_page={{ quizzes.number }}">Previous</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link">Page {{ resources.number }} of {{ resources.paginator.num_pages }}</span></li>
+            {% if resources.has_next %}
+            <li class="page-item"><a class="page-link" href="?resource_page={{ resources.next_page_number }}&quiz_page={{ quizzes.number }}">Next</a></li>
+            {% endif %}
+          </ul>
+        </nav>
+        {% endif %}
       </div>
 
       <div class="card shadow-sm">
@@ -127,6 +140,19 @@
             <li class="list-group-item text-muted">No quizzes yet.</li>
           {% endfor %}
         </ul>
+        {% if quizzes.has_other_pages %}
+        <nav aria-label="Quiz pagination" class="mt-3">
+          <ul class="pagination justify-content-center">
+            {% if quizzes.has_previous %}
+            <li class="page-item"><a class="page-link" href="?resource_page={{ resources.number }}&quiz_page={{ quizzes.previous_page_number }}">Previous</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link">Page {{ quizzes.number }} of {{ quizzes.paginator.num_pages }}</span></li>
+            {% if quizzes.has_next %}
+            <li class="page-item"><a class="page-link" href="?resource_page={{ resources.number }}&quiz_page={{ quizzes.next_page_number }}">Next</a></li>
+            {% endif %}
+          </ul>
+        </nav>
+        {% endif %}
       </div>
     </div>
   </div>

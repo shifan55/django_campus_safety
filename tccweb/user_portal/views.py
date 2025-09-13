@@ -14,12 +14,23 @@ from django.conf import settings
 
 
 def index(request):
-    recent_resources = EducationalResource.objects.filter(is_public=True).order_by('-created_at')[:3]
-    return render(request, 'index.html', {'recent_resources': recent_resources})
+    recent_resources = (
+        EducationalResource.objects.filter(is_public=True)
+        .select_related("created_by")
+        .order_by("-created_at")[:3]
+    )
+
+    context = {
+        "recent_resources": recent_resources,
+    }
+    return render(request, "index.html", context)
 
 
 def awareness(request):
-    resources = EducationalResource.objects.filter(is_public=True)
+    resources = (
+        EducationalResource.objects.filter(is_public=True)
+        .select_related("created_by")
+    )
 
     category = request.GET.get('category')
     resource_type = request.GET.get('type')
@@ -143,10 +154,11 @@ def dashboard(request):
     query = request.GET.get('q')
     sort = request.GET.get('sort', '-created_at')
 
+    reports_qs = Report.objects.select_related("reporter", "assigned_to")
     if request.user.is_staff:
-        reports_qs = Report.objects.filter(assigned_to=request.user)
+        reports_qs = reports_qs.filter(assigned_to=request.user)
     else:
-        reports_qs = Report.objects.filter(reporter=request.user)
+        reports_qs = reports_qs.filter(reporter=request.user)
 
     if query:
         reports_qs = reports_qs.filter(description__icontains=query)

@@ -1,14 +1,26 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.decorators import (
+    login_required,
+    user_passes_test,
+)
+from django.core.cache import caches
+from django.core.paginator import Paginator
+
+# Use the project's default cache backend for storing dashboard statistics
+cache = caches["default"]
 from django.db.models import Count
 from django.db.models.functions import TruncMonth
-from tccweb.core.models import Report, EducationalResource, ReportType, ReportStatus, Quiz
-from tccweb.core.forms import EducationalResourceForm, QuizForm, QuizQuestionFormSet
-from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponse
 import csv
+from tccweb.core.models import (
+    Report,
+    EducationalResource,
+    ReportType,
+    ReportStatus,
+)
+from tccweb.core.forms import EducationalResourceForm, QuizForm, QuizQuestionFormSet
 from .forms import CounselorCreationForm
 
 try:
@@ -31,17 +43,32 @@ def admin_dashboard(request):
         .order_by("-created_at")[:10]
     )
 
-    monthly_qs = (
-        Report.objects
-        .annotate(month=TruncMonth("created_at"))
-        .values("month")
-        .annotate(count=Count("id"))
-        .order_by("month")
-    )
-    monthly_stats = [{"month": m["month"].strftime("%Y-%m"), "count": m["count"]} for m in monthly_qs]
+    monthly_stats = cache.get("dashboard_monthly_stats")
+    if monthly_stats is None:
+        monthly_qs = (
+            Report.objects
+            .annotate(month=TruncMonth("created_at"))
+            .values("month")
+            .annotate(count=Count("id"))
+            .order_by("month")
+        )
+        monthly_stats = [
+            {"month": m["month"].strftime("%Y-%m"), "count": m["count"]}
+            for m in monthly_qs
+        ]
+        cache.set("dashboard_monthly_stats", monthly_stats, 300)
 
-    type_qs = Report.objects.values("incident_type").annotate(count=Count("id")).order_by("-count")
-    type_stats = [{"type": r["incident_type"], "count": r["count"]} for r in type_qs]
+    type_stats = cache.get("dashboard_type_stats") or []
+    if not type_stats:
+        type_qs = (
+            Report.objects.values("incident_type")
+            .annotate(count=Count("id")).order_by("-count")
+        )
+        type_stats = [
+            {"type": r["incident_type"], "count": r["count"]}
+            for r in type_qs
+        ]
+        cache.set("dashboard_type_stats", type_stats, 300)
 
     ctx = {
         "total_reports": total_reports,
@@ -89,11 +116,20 @@ def admin_reports(request):
         return response
 
     locations = reports.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
+    
+    paginator = Paginator(reports, 25)
+    page_number = request.GET.get("page")
+    reports_page = paginator.get_page(page_number)
+
+    params = request.GET.copy()
+    params.pop("page", None)
+    
     ctx = {
-        "reports": reports,
+        "reports": reports_page,
         "types": ReportType.choices,
         "statuses": ReportStatus.choices,
         "locations": locations,
+        "params": params.urlencode(),
     }
     return render(request, "admin_reports.html", ctx)
 
@@ -125,16 +161,31 @@ def admin_case_assignment(request):
 @login_required
 @user_passes_test(lambda u: u.is_superuser or u.is_staff)
 def admin_analytics(request):
-    monthly_qs = (
-        Report.objects
-        .annotate(month=TruncMonth('created_at'))
-        .values('month')
-        .annotate(count=Count('id'))
-        .order_by('month')
-    )
-    monthly_stats = [{'month': m['month'].strftime('%Y-%m'), 'count': m['count']} for m in monthly_qs]
-    type_qs = Report.objects.values('incident_type').annotate(count=Count('id')).order_by('-count')
-    type_stats = [{'type': r['incident_type'], 'count': r['count']} for r in type_qs]
+    monthly_stats = cache.get("dashboard_monthly_stats")
+    if monthly_stats is None:
+        monthly_qs = (
+            Report.objects
+            .annotate(month=TruncMonth('created_at'))
+            .values('month')
+            .annotate(count=Count('id'))
+            .order_by('month')
+        )
+        monthly_stats = [
+            {'month': m['month'].strftime('%Y-%m'), 'count': m['count']} for m in monthly_qs
+        ]
+        cache.set("dashboard_monthly_stats", monthly_stats, 300)
+
+    type_stats = cache.get("dashboard_type_stats") or []
+    if not type_stats:
+        type_qs = (
+            Report.objects.values('incident_type')
+            .annotate(count=Count('id')).order_by('-count')
+        )
+        type_stats = [
+            {'type': r['incident_type'], 'count': r['count']} for r in type_qs
+        ]
+        cache.set("dashboard_type_stats", type_stats, 300)
+
     locations = Report.objects.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
     return render(
         request,

@@ -152,11 +152,16 @@ class AdminAlert(models.Model):
         on_delete=models.CASCADE,
     )
     message = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     is_read = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["created_at"], name="adm_alert_created_idx"),
+            models.Index(fields=["admin"],      name="adm_alert_admin_idx"),
+            models.Index(fields=["report"],     name="adm_alert_report_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"Alert for report {self.report_id} to admin {self.admin_id}"

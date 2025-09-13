@@ -61,6 +61,23 @@
       </tbody>
     </table>
   </div>
+  {% if reports.has_other_pages %}
+  <nav aria-label="Report pagination">
+    <ul class="pagination justify-content-center mt-3">
+      {% if reports.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?{% if params %}{{ params }}&{% endif %}page={{ reports.previous_page_number }}">Previous</a>
+      </li>
+      {% endif %}
+      <li class="page-item disabled"><span class="page-link">Page {{ reports.number }} of {{ reports.paginator.num_pages }}</span></li>
+      {% if reports.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?{% if params %}{{ params }}&{% endif %}page={{ reports.next_page_number }}">Next</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
 </div>
 {% if locations %}
 <link
