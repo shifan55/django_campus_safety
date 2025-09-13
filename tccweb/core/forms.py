@@ -275,3 +275,13 @@ class ReportForm(forms.ModelForm):
             cleaned['reporter_phone'] = ''
 
         return cleaned
+
+
+class MessageForm(forms.Form):
+    message = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 2, "class": "form-control"})
+    )
+    parent_id = forms.IntegerField(
+        required=False,
+        widget=forms.HiddenInput(attrs={"id": "parent_id"}),
+    )

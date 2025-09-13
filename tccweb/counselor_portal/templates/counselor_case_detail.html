@@ -1,10 +1,25 @@
 {% extends 'base.html' %}
+{% load text_extras chat_filters %}
+{% load text_extras %}
 {% block title %}Case Detail{% endblock %}
 {% block content %}
 <div class="container mt-4">
     <h2>Report #{{ report.id }}</h2>
     <p><strong>Type:</strong> {{ report.get_incident_type_display }}</p>
-    <p><strong>Status:</strong> {{ report.get_status_display }}</p>
+    <p><strong>Status:</strong> <span class="badge bg-{{ report.status|status_badge }}">{{ report.get_status_display }}</span></p>
+    {% if report.status != 'resolved' %}
+    <form method="post" class="mb-3">
+        {% csrf_token %}
+        <button class="btn btn-success" name="resolve_case">Mark Resolved</button>
+    </form>
+    {% endif %}
+
+    {% if report.status != 'resolved' %}
+    <form method="post" class="mb-3">
+        {% csrf_token %}
+        <button class="btn btn-success" name="resolve_case">Mark Resolved</button>
+    </form>
+    {% endif %}
 
     <hr>
     <h3>Case Notes</h3>
@@ -35,14 +50,35 @@
     <p class="text-muted">Reporter is anonymous; messaging disabled.</p>
     {% endif %}
     <ul class="list-group">
-        {% for message in messages %}
+        {% for message in chat_messages %}
             <li class="list-group-item">
-                <strong>{{ message.sender.username }}:</strong> {{ message.message|linebreaksbr }}
+                <strong>{{ message.sender.username }}:</strong> {{ message|decrypt:request.user|linebreaksbr }}
                 <br><small class="text-muted">{{ message.timestamp }}</small>
+                <a href="#" class="reply-link" data-parent="{{ message.id }}">Reply</a>
+                {% if message.replies.all %}
+                <ul class="list-group mt-2">
+                    {% for reply in message.replies.all %}
+                    <li class="list-group-item">
+                        <strong>{{ reply.sender.username }}:</strong> {{ reply|decrypt:request.user|linebreaksbr }}
+                        <br><small class="text-muted">{{ reply.timestamp }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
             </li>
         {% empty %}
             <li class="list-group-item">No messages.</li>
         {% endfor %}
     </ul>
 </div>
+
+<script>
+document.querySelectorAll('.reply-link').forEach(function(link){
+    link.addEventListener('click', function(e){
+        e.preventDefault();
+        document.getElementById('parent_id').value = this.dataset.parent;
+        document.getElementById('id_message').focus();
+    });
+});
+</script>
 {% endblock %}

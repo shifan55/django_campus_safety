@@ -20,7 +20,13 @@ class ReportStatus(models.TextChoices):
     RESOLVED = 'resolved', 'Resolved'
 
 class Report(models.Model):
-    reporter = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='reports')
+    reporter = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='reports',
+    )
     incident_type = models.CharField(max_length=32, choices=ReportType.choices)
     description = models.TextField()
     incident_date = models.DateTimeField()
@@ -40,11 +46,16 @@ class Report(models.Model):
     reporter_phone = models.CharField(max_length=20, blank=True, null=True)
     tracking_code = models.CharField(max_length=12, unique=True, default=generate_tracking_code, editable=False)
 
-    status = models.CharField(max_length=50, choices=ReportStatus.choices, default=ReportStatus.PENDING)
+    status = models.CharField(
+        max_length=50,
+        choices=ReportStatus.choices,
+        default=ReportStatus.PENDING,
+    )
 
     assigned_to = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="assigned_reports",
         on_delete=models.SET_NULL,
     )
@@ -54,7 +65,13 @@ class Report(models.Model):
     def __str__(self):
         return f"{self.get_incident_type_display()} on {self.incident_date:%Y-%m-%d}"
     
-    
+    class Meta:
+        indexes = [
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["reporter"]),
+            models.Index(fields=["assigned_to"]),
+        ]
 
 class EducationalResource(models.Model):
     RESOURCE_TYPES = [
@@ -77,6 +94,11 @@ class EducationalResource(models.Model):
     def __str__(self):
         return self.title
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["created_by"]),
+        ]
 
 class Quiz(models.Model):
     """A quiz consisting of multiple questions."""
@@ -88,6 +110,11 @@ class Quiz(models.Model):
     def __str__(self):
         return self.title
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["created_by"]),
+        ]
 
 class QuizQuestion(models.Model):
     """Individual question belonging to a Quiz."""
@@ -110,6 +137,9 @@ class QuizQuestion(models.Model):
     def __str__(self):
         return self.text
 
+    class Meta:
+        indexes = [models.Index(fields=["quiz"])]
+
 class SupportContact(models.Model):
     name = models.CharField(max_length=100)
     title = models.CharField(max_length=100)
@@ -123,3 +153,5 @@ class SupportContact(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        indexes = [models.Index(fields=["created_at"])]

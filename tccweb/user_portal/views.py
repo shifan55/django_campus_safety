@@ -4,11 +4,12 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 from django.core.paginator import Paginator
 from django.db.models import Q
 from tccweb.core.models import Report, EducationalResource, SupportContact
-from tccweb.core.forms import LoginForm, RegistrationForm, AnonymousReportForm, ReportForm
+from tccweb.core.forms import LoginForm, RegistrationForm, AnonymousReportForm, ReportForm, MessageForm
+from tccweb.counselor_portal.models import ChatMessage
 from django.conf import settings
 
 
@@ -52,16 +53,18 @@ def awareness(request):
     }
     return render(request, 'awareness.html', context)
 
+@require_GET
 def resource_detail(request, resource_id):
-    """Return JSON details for a single educational resource."""
+    """AJAX endpoint returning details for a single public resource."""
     resource = get_object_or_404(EducationalResource, id=resource_id, is_public=True)
     data = {
         "id": resource.id,
         "title": resource.title,
         "content": resource.content,
-        "url": resource.url,
         "resource_type": resource.resource_type,
     }
+    if resource.url:
+        data["url"] = resource.url
     if resource.file:
         data["file"] = resource.file.url
     return JsonResponse(data)
@@ -199,6 +202,53 @@ def track_report(request):
         except Report.DoesNotExist:
             messages.error(request, 'No report found with that tracking code.')
     return render(request, 'track_report.html', {'report': report})
+
+@login_required
+def report_messages(request, report_id):
+    report = get_object_or_404(Report, id=report_id, reporter=request.user)
+    msg_form = MessageForm(request.POST or None)
+    if request.method == "POST" and msg_form.is_valid() and report.assigned_to:
+        parent_id = msg_form.cleaned_data.get("parent_id")
+        parent = ChatMessage.objects.filter(id=parent_id, report=report).first() if parent_id else None
+        ChatMessage.create(
+            report=report,
+            sender=request.user,
+            recipient=report.assigned_to,
+            message=msg_form.cleaned_data["message"],
+            parent=parent,
+        )
+        return redirect("report_messages", report_id=report.id)
+    ChatMessage.objects.filter(report=report, recipient=request.user, is_read=False).update(is_read=True)
+    chat_messages = (
+        ChatMessage.objects.filter(report=report, parent__isnull=True)
+        .select_related("sender")
+        .prefetch_related("replies__sender")
+    )
+    return render(
+        request,
+        "report_messages.html",
+        {"report": report, "chat_messages": chat_messages, "msg_form": msg_form},
+    )
+
+@login_required
+def user_messages(request):
+    """List conversation threads for the logged-in user."""
+    q = request.GET.get("q", "").strip()
+    threads_qs = (
+        ChatMessage.objects.filter(
+            Q(sender=request.user) | Q(recipient=request.user), parent__isnull=True
+        )
+        .select_related("sender", "recipient", "report")
+        .prefetch_related("replies__sender", "replies__recipient")
+        .order_by("-timestamp")
+    )
+    if q:
+        if q.isdigit():
+            threads_qs = threads_qs.filter(report__id=q)
+        else:
+            threads_qs = threads_qs.none()
+    return render(request, "user_messages.html", {"threads": threads_qs, "q": q})
+
 
 
 def report_success(request, tracking_code):

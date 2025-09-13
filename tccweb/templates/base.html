@@ -18,7 +18,7 @@
     
     {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100">
     <!-- Skip to content link for accessibility -->
    <!--  <a class="skip-link" href="#main-content">Skip to main content</a>  -->
     
@@ -42,7 +42,7 @@
                     <a class="nav-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}" href="{% url 'admin_dashboard' %}">Admin Dashboard</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if request.resolver_match.url_name == 'admin_reports' %}active{% endif %}" href="{% url 'admin_reports' %}">Reports</a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'admin_reports' %}active{% endif %}" href="{% url 'admin_reports' %}">Reports{% if admin_alerts %} <span class="badge bg-danger">{{ admin_alerts }}</span>{% endif %}</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {% if request.resolver_match.url_name == 'admin_case_assignment' %}active{% endif %}" href="{% url 'admin_case_assignment' %}">Case Assignment</a>
@@ -67,7 +67,7 @@
                     <a class="nav-link {% if request.resolver_match.url_name == 'awareness' %}active{% endif %}" href="{% url 'awareness' %}">Awareness Hub</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if request.resolver_match.url_name == 'counselor_messages' %}active{% endif %}" href="{% url 'counselor_messages' %}">Messages</a>
+                   <a class="nav-link {% if request.resolver_match.url_name == 'counselor_messages' %}active{% endif %}" href="{% url 'counselor_messages' %}">Messages{% if unread_messages %} <span class="badge bg-danger">{{ unread_messages }}</span>{% endif %}</a>
                 </li>
                 {% else %}
                 <li class="nav-item">
@@ -81,6 +81,12 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'user_messages' %}active{% endif %}" href="{% url 'user_messages' %}">Messages{% if unread_messages %} <span class="badge bg-danger">{{ unread_messages }}</span>{% endif %}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'user_messages' %}active{% endif %}" href="{% url 'user_messages' %}">Messages</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {% if request.resolver_match.url_name == 'awareness' %}active{% endif %}" href="{% url 'awareness' %}">Awareness Hub</a>
@@ -162,12 +168,12 @@
 
 
     <!-- Main Content -->
-    <main id="main-content">
+    <main id="main-content" class="flex-grow-1">
         {% block content %}{% endblock %}
     </main>
 
     <!-- Footer -->
-    <footer class="bg-dark text-light py-4 mt-5">
+    <footer class="bg-dark text-light py-4 mt-auto">
         <div class="container">
             <div class="row">
                 <div class="col-md-6">
@@ -260,6 +266,18 @@
         });
     </script>
     
+        <!-- Auto-dismiss flash messages -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(function () {
+                document.querySelectorAll('.alert-dismissible').forEach(function (alert) {
+                    var alertInstance = bootstrap.Alert.getOrCreateInstance(alert);
+                    alertInstance.close();
+                });
+            }, 5000);
+        });
+    </script>
+
     <!-- Custom JS -->
     <script src="{% static 'js/main.js' %}"></script>
     

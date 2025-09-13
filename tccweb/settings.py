@@ -84,6 +84,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 "tccweb.user_portal.context_processors.google_maps_key",
+                "tccweb.user_portal.context_processors.unread_messages",
                 "django.template.context_processors.static", # make settings available in templates
             ],
         "builtins": [
@@ -147,7 +148,7 @@ LOGIN_URL = '/login/'
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "/statics/"
-STATICFILES_DIRS = [BASE_DIR / "tccweb" / "static"]  # adjust to the actual source directory
+STATICFILES_DIRS = [BASE_DIR / "tccweb" / "statics"]  # adjust to the actual source directory
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"

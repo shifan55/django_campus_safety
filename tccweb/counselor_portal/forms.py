@@ -1,5 +1,5 @@
 from django import forms
-from .models import CaseNote, ChatMessage
+from .models import CaseNote
 
 
 class CaseNoteForm(forms.ModelForm):
@@ -7,10 +7,4 @@ class CaseNoteForm(forms.ModelForm):
         model = CaseNote
         fields = ["note"]
         widgets = {"note": forms.Textarea(attrs={"rows": 3})}
-
-
-class MessageForm(forms.ModelForm):
-    class Meta:
-        model = ChatMessage
-        fields = ["message"]
-        widgets = {"message": forms.Textarea(attrs={"rows": 2})}
+   

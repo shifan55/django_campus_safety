@@ -1,15 +1,25 @@
 {% extends 'base.html' %}
+{% load chat_filters %}
 {% block title %}Messages{% endblock %}
 {% block content %}
 <div class="container mt-4">
+    <a href="{% url 'counselor_dashboard' %}" class="btn btn-secondary mb-3">&laquo; Back to Dashboard</a>
     <h2>Recent Messages</h2>
+    <form method="get" class="mb-3">
+        <div class="input-group">
+            <input type="text" name="q" class="form-control" placeholder="Search by report #" value="{{ q }}">
+            <button class="btn btn-outline-secondary" type="submit">Search</button>
+        </div>
+    </form>
     <ul class="list-group">
-        {% for msg in messages %}
+        {% for thread in threads %}
+            {% with last_msg=thread.replies.last|default:thread %}
             <li class="list-group-item">
-                <a href="{% url 'counselor_case_detail' msg.report.id %}">Report #{{ msg.report.id }}</a> -
-                <strong>{{ msg.sender.username }}</strong>: {{ msg.message|truncatewords:20 }}
-                <br><small class="text-muted">{{ msg.timestamp }}</small>
+                <a href="{% url 'counselor_case_detail' thread.report.id %}">Report #{{ thread.report.id }}</a> -
+                <strong>{{ last_msg.sender.username }}</strong>: {{ last_msg|decrypt:request.user|truncatewords:20 }}
+                <br><small class="text-muted">{{ last_msg.timestamp }}</small>
             </li>
+            {% endwith %}
         {% empty %}
             <li class="list-group-item">No messages.</li>
         {% endfor %}

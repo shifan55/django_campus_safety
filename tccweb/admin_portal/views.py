@@ -26,7 +26,10 @@ def admin_dashboard(request):
 
     resolution_rate = int(round((resolved_reports / total_reports) * 100)) if total_reports else 0
 
-    recent_reports = Report.objects.select_related("assigned_to").order_by("-created_at")[:10]
+    recent_reports = (
+        Report.objects.select_related("assigned_to", "reporter")
+        .order_by("-created_at")[:10]
+    )
 
     monthly_qs = (
         Report.objects
@@ -97,7 +100,7 @@ def admin_reports(request):
 @login_required
 @user_passes_test(lambda u: u.is_superuser or u.is_staff)
 def admin_case_assignment(request):
-    reports = Report.objects.select_related('assigned_to').all()
+    reports = Report.objects.select_related('assigned_to', 'reporter').all()
     users = User.objects.filter(is_staff=True)
     if request.method == 'POST':
         report_id = request.POST.get('report_id')
@@ -142,9 +145,9 @@ def admin_analytics(request):
 @login_required
 @user_passes_test(lambda u: u.is_superuser or u.is_staff)
 def admin_awareness(request):
-    resources = EducationalResource.objects.all().order_by('-created_at')
+    resources = EducationalResource.objects.all().select_related("created_by").order_by('-created_at')
     try:
-        quizzes = Quiz.objects.all().order_by('-created_at')
+        quizzes = Quiz.objects.all().prefetch_related('questions').order_by('-created_at')
     except Exception:
         quizzes = []
 

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load text_extras %}
 {% block title %}Case Assignment - Safe Campus{% endblock %}
 {% block content %}
 <div class="container py-4">
@@ -19,7 +20,7 @@
         <tr>
           <td>{{ report.id }}</td>
           <td>{{ report.get_incident_type_display }}</td>
-          <td>{{ report.status }}</td>
+          <td><span class="badge bg-{{ report.status|status_badge }}">{{ report.status|humanize_enum }}</span></td>
           <td>{% if report.assigned_to %}{{ report.assigned_to.username }}{% else %}Unassigned{% endif %}</td>
           <td>
             <form method="post" class="d-flex align-items-center">

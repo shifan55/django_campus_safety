@@ -13,6 +13,8 @@ urlpatterns = [
     path('awareness/', views.awareness, name='awareness'),
     path('resource/<int:resource_id>/', views.resource_detail, name='resource_detail'),
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('reports/<int:report_id>/messages/', views.report_messages, name='report_messages'),
+    path('messages/', views.user_messages, name='user_messages'),
     path('profile/', views.profile_view, name='profile'),
     path('set-theme/', views.set_theme, name='set_theme'),
 ]

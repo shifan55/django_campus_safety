@@ -1,22 +1,54 @@
 {% extends 'base.html' %}
+{% load text_extras %}
 {% block title %}Counselor Dashboard{% endblock %}
 {% block content %}
 <div class="container mt-4">
     <h1 class="mb-4">Assigned Reports</h1>
+
+
+    <div class="mb-3">
+        <a href="?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}export=csv" class="btn btn-secondary btn-sm">Export CSV</a>
+    </div>
+
+    <form method="get" class="row g-2 mb-4">
+        <div class="col-md-2">
+            <input type="date" name="start" value="{{ request.GET.start }}" class="form-control" placeholder="Start date">
+        </div>
+        <div class="col-md-2">
+            <input type="date" name="end" value="{{ request.GET.end }}" class="form-control" placeholder="End date">
+        </div>
+        <div class="col-md-3">
+            <select name="status" class="form-select">
+                <option value="">All Statuses</option>
+                {% for value,label in statuses %}
+                <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary w-100" type="submit">Filter</button>
+        </div>
+    </form>
+
+    <div id="reportMap" class="mb-4" style="height:400px;"></div>
+
     <div class="row mb-4">
         {% for stat in stats %}
-            <div class="col-md-3">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ stat.status|title }}</h5>
-                        <p class="card-text display-6">{{ stat.total }}</p>
-                    </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <span class="badge bg-{{ stat.status|status_badge }}">{{ stat.status|title }}</span>
+                    </h5>
+                    <p class="card-text display-6">{{ stat.total }}</p>
                 </div>
             </div>
+        </div>
         {% empty %}
-            <p>No analytics available.</p>
+        <p>No analytics available.</p>
         {% endfor %}
     </div>
+
     <table class="table table-striped">
         <thead>
             <tr><th>ID</th><th>Type</th><th>Status</th><th>Actions</th></tr>
@@ -26,13 +58,35 @@
             <tr>
                 <td>{{ report.id }}</td>
                 <td>{{ report.get_incident_type_display }}</td>
-                <td>{{ report.get_status_display }}</td>
+                <td>
+                    <span class="badge bg-{{ report.status|status_badge }}">{{ report.get_status_display }}</span>
+                </td>
                 <td><a href="{% url 'counselor_case_detail' report.id %}" class="btn btn-sm btn-primary">View</a></td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" class="text-center">No reports assigned.</td></tr>
+            <tr><td colspan="4" class="text-center">No reports found.</td></tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
+{% if locations %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-sA+BxFsG4EsCvP2vNhbbXfkA2sH7sC9Vx08Gp3lXpqE=" crossorigin="" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-o1Z8S9CQ/h1Cdmk9VHtVHCnRvW52i8V+ZoM80uY+4TM=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+    var map = L.map('reportMap').setView([0, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+    var markers = L.markerClusterGroup();
+    {% for r in locations %}
+    markers.addLayer(L.marker([{{ r.latitude }}, {{ r.longitude }}]).bindPopup('Report #{{ r.id }}'));
+    {% endfor %}
+    map.addLayer(markers);
+    if (markers.getLayers().length) {
+        map.fitBounds(markers.getBounds());
+    }
+</script>
+{% endif %}
 {% endblock %}
