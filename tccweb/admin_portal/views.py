@@ -29,7 +29,7 @@ except Exception:
     Quiz = None
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser or u.is_staff)
+@user_passes_test(lambda u: u.is_superuser)
 def admin_dashboard(request):
     total_reports = Report.objects.count()
     resolved_reports = Report.objects.filter(status=ReportStatus.RESOLVED).count()
@@ -83,7 +83,7 @@ def admin_dashboard(request):
     return render(request, 'admin_dashboard.html', ctx)
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser or u.is_staff)
+@user_passes_test(lambda u: u.is_superuser)
 def admin_reports(request):
     reports = Report.objects.select_related("reporter", "assigned_to").all()
     incident_type = request.GET.get("type")
@@ -134,7 +134,7 @@ def admin_reports(request):
     return render(request, "admin_reports.html", ctx)
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser or u.is_staff)
+@user_passes_test(lambda u: u.is_superuser)
 def admin_case_assignment(request):
     reports = Report.objects.select_related('assigned_to', 'reporter').all()
     users = User.objects.filter(is_staff=True)
@@ -159,7 +159,7 @@ def admin_case_assignment(request):
     )
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser or u.is_staff)
+@user_passes_test(lambda u: u.is_superuser)
 def admin_analytics(request):
     monthly_stats = cache.get("dashboard_monthly_stats")
     if monthly_stats is None:
@@ -194,13 +194,25 @@ def admin_analytics(request):
     )
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser or u.is_staff)
+@user_passes_test(lambda u: u.is_superuser)
 def admin_awareness(request):
-    resources = EducationalResource.objects.all().select_related("created_by").order_by('-created_at')
     try:
-        quizzes = Quiz.objects.all().prefetch_related('questions').order_by('-created_at')
+        resource_qs = EducationalResource.objects.all().select_related("created_by").order_by('-created_at')
     except Exception:
-        quizzes = []
+        resource_qs = EducationalResource.objects.none()
+        messages.error(request, "Resources unavailable.")
+    resource_paginator = Paginator(resource_qs, 10)
+    resource_page_number = request.GET.get('resource_page')
+    resources = resource_paginator.get_page(resource_page_number)
+
+    try:
+        quiz_qs = Quiz.objects.all().prefetch_related('questions').order_by('-created_at')
+    except Exception:
+        quiz_qs = Quiz.objects.none() if Quiz else []
+        messages.error(request, "Quizzes unavailable.")
+    quiz_paginator = Paginator(quiz_qs, 10)
+    quiz_page_number = request.GET.get('quiz_page')
+    quizzes = quiz_paginator.get_page(quiz_page_number)
 
     # default forms
     form = EducationalResourceForm()
@@ -219,6 +231,9 @@ def admin_awareness(request):
                 res.save()
                 messages.success(request, 'Resource added.')
                 return redirect('admin_awareness')
+            else:
+                error_msg = form.errors.get('file', ['Upload failed.'])[0]
+                messages.error(request, error_msg)
 
         elif form_type == 'quiz':
             quiz_form = QuizForm(request.POST)
@@ -232,6 +247,8 @@ def admin_awareness(request):
                 question_formset.save()
                 messages.success(request, 'Quiz created.')
                 return redirect('admin_awareness')
+            else:
+                messages.error(request, 'Quiz submission failed. Please correct the errors below.')
 
     context = {
         'form': form,
@@ -241,6 +258,15 @@ def admin_awareness(request):
         'quizzes': quizzes,
     }
     return render(request, 'admin_awareness.html', context)
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def delete_resource(request, pk):
+    resource = get_object_or_404(EducationalResource, pk=pk)
+    if request.method == "POST":
+        resource.delete()
+        messages.success(request, "Resource deleted.")
+    return redirect("admin_awareness")
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)

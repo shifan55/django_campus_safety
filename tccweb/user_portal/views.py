@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_GET
@@ -53,10 +53,13 @@ def awareness(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    contacts = SupportContact.objects.filter(is_available=True).order_by('name')
+    contacts_qs = SupportContact.objects.filter(is_available=True).order_by('name')
+    contacts_paginator = Paginator(contacts_qs, 6)
+    contacts_page_number = request.GET.get('contact_page')
+    contacts_page = contacts_paginator.get_page(contacts_page_number)
     context = {
         'resources': page_obj,
-        'contacts': contacts,
+        'contacts': contacts_page,
         'category': category or 'all',
         'type': resource_type or 'all',
         'query': query or '',
@@ -150,15 +153,14 @@ def report_anonymous(request):
 
 
 @login_required
+@user_passes_test(lambda u: not u.is_staff)
 def dashboard(request):
     query = request.GET.get('q')
     sort = request.GET.get('sort', '-created_at')
 
-    reports_qs = Report.objects.select_related("reporter", "assigned_to")
-    if request.user.is_staff:
-        reports_qs = reports_qs.filter(assigned_to=request.user)
-    else:
-        reports_qs = reports_qs.filter(reporter=request.user)
+    reports_qs = Report.objects.select_related("reporter", "assigned_to").filter(
+        reporter=request.user
+    )
 
     if query:
         reports_qs = reports_qs.filter(description__icontains=query)
@@ -181,6 +183,7 @@ def dashboard(request):
 
 
 @login_required
+@user_passes_test(lambda u: not u.is_staff)
 def submit_report(request):
     if request.method == 'POST':
         form = ReportForm(request.POST)
@@ -216,6 +219,7 @@ def track_report(request):
     return render(request, 'track_report.html', {'report': report})
 
 @login_required
+@user_passes_test(lambda u: not u.is_staff)
 def report_messages(request, report_id):
     report = get_object_or_404(Report, id=report_id, reporter=request.user)
     msg_form = MessageForm(request.POST or None)
@@ -243,6 +247,7 @@ def report_messages(request, report_id):
     )
 
 @login_required
+@user_passes_test(lambda u: not u.is_staff)
 def user_messages(request):
     """List conversation threads for the logged-in user."""
     q = request.GET.get("q", "").strip()
@@ -268,6 +273,7 @@ def report_success(request, tracking_code):
 
 
 @login_required
+@user_passes_test(lambda u: not u.is_staff)
 def profile_view(request):
     return render(request, 'profile.html', {'user': request.user})
 

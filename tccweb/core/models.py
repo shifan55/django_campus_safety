@@ -2,11 +2,41 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.core.files.storage import FileSystemStorage
+from django.core.validators import FileExtensionValidator
+from django.core.files.base import ContentFile
+from django.core.exceptions import ValidationError
+import os
 import uuid
+try:
+    from cryptography.fernet import Fernet
+except ImportError:  # pragma: no cover - dependency may be missing in some envs
+    Fernet = None
+
+from .validators import (
+    validate_file_size,
+    validate_file_type,
+    validate_no_malware,
+)
 
 def generate_tracking_code():
     """Generate a short unique tracking code for anonymous lookups."""
     return uuid.uuid4().hex[:10].upper()
+
+def resource_file_path(instance, filename):
+    """Generate a non-guessable filename for uploaded resources."""
+    ext = os.path.splitext(filename)[1].lower()
+    return f"resources/{uuid.uuid4().hex}{ext}"
+resource_storage = FileSystemStorage(location=settings.PROTECTED_MEDIA_ROOT)
+
+
+def validate_file_size(value):
+    limit = 10 * 1024 * 1024  # 10 MB
+    if value.size > limit:
+        raise ValidationError("File size must not exceed 10 MB")
+
+
+resource_storage = FileSystemStorage(location=settings.PROTECTED_MEDIA_ROOT)
 
 class ReportType(models.TextChoices):
     BULLYING = 'bullying', 'Bullying'
@@ -84,12 +114,38 @@ class EducationalResource(models.Model):
     title = models.CharField(max_length=200)
     content = models.TextField(blank=True)
     url = models.URLField(blank=True)
-    file = models.FileField(upload_to="resources/", blank=True, null=True)
+    file = models.FileField(
+        upload_to=resource_file_path,
+        storage=resource_storage,
+        blank=True,
+        null=True,
+        validators=[
+            FileExtensionValidator(["pdf", "mp4"]),
+            validate_file_type,
+            validate_file_size,
+            validate_no_malware,
+        ],
+    )
     resource_type = models.CharField(max_length=20, choices=RESOURCE_TYPES, default="article")
     category = models.CharField(max_length=50, blank=True)
     is_public = models.BooleanField(default=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_resources')
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if self.file and not getattr(self.file, "_encrypted", False):
+            if Fernet is None:
+                raise RuntimeError("cryptography library is required for file encryption")
+            fernet = Fernet(settings.FILE_ENCRYPTION_KEY.encode())
+            data = self.file.read()
+            self.file = ContentFile(fernet.encrypt(data), name=self.file.name)
+            self.file._encrypted = True
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.file:
+            self.file.delete(save=False)
+        super().delete(*args, **kwargs)
 
     def __str__(self):
         return self.title

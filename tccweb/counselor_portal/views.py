@@ -1,12 +1,13 @@
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import get_user_model
-from django.core.exceptions import PermissionDenied
 from django.core.mail import send_mail
 from django.db.models import Count, Q
 from django.db.utils import OperationalError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.conf import settings
+from django.core.paginator import Paginator
+from django.contrib import messages
 import csv
 
 
@@ -20,19 +21,10 @@ def _is_counselor(user):
     return user.is_staff or getattr(getattr(user, "profile", None), "is_staff", False)
 
 
-def counselor_required(view_func):
-    @login_required
-    def _wrapped(request, *args, **kwargs):
-        if not _is_counselor(request.user):
-            raise PermissionDenied
-        return view_func(request, *args, **kwargs)
-
-    return _wrapped
-
-
-@counselor_required
+@login_required
+@user_passes_test(_is_counselor)
 def dashboard(request):
-    reports = (
+    reports_qs = (
         Report.objects.filter(assigned_to=request.user)
         .select_related("reporter", "assigned_to")
     )
@@ -40,18 +32,18 @@ def dashboard(request):
     start = request.GET.get("start")
     end = request.GET.get("end")
     if status:
-        reports = reports.filter(status=status)
+        reports_qs = reports_qs.filter(status=status)
     if start:
-        reports = reports.filter(created_at__date__gte=start)
+        reports_qs = reports_qs.filter(created_at__date__gte=start)
     if end:
-        reports = reports.filter(created_at__date__lte=end)
+        reports_qs = reports_qs.filter(created_at__date__lte=end)
 
     if request.GET.get("export") == "csv":
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = "attachment; filename=assigned_reports.csv"
         writer = csv.writer(response)
         writer.writerow(["ID", "Type", "Status", "Submitted"])
-        for r in reports:
+        for r in reports_qs:
             writer.writerow([
                 r.id,
                 r.get_incident_type_display(),
@@ -60,8 +52,11 @@ def dashboard(request):
             ])
         return response
     
-    stats = reports.values("status").annotate(total=Count("id"))
-    locations = reports.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
+    stats = reports_qs.values("status").annotate(total=Count("id"))
+    locations = reports_qs.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
+    paginator = Paginator(reports_qs, 25)
+    page_number = request.GET.get("page")
+    reports = paginator.get_page(page_number)
     context = {
         "reports": reports,
         "stats": stats,
@@ -71,7 +66,8 @@ def dashboard(request):
     return render(request, "counselor_dashboard.html", context)
 
 
-@counselor_required
+@login_required
+@user_passes_test(_is_counselor)
 def case_detail(request, report_id):
     report = get_object_or_404(Report, id=report_id, assigned_to=request.user)
     note_form = CaseNoteForm(request.POST or None)
@@ -157,7 +153,8 @@ def case_detail(request, report_id):
     return render(request, "counselor_case_detail.html", context)
 
 
-@counselor_required
+@login_required
+@user_passes_test(_is_counselor)
 def messages_view(request):
     """List message threads for the counselor, grouped by report."""
     q = request.GET.get("q", "").strip()

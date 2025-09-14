@@ -10,16 +10,34 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
+import base64
 from pathlib import Path
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
+
 load_dotenv()  # reads .env at project root
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Google Servicess
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-key")
-DEBUG = os.getenv("DEBUG", "1") == "1"
+# Google Services
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set")
+
+FILE_ENCRYPTION_KEY = os.getenv("FILE_ENCRYPTION_KEY")
+if not FILE_ENCRYPTION_KEY:
+    FILE_ENCRYPTION_KEY = base64.urlsafe_b64encode(os.urandom(32)).decode()
+
+# Default to secure settings unless explicitly enabled
+DEBUG = os.getenv("DEBUG", "0") == "1"
+
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 3600
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -155,6 +173,7 @@ if not DEBUG:
     STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+PROTECTED_MEDIA_ROOT = BASE_DIR / "protected_media"
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 

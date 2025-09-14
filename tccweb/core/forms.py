@@ -1,8 +1,28 @@
 from django import forms
 from django.forms import inlineformset_factory
 from django.contrib.auth.models import User
-from .models import Report, ReportType, EducationalResource, Quiz, QuizQuestion
 from django.contrib.auth.forms import UserCreationForm
+from django.core.exceptions import ValidationError
+import os
+import subprocess
+import tempfile
+from .models import Report, ReportType, EducationalResource, Quiz, QuizQuestion
+
+
+def scan_file_for_malware(file):
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        for chunk in file.chunks():
+            tmp.write(chunk)
+        tmp_path = tmp.name
+    try:
+        result = subprocess.run(["clamscan", "--no-summary", tmp_path], capture_output=True)
+        if result.returncode == 1:
+            raise ValidationError("Uploaded file failed malware scan")
+    except FileNotFoundError:
+        raise ValidationError("Malware scanner not available")
+    finally:
+        os.remove(tmp_path)
+
 
 class LoginForm(forms.Form):
     """Authentication form with Bootstrap styling and better UX."""
@@ -152,12 +172,17 @@ class EducationalResourceForm(forms.ModelForm):
             "title": forms.TextInput(attrs={"class": "form-control"}),
             "content": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "url": forms.URLInput(attrs={"class": "form-control"}),
-            "file": forms.FileInput(attrs={"class": "form-control", "accept": "video/*,.pdf,.doc,.docx"}),
+            "file": forms.FileInput(attrs={"class": "form-control", "accept": "application/pdf,video/mp4"}),
             "resource_type": forms.Select(attrs={"class": "form-select"}),
             "category": forms.TextInput(attrs={"class": "form-control"}),
             "is_public": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
 
+    def clean_file(self):
+        file = self.cleaned_data.get("file")
+        if file:
+            scan_file_for_malware(file)
+        return file
 
 class QuizForm(forms.ModelForm):
     class Meta:

@@ -105,11 +105,15 @@
                 {% elif resource.url %}
                   <a href="{{ resource.url }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-external-link-alt"></i></a>
                 {% endif %}
-              </span>
-            </li>
-          {% empty %}
-            <li class="list-group-item text-muted">No resources yet.</li>
-          {% endfor %}
+              <form method="post" action="{% url 'delete_resource' resource.id %}" class="d-inline" data-confirm="Delete this resource?">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                  </form>
+                </span>
+              </li>
+            {% empty %}
+              <li class="list-group-item text-muted">No resources yet.</li>
+            {% endfor %}
         </ul>
         {% if resources.has_other_pages %}
         <nav aria-label="Resource pagination" class="mt-3">

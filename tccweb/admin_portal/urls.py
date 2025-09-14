@@ -7,5 +7,6 @@ urlpatterns = [
     path('case-assignment/', views.admin_case_assignment, name='admin_case_assignment'),
     path('analytics/', views.admin_analytics, name='admin_analytics'),
     path('awareness/', views.admin_awareness, name='admin_awareness'),
+    path('resource/<int:pk>/delete/', views.delete_resource, name='delete_resource'),
     path('users/', views.admin_user_management, name='admin_user_management'),
     ]
