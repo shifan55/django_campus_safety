@@ -29,6 +29,11 @@ FILE_ENCRYPTION_KEY = os.getenv("FILE_ENCRYPTION_KEY")
 if not FILE_ENCRYPTION_KEY:
     FILE_ENCRYPTION_KEY = base64.urlsafe_b64encode(os.urandom(32)).decode()
 
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+SITE_DOMAIN = os.getenv("SITE_DOMAIN", "example.com")
+SITE_NAME = os.getenv("SITE_NAME", SITE_DOMAIN)
+
 # Default to secure settings unless explicitly enabled
 DEBUG = os.getenv("DEBUG", "0") == "1"
 
@@ -188,12 +193,13 @@ LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 
 
-# Minimal allauth account config (tweak later as needed)
-ACCOUNT_AUTHENTICATION_METHOD = "username_email"
-ACCOUNT_EMAIL_REQUIRED = True
+# Allauth configuration
+ACCOUNT_LOGIN_METHODS = {"username", "email"}
+ACCOUNT_SIGNUP_FIELDS = ["username", "email"]
 ACCOUNT_EMAIL_VERIFICATION = "optional"
 ACCOUNT_LOGOUT_ON_GET = True
 
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = "http"  # "https" in production behind TLS
 
 # Development email backend: print emails to console
 
@@ -204,13 +210,4 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")          # your email / SMTP user
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")  # app password / SMTP key
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "no-reply@safecampus.app")
 
-
-
-# Minimal allauth config so it won't block flows
-
-ACCOUNT_EMAIL_VERIFICATION = "optional"  # or "none" to completely skip verification in dev
-ACCOUNT_DEFAULT_HTTP_PROTOCOL = "http"    # "https" in production behind TLS
-
-ACCOUNT_SIGNUP_FIELDS = ["email"]
-ACCOUNT_LOGIN_METHODS = {"email"}
 

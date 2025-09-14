@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import (
 )
 from django.core.cache import caches
 from django.core.paginator import Paginator
+import logging
 
 # Use the project's default cache backend for storing dashboard statistics
 cache = caches["default"]
@@ -23,9 +24,11 @@ from tccweb.core.models import (
 from tccweb.core.forms import EducationalResourceForm, QuizForm, QuizQuestionFormSet
 from .forms import CounselorCreationForm
 
+logger = logging.getLogger(__name__)
+
 try:
     from tccweb.core.models import Quiz  # or wherever your Quiz model is
-except Exception:
+except ImportError:
     Quiz = None
 
 @login_required
@@ -199,25 +202,37 @@ def admin_awareness(request):
     try:
         resource_qs = EducationalResource.objects.all().select_related("created_by").order_by('-created_at')
     except Exception:
+        logger.exception("Failed to load educational resources")
         resource_qs = EducationalResource.objects.none()
         messages.error(request, "Resources unavailable.")
+        
     resource_paginator = Paginator(resource_qs, 10)
     resource_page_number = request.GET.get('resource_page')
     resources = resource_paginator.get_page(resource_page_number)
 
-    try:
-        quiz_qs = Quiz.objects.all().prefetch_related('questions').order_by('-created_at')
-    except Exception:
-        quiz_qs = Quiz.objects.none() if Quiz else []
-        messages.error(request, "Quizzes unavailable.")
+    if Quiz:
+        try:
+            quiz_qs = Quiz.objects.all().prefetch_related('questions').order_by('-created_at')
+        except Exception:
+            logger.exception("Failed to load quizzes")
+            quiz_qs = Quiz.objects.none()
+            messages.error(request, "Quizzes unavailable.")
+    else:
+        quiz_qs = []
+        messages.warning(request, "Quiz functionality is unavailable.")
+        
     quiz_paginator = Paginator(quiz_qs, 10)
     quiz_page_number = request.GET.get('quiz_page')
     quizzes = quiz_paginator.get_page(quiz_page_number)
 
     # default forms
     form = EducationalResourceForm()
-    quiz_form = QuizForm()
-    question_formset = QuizQuestionFormSet(prefix='questions')
+    if Quiz:
+        quiz_form = QuizForm()
+        question_formset = QuizQuestionFormSet(prefix='questions')
+    else:
+        quiz_form = None
+        question_formset = None
 
     if request.method == 'POST':
         form_type = request.POST.get('form_type')
@@ -235,7 +250,7 @@ def admin_awareness(request):
                 error_msg = form.errors.get('file', ['Upload failed.'])[0]
                 messages.error(request, error_msg)
 
-        elif form_type == 'quiz':
+        elif form_type == 'quiz' and Quiz:
             quiz_form = QuizForm(request.POST)
             question_formset = QuizQuestionFormSet(request.POST, prefix='questions')
             if quiz_form.is_valid() and question_formset.is_valid():
@@ -249,7 +264,9 @@ def admin_awareness(request):
                 return redirect('admin_awareness')
             else:
                 messages.error(request, 'Quiz submission failed. Please correct the errors below.')
-
+        elif form_type == 'quiz':
+            messages.error(request, 'Quiz functionality is unavailable.')
+            
     context = {
         'form': form,
         'resources': resources,
@@ -274,7 +291,7 @@ def admin_user_management(request):
     counselors = User.objects.filter(is_staff=True, is_superuser=False).order_by('username')
     students = User.objects.filter(is_staff=False).order_by('username')
     form = CounselorCreationForm()
-    form = CounselorCreationForm()
+    
     if request.method == 'POST':
         if request.POST.get('form_type') == 'create':
             form = CounselorCreationForm(request.POST)

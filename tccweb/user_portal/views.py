@@ -11,14 +11,22 @@ from tccweb.core.models import Report, EducationalResource, SupportContact
 from tccweb.core.forms import LoginForm, RegistrationForm, AnonymousReportForm, ReportForm, MessageForm
 from tccweb.counselor_portal.models import ChatMessage
 from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def index(request):
-    recent_resources = (
-        EducationalResource.objects.filter(is_public=True)
-        .select_related("created_by")
-        .order_by("-created_at")[:3]
-    )
+    try:
+        recent_resources = (
+            EducationalResource.objects.filter(is_public=True)
+            .select_related("created_by")
+            .order_by("-created_at")[:3]
+        )
+    except Exception:
+        logger.exception("Failed to load recent resources")
+        recent_resources = []
+        messages.error(request, "Unable to load recent resources.")
 
     context = {
         "recent_resources": recent_resources,
@@ -27,10 +35,15 @@ def index(request):
 
 
 def awareness(request):
-    resources = (
-        EducationalResource.objects.filter(is_public=True)
-        .select_related("created_by")
-    )
+    try:
+        resources = (
+            EducationalResource.objects.filter(is_public=True)
+            .select_related("created_by")
+        )
+    except Exception:
+        logger.exception("Failed to load resources")
+        resources = EducationalResource.objects.none()
+        messages.error(request, "Unable to load resources.")
 
     category = request.GET.get('category')
     resource_type = request.GET.get('type')
@@ -53,7 +66,13 @@ def awareness(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    contacts_qs = SupportContact.objects.filter(is_available=True).order_by('name')
+    try:
+        contacts_qs = SupportContact.objects.filter(is_available=True).order_by('name')
+    except Exception:
+        logger.exception("Failed to load support contacts")
+        contacts_qs = SupportContact.objects.none()
+        messages.error(request, "Unable to load support contacts.")
+        
     contacts_paginator = Paginator(contacts_qs, 6)
     contacts_page_number = request.GET.get('contact_page')
     contacts_page = contacts_paginator.get_page(contacts_page_number)
@@ -158,9 +177,14 @@ def dashboard(request):
     query = request.GET.get('q')
     sort = request.GET.get('sort', '-created_at')
 
-    reports_qs = Report.objects.select_related("reporter", "assigned_to").filter(
-        reporter=request.user
-    )
+    try:
+        reports_qs = Report.objects.select_related("reporter", "assigned_to").filter(
+            reporter=request.user
+        )
+    except Exception:
+        logger.exception("Failed to load user reports")
+        reports_qs = Report.objects.none()
+        messages.error(request, "Unable to load your reports.")
 
     if query:
         reports_qs = reports_qs.filter(description__icontains=query)
@@ -289,5 +313,5 @@ def set_theme(request):
             request.session['theme'] = theme
             return JsonResponse({'status': 'ok'})
     except Exception:
-        pass
+        logger.exception("Failed to set theme")
     return JsonResponse({'status': 'error'}, status=400)
