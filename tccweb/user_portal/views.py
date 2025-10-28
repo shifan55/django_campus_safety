@@ -7,7 +7,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_GET
 from django.core.paginator import Paginator
 from django.db.models import Q
-from tccweb.core.models import Report, EducationalResource, SupportContact
+from django.db import NotSupportedError
+from django.db.models import Avg, Count, DurationField, ExpressionWrapper, F
+from django.db.models.functions import TruncMonth, TruncWeek
+from tccweb.core.models import Report, EducationalResource, ReportStatus, SupportContact
 from tccweb.core.forms import LoginForm, RegistrationForm, AnonymousReportForm, ReportForm, MessageForm
 from tccweb.counselor_portal.models import ChatMessage
 from django.conf import settings
