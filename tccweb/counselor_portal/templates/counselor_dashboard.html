@@ -3,11 +3,17 @@
 {% block title %}Counselor Dashboard{% endblock %}
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">Assigned Reports</h1>
+    <h1 class="mb-2">Counselor Work Queue</h1>
+    <p class="text-muted mb-4">Monitor new submissions, active cases, and closed reports from a single support-style dashboard.</p>
 
 
-    <div class="mb-3">
-        <a href="?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}export=csv" class="btn btn-secondary btn-sm">Export CSV</a>
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <div>
+            <a href="?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}export=csv" class="btn btn-secondary btn-sm">Export CSV</a>
+        </div>
+        <div>
+            <a href="{% url 'counselor_analytics' %}" class="btn btn-primary btn-sm">📊 View Analytics</a>
+        </div>
     </div>
 
     <form method="get" class="row g-2 mb-4">
@@ -25,10 +31,60 @@
                 {% endfor %}
             </select>
         </div>
+
+        <div class="col-md-3">
+            <select name="queue" class="form-select">
+                <option value="all" {% if queue_filter == 'all' or not queue_filter %}selected{% endif %}>All Queues</option>
+                {% for bucket in queue_summary %}
+                <option value="{{ bucket.value }}" {% if queue_filter == bucket.value %}selected{% endif %}>{{ bucket.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
         <div class="col-md-2">
             <button class="btn btn-primary w-100" type="submit">Filter</button>
         </div>
     </form>
+
+    <div class="d-flex justify-content-end mb-2">
+        {% if queue_filter and queue_filter != 'all' %}
+        <a class="btn btn-outline-secondary btn-sm" href="?{% if request.GET.status %}status={{ request.GET.status }}&amp;{% endif %}{% if request.GET.start %}start={{ request.GET.start }}&amp;{% endif %}{% if request.GET.end %}end={{ request.GET.end }}&amp;{% endif %}queue=all">Clear queue filter</a>
+        {% endif %}
+    </div>
+
+    {% if overdue_count > 0 %}
+    <div class="alert alert-danger d-flex align-items-center" role="alert">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill me-2" viewBox="0 0 16 16">
+            <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+        </svg>
+        <div>
+            <strong>⚠ {{ overdue_count }} case{{ overdue_count|pluralize }} need{{ overdue_count|pluralize:",s" }} immediate attention</strong>
+            <div class="small">These reports have been inactive for more than 48 hours. Please review them soon.</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-3 mb-4">
+        {% for bucket in queue_summary %}
+        <div class="col-md-6 col-lg-3">
+            <a class="text-decoration-none text-reset" href="?queue={{ bucket.value }}{% if request.GET.status %}&amp;status={{ request.GET.status }}{% endif %}{% if request.GET.start %}&amp;start={{ request.GET.start }}{% endif %}{% if request.GET.end %}&amp;end={{ request.GET.end }}{% endif %}">
+                <div class="card h-100 border-{{ bucket.badge }} {% if queue_filter == bucket.value %}border-2 shadow-sm{% endif %} hover-shadow">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0">{{ bucket.label }}</h5>
+                            <span class="badge bg-{{ bucket.badge }} fs-6">{{ bucket.count }}</span>
+                        </div>
+                        <p class="card-text small text-muted mb-0">{{ bucket.description }}</p>
+                        {% if bucket.count > 0 %}
+                        <div class="mt-2">
+                            <small class="text-muted">{{ bucket.description }}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
 
     <div id="reportMap" class="mb-4" style="height:400px;"></div>
 
@@ -49,9 +105,9 @@
         {% endfor %}
     </div>
 
-    <table class="table table-striped">
+    <table class="table table-striped align-middle">
         <thead>
-            <tr><th>ID</th><th>Type</th><th>Status</th><th>Actions</th></tr>
+            <tr><th>ID</th><th>Type</th><th>Status</th><th>Queue</th><th>Assigned To</th><th>Last Update</th><th>Actions</th></tr>
         </thead>
         <tbody>
             {% for report in reports %}
@@ -61,10 +117,45 @@
                 <td>
                     <span class="badge bg-{{ report.status|status_badge }}">{{ report.get_status_display }}</span>
                 </td>
-                <td><a href="{% url 'counselor_case_detail' report.id %}" class="btn btn-sm btn-primary">View</a></td>
+                <td>
+                    <div class="d-flex flex-column gap-1">
+                        <span class="badge bg-{{ report.queue_badge }}">{{ report.queue_label }}</span>
+                        <small class="badge bg-{{ report.overdue_badge }}">{{ report.priority_label }}</small>
+                        {% if report.has_unread %}
+                            <span class="badge text-bg-danger">Unread</span>
+                        {% endif %}
+                    </div>
+                </td>
+                <td>
+                    {% if report.assigned_to %}
+                        <span class="text-muted">{{ report.assigned_to.username }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Unassigned</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if report.latest_message_ts %}
+                        <div>{{ report.latest_message_ts|date:"M j, Y g:i a" }}</div>
+                        <small class="text-muted">Updated {{ report.latest_activity_ref|timesince }} ago</small>
+                    {% else %}
+                        <div>{{ report.created_at|date:"M j, Y" }}</div>
+                        <small class="text-muted">Created {{ report.created_at_ref|timesince }} ago</small>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if report.assigned_to %}
+                        <a href="{% url 'counselor_case_detail' report.id %}" class="btn btn-sm btn-primary">Open Case</a>
+                    {% else %}
+                        <form method="post" action="{% url 'counselor_claim_case' report.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-success me-2">Claim Case</button>
+                        </form>
+                        <a href="{% url 'counselor_case_detail' report.id %}" class="btn btn-sm btn-outline-primary">View</a>
+                    {% endif %}
+                </td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" class="text-center">No reports found.</td></tr>
+            <tr><td colspan="7" class="text-center">No reports found.</td></tr>
             {% endfor %}
         </tbody>
     </table>

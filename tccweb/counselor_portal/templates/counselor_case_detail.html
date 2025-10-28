@@ -7,14 +7,22 @@
     <h2>Report #{{ report.id }}</h2>
     <p><strong>Type:</strong> {{ report.get_incident_type_display }}</p>
     <p><strong>Status:</strong> <span class="badge bg-{{ report.status|status_badge }}">{{ report.get_status_display }}</span></p>
-    {% if report.status != 'resolved' %}
+    <p><strong>Assignee:</strong>
+        {% if report.assigned_to %}
+            {{ report.assigned_to.get_full_name|default:report.assigned_to.username }}
+        {% else %}
+            <span class="text-muted">Unassigned</span>
+        {% endif %}
+    </p>
+
+    {% if not is_owner and not report.assigned_to %}
+    <div class="alert alert-info">Claim this report to begin counseling and enable case actions.</div>
     <form method="post" class="mb-3">
         {% csrf_token %}
-        <button class="btn btn-success" name="resolve_case">Mark Resolved</button>
+        <button class="btn btn-primary" name="take_case">Assign to Me</button>
     </form>
-    {% endif %}
 
-    {% if report.status != 'resolved' %}
+    {% elif is_owner and report.status != 'resolved' %}
     <form method="post" class="mb-3">
         {% csrf_token %}
         <button class="btn btn-success" name="resolve_case">Mark Resolved</button>
@@ -23,11 +31,15 @@
 
     <hr>
     <h3>Case Notes</h3>
+    {% if is_owner %}
     <form method="post" class="mb-3">
         {% csrf_token %}
         {{ note_form.as_p }}
         <button class="btn btn-primary" name="add_note">Add Note</button>
     </form>
+    {% else %}
+    <p class="text-muted">Assign the report to yourself to add private counseling notes.</p>
+    {% endif %}
     <ul class="list-group mb-4">
         {% for note in notes %}
             <li class="list-group-item">
@@ -40,14 +52,16 @@
     </ul>
 
     <h3>Messages</h3>
-    {% if report.reporter %}
+    {% if report.reporter and is_owner %}
     <form method="post" class="mb-3">
         {% csrf_token %}
         {{ msg_form.as_p }}
         <button class="btn btn-secondary" name="send_msg">Send</button>
     </form>
-    {% else %}
+    {% elif not report.reporter %}
     <p class="text-muted">Reporter is anonymous; messaging disabled.</p>
+    {% else %}
+    <p class="text-muted">Assign the report to yourself to reply to the student.</p>
     {% endif %}
     <ul class="list-group">
         {% for message in chat_messages %}

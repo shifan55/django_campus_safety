@@ -3,22 +3,29 @@
 
 :root {
   /* High-contrast accessible colors for quick recognition */
-  --safe-campus-primary: #007bff;        /* Bright blue - primary actions */
-  --safe-campus-urgent: #ff0066;         /* Hot pink - urgent/report buttons */
-  --safe-campus-safe: #00cc66;           /* Bright green - safe/success states */
-  --safe-campus-warning: #ff9900;        /* Orange - warnings */
-  --safe-campus-neutral: #6c757d;        /* Gray - secondary info */
-  --safe-campus-danger: #dc3545;         /* Red - danger/errors */
-  
+  --safe-campus-primary: #007bff;
+  /* Bright blue - primary actions */
+  --safe-campus-urgent: #ff0066;
+  /* Hot pink - urgent/report buttons */
+  --safe-campus-safe: #00cc66;
+  /* Bright green - safe/success states */
+  --safe-campus-warning: #ff9900;
+  /* Orange - warnings */
+  --safe-campus-neutral: #6c757d;
+  /* Gray - secondary info */
+  --safe-campus-danger: #dc3545;
+  /* Red - danger/errors */
+
   /* Background variations for quick visual scanning */
   --safe-campus-bg-urgent: rgba(255, 0, 102, 0.1);
   --safe-campus-bg-safe: rgba(0, 204, 102, 0.1);
   --safe-campus-bg-warning: rgba(255, 153, 0, 0.1);
-  
+
   /* High contrast text colors */
   --safe-campus-text-urgent: #ffffff;
   --safe-campus-text-primary: #ffffff;
-  --safe-campus-border-focus: #00ffff;   /* Cyan for focus states */
+  --safe-campus-border-focus: #00ffff;
+  /* Cyan for focus states */
 }
 
 /* Body and Layout */
@@ -92,6 +99,16 @@ body {
   transform: translateY(-2px);
 }
 
+/* Queue card hover effects */
+.hover-shadow {
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.hover-shadow:hover {
+  box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.2) !important;
+  transform: translateY(-3px);
+}
+
 /* Fade-in animation for landing elements */
 .fade-in-up {
   opacity: 0;
@@ -114,13 +131,15 @@ body {
 }
 
 /* Map container styling */
-#map, #modalMap {
+#map,
+#modalMap {
   border: 2px solid var(--bs-border-color);
   border-radius: 8px;
   transition: border-color 0.3s ease;
 }
 
-#map:hover, #modalMap:hover {
+#map:hover,
+#modalMap:hover {
   border-color: var(--bs-primary);
 }
 
@@ -197,7 +216,7 @@ body {
 }
 
 /* Priority button variants */
-.btn-priority-high, 
+.btn-priority-high,
 .btn-urgent {
   background-color: var(--safe-campus-urgent) !important;
   border-color: var(--safe-campus-urgent) !important;
@@ -262,9 +281,17 @@ body {
 
 /* Pulse animation for urgent buttons */
 @keyframes pulse-urgent {
-  0% { box-shadow: 0 4px 8px rgba(255, 0, 102, 0.3); }
-  50% { box-shadow: 0 4px 12px rgba(255, 0, 102, 0.5); }
-  100% { box-shadow: 0 4px 8px rgba(255, 0, 102, 0.3); }
+  0% {
+    box-shadow: 0 4px 8px rgba(255, 0, 102, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 4px 12px rgba(255, 0, 102, 0.5);
+  }
+
+  100% {
+    box-shadow: 0 4px 8px rgba(255, 0, 102, 0.3);
+  }
 }
 
 /* Quick navigation cards with high contrast */
@@ -389,12 +416,15 @@ body {
 
 /* Large touch targets for mobile */
 @media (max-width: 768px) {
-  .btn, .nav-link, .dropdown-item {
+
+  .btn,
+  .nav-link,
+  .dropdown-item {
     min-height: 48px;
     display: flex;
     align-items: center;
   }
-  
+
   .quick-access-card {
     margin-bottom: 1rem;
   }
@@ -449,6 +479,7 @@ body {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -464,9 +495,11 @@ body {
   0% {
     transform: scale(0);
   }
+
   50% {
     transform: scale(1.2);
   }
+
   100% {
     transform: scale(1);
   }
@@ -498,16 +531,16 @@ body {
   .navbar-brand {
     font-size: 1.25rem;
   }
-  
+
   .display-4 {
     font-size: 2.5rem;
   }
-  
+
   .feature-icon {
     width: 60px !important;
     height: 60px !important;
   }
-  
+
   .btn-lg {
     padding: 0.75rem 1.5rem;
     font-size: 1rem;
@@ -516,18 +549,19 @@ body {
 
 /* Print styles */
 @media print {
+
   .navbar,
   .footer,
   .btn,
   .modal {
     display: none !important;
   }
-  
+
   body {
     color: black !important;
     background: white !important;
   }
-  
+
   .card {
     border: 1px solid #ddd !important;
     box-shadow: none !important;
@@ -539,7 +573,7 @@ body {
   .card {
     border: 2px solid var(--bs-border-color) !important;
   }
-  
+
   .btn {
     border-width: 2px !important;
   }
@@ -547,6 +581,7 @@ body {
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -557,7 +592,14 @@ body {
 }
 
 /* Smooth theme transitions */
-body, .navbar, .nav-link, .navbar-brand, .card, .btn, footer, .alert {
+body,
+.navbar,
+.nav-link,
+.navbar-brand,
+.card,
+.btn,
+footer,
+.alert {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 

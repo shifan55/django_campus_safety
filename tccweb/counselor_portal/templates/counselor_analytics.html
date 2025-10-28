@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% block title %}Counselor Analytics{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-3">Analytics Dashboard</h1>
+    
+    <!-- Time Range Toggle -->
+    <div class="btn-group mb-4" role="group" aria-label="Time range selector">
+        <a href="?range=7" class="btn btn-outline-primary {% if time_range == '7' %}active{% endif %}">7 Days</a>
+        <a href="?range=30" class="btn btn-outline-primary {% if time_range == '30' %}active{% endif %}">30 Days</a>
+        <a href="?range=all" class="btn btn-outline-primary {% if time_range == 'all' %}active{% endif %}">All Time</a>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Cases</h5>
+                    <p class="card-text display-4">{{ total_cases }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Pending Cases</h5>
+                    <p class="card-text display-4">{{ pending_count }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Avg Closure Time</h5>
+                    <p class="card-text display-4">{{ avg_closure_days }}<small class="fs-6"> days</small></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Avg Response Time</h5>
+                    <p class="card-text display-4">{{ avg_response_hours }}<small class="fs-6"> hrs</small></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row g-3">
+        <!-- Reports Over Time (Weekly) -->
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Reports Handled Over Time</h5>
+                </div>
+                <div class="card-body">
+                    <div id="weeklyChart" style="height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports by Status -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Reports by Status</h5>
+                </div>
+                <div class="card-body">
+                    <div id="statusChart" style="height: 300px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports by Incident Type -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Reports by Incident Type</h5>
+                </div>
+                <div class="card-body">
+                    <div id="incidentChart" style="height: 300px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Queue Distribution -->
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Queue Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div id="queueChart" style="height: 300px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Plotly.js CDN -->
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+<script>
+    // Parse JSON data
+    const weeklyData = {{ weekly_chart|safe }};
+    const statusData = {{ status_chart|safe }};
+    const incidentData = {{ incident_chart|safe }};
+    const queueData = {{ queue_chart|safe }};
+
+    // Weekly Reports Chart (Line)
+    if (weeklyData.x.length > 0) {
+        const weeklyTrace = {
+            x: weeklyData.x,
+            y: weeklyData.y,
+            type: 'scatter',
+            mode: 'lines+markers',
+            name: 'Reports',
+            line: { color: '#007bff', width: 2 },
+            marker: { size: 8 }
+        };
+        const weeklyLayout = {
+            title: 'Reports Handled Weekly',
+            xaxis: { title: 'Week' },
+            yaxis: { title: 'Number of Reports' }
+        };
+        Plotly.newPlot('weeklyChart', [weeklyTrace], weeklyLayout);
+    } else {
+        document.getElementById('weeklyChart').innerHTML = '<p class="text-center text-muted">No data available for the selected time range</p>';
+    }
+
+    // Status Chart (Pie)
+    if (statusData.values.length > 0) {
+        const statusTrace = {
+            labels: statusData.labels,
+            values: statusData.values,
+            type: 'pie',
+            marker: { colors: ['#28a745', '#ffc107', '#dc3545', '#6c757d'] }
+        };
+        Plotly.newPlot('statusChart', [statusTrace]);
+    } else {
+        document.getElementById('statusChart').innerHTML = '<p class="text-center text-muted">No data available</p>';
+    }
+
+    // Incident Type Chart (Bar)
+    if (incidentData.values.length > 0) {
+        const incidentTrace = {
+            x: incidentData.labels,
+            y: incidentData.values,
+            type: 'bar',
+            marker: { color: '#007bff' }
+        };
+        const incidentLayout = {
+            yaxis: { title: 'Number of Reports' }
+        };
+        Plotly.newPlot('incidentChart', [incidentTrace], incidentLayout);
+    } else {
+        document.getElementById('incidentChart').innerHTML = '<p class="text-center text-muted">No data available</p>';
+    }
+
+    // Queue Distribution Chart (Pie)
+    if (queueData.values.length > 0 && queueData.values.some(v => v > 0)) {
+        const queueTrace = {
+            labels: queueData.labels,
+            values: queueData.values,
+            type: 'pie',
+            marker: { colors: ['#17a2b8', '#ffc107'] }
+        };
+        Plotly.newPlot('queueChart', [queueTrace]);
+    } else {
+        document.getElementById('queueChart').innerHTML = '<p class="text-center text-muted">No data available</p>';
+    }
+</script>
+
+{% endblock %}
+
