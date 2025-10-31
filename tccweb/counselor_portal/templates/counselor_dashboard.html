@@ -7,13 +7,8 @@
     <p class="text-muted mb-4">Monitor new submissions, active cases, and closed reports from a single support-style dashboard.</p>
 
 
-    <div class="mb-3 d-flex justify-content-between align-items-center">
-        <div>
-            <a href="?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}export=csv" class="btn btn-secondary btn-sm">Export CSV</a>
-        </div>
-        <div>
-            <a href="{% url 'counselor_analytics' %}" class="btn btn-primary btn-sm">📊 View Analytics</a>
-        </div>
+    <div class="mb-3 d-flex justify-content-end align-items-center">
+        <a href="?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}export=csv" class="btn btn-secondary btn-sm">Export CSV</a>
     </div>
 
     <form method="get" class="row g-2 mb-4">

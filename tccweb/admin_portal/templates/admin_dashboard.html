@@ -106,8 +106,13 @@
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
-                            <h3 class="mb-1">{{ resolution_rate }}%</h3>
-                            <p class="mb-0">Resolution Rate</p>
+                            <h3 class="mb-1">
+                                {% if total_reports %}
+                                <h3 class="mb-1">{{ resolution_rate }}%</h3>
+                                {% else %}
+                                <h3 class="mb-1">0%</h3>
+                                {% endif %}
+                            </h3>
                         </div>
                         <div>
                             <i class="fas fa-chart-line fa-2x opacity-75"></i>
@@ -138,60 +143,6 @@
                 </div>
                 <div class="card-body">
                     <canvas id="typeChart" height="300"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-<div class="row mb-4">
-        <div class="col-lg-7 mb-3">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-chart-area me-2"></i>Weekly Report Volume</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="weeklyChart" height="280"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-5 mb-3">
-            <div class="card h-100">
-                <div class="card-header d-flex align-items-center justify-content-between">
-                    <h5 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Operational KPIs</h5>
-                    <span class="badge bg-light text-dark">Live</span>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                            <div>
-                                <span class="fw-semibold">Average Closure Time</span>
-                                <div class="text-muted small">Resolved reports turnaround</div>
-                            </div>
-                            <span class="badge bg-primary-subtle text-primary-emphasis fs-6">{{ average_closure_display }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                            <div>
-                                <span class="fw-semibold">Average Response Time</span>
-                                <div class="text-muted small">Initial admin follow-up</div>
-                            </div>
-                            <span class="badge bg-success-subtle text-success-emphasis fs-6">{{ average_response_display }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                            <div>
-                                <span class="fw-semibold">Pending Cases</span>
-                                <div class="text-muted small">Awaiting review or action</div>
-                            </div>
-                            <span class="badge bg-warning-subtle text-warning-emphasis fs-6">{{ pending_reports }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                            <div>
-                                <span class="fw-semibold">Reopened Cases</span>
-                                <div class="text-muted small">Follow-up required</div>
-                            </div>
-                            <span class="badge bg-danger-subtle text-danger-emphasis fs-6">{{ reopened_reports }}</span>
-                        </li>
-                    </ul>
                 </div>
             </div>
         </div>
@@ -346,10 +297,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const monthlyData = JSON.parse(document.getElementById('monthly-stats').textContent);
     const typeData = JSON.parse(document.getElementById('type-stats').textContent);
     
-    const weeklyElement = document.getElementById('weekly-stats');
-    const weeklyData = weeklyElement ? JSON.parse(weeklyElement.textContent) : [];
-
-    initializeCharts(monthlyData, typeData, weeklyData);
+    initializeCharts(monthlyData, typeData);
 });
 
 // Filter reports by status

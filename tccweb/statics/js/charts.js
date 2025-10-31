@@ -5,7 +5,6 @@
 
 let monthlyChart;
 let typeChart;
-let weeklyChart;
 let statusChart;
 
 /**
@@ -13,15 +12,12 @@ let statusChart;
  * @param {Array} monthlyData - Monthly report data
  * @param {Array} typeData - Report type distribution data
  */
-function initializeCharts(monthlyData = [], typeData = [], weeklyData = []) {
+function initializeCharts(monthlyData = [], typeData = []) {
     // Initialize monthly trends chart
     initMonthlyChart(monthlyData);
-
+    
     // Initialize report types chart
     initTypeChart(typeData);
-
-    // Initialize weekly chart
-    initWeeklyChart(weeklyData);
     
     // Initialize status distribution chart if container exists
     const statusContainer = document.getElementById('statusChart');
@@ -214,80 +210,6 @@ function initTypeChart(data) {
 }
 
 /**
- * Initialize weekly volume chart
- * @param {Array} data - Weekly data array
- */
-function initWeeklyChart(data) {
-    const ctx = document.getElementById('weeklyChart');
-    if (!ctx) return;
-
-    const processedData = processWeeklyData(data);
-
-    weeklyChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: processedData.labels,
-            datasets: [{
-                label: 'Reports Handled',
-                data: processedData.data,
-                backgroundColor: 'rgba(99, 102, 241, 0.6)',
-                borderColor: 'rgb(99, 102, 241)',
-                borderWidth: 2,
-                borderRadius: 6,
-                maxBarThickness: 36
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Reports Handled by Week',
-                    font: {
-                        size: 16,
-                        weight: 'bold'
-                    }
-                },
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    titleColor: '#fff',
-                    bodyColor: '#fff',
-                    borderColor: 'rgb(99, 102, 241)',
-                    borderWidth: 1,
-                    cornerRadius: 6,
-                    callbacks: {
-                        title: function(context) {
-                            return `Week of ${context[0].label}`;
-                        },
-                        label: function(context) {
-                            const value = context.parsed.y || 0;
-                            return `${value} case${value !== 1 ? 's' : ''}`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    grid: {
-                        display: false
-                    }
-                },
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        precision: 0
-                    }
-                }
-            }
-        }
-    });
-}
-
-/**
  * Initialize status distribution chart
  */
 function initStatusChart() {
@@ -428,43 +350,6 @@ function processTypeData(rawData) {
 }
 
 /**
- * Process weekly data for chart consumption
- * @param {Array} rawData - Raw weekly data from backend
- * @returns {Object} Processed data with labels and values
- */
-function processWeeklyData(rawData) {
-    const labels = [];
-    const data = [];
-
-    const now = new Date();
-    const startOfWeek = new Date(now);
-    startOfWeek.setHours(0, 0, 0, 0);
-    // Align with Monday as first day of the week
-    const day = startOfWeek.getDay();
-    const diff = (day === 0 ? -6 : 1) - day;
-    startOfWeek.setDate(startOfWeek.getDate() + diff);
-
-    for (let i = 7; i >= 0; i--) {
-        const weekStart = new Date(startOfWeek);
-        weekStart.setDate(weekStart.getDate() - i * 7);
-        const weekKey = weekStart.toISOString().slice(0, 10);
-
-        const label = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-
-        labels.push(label);
-
-        const weekData = rawData.find(item => item.week === weekKey);
-        data.push(weekData ? weekData.count : 0);
-    }
-
-    return {
-        labels,
-        data
-    };
-}
-
-
-/**
  * Update chart data dynamically
  * @param {string} chartType - Type of chart to update
  * @param {Array} newData - New data to display
@@ -487,16 +372,6 @@ function updateChartData(chartType, newData) {
         case 'type':
             chart = typeChart;
             processedData = processTypeData(newData);
-            if (chart) {
-                chart.data.labels = processedData.labels;
-                chart.data.datasets[0].data = processedData.data;
-                chart.update('active');
-            }
-            break;
-
-        case 'weekly':
-            chart = weeklyChart;
-            processedData = processWeeklyData(newData);
             if (chart) {
                 chart.data.labels = processedData.labels;
                 chart.data.datasets[0].data = processedData.data;
@@ -528,13 +403,12 @@ function setupResponsiveCharts() {
     window.addEventListener('resize', debounce(function() {
         if (monthlyChart) monthlyChart.resize();
         if (typeChart) typeChart.resize();
-        if (weeklyChart) weeklyChart.resize();
         if (statusChart) statusChart.resize();
     }, 300));
-
+    
     // Handle tab visibility changes to pause animations
     document.addEventListener('visibilitychange', function() {
-        const charts = [monthlyChart, typeChart, weeklyChart, statusChart];
+        const charts = [monthlyChart, typeChart, statusChart];
         charts.forEach(chart => {
             if (chart) {
                 if (document.hidden) {
@@ -566,10 +440,7 @@ async function refreshCharts() {
         // Update charts
         updateChartData('monthly', data.monthly);
         updateChartData('type', data.types);
-        if (data.weekly) {
-            updateChartData('weekly', data.weekly);
-        }
-
+        
         // Hide loading indicators
         hideChartLoading();
         
@@ -591,7 +462,7 @@ async function refreshCharts() {
  * Show loading indicators on charts
  */
 function showChartLoading() {
-    const chartContainers = ['monthlyChart', 'typeChart', 'weeklyChart', 'statusChart'];
+    const chartContainers = ['monthlyChart', 'typeChart', 'statusChart'];
     
     chartContainers.forEach(id => {
         const container = document.getElementById(id)?.parentElement;
@@ -627,9 +498,6 @@ function exportChart(chartType, filename) {
             break;
         case 'type':
             chart = typeChart;
-            break;
-        case 'weekly':
-            chart = weeklyChart;
             break;
         case 'status':
             chart = statusChart;

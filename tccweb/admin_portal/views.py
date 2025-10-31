@@ -11,9 +11,8 @@ import logging
 
 # Use the project's default cache backend for storing dashboard statistics
 cache = caches["default"]
-from django.db import NotSupportedError
-from django.db.models import Avg, Count, DurationField, ExpressionWrapper, F
-from django.db.models.functions import TruncMonth, TruncWeek
+from django.db.models import Count
+from django.db.models.functions import TruncMonth
 from django.http import HttpResponse
 import csv
 from tccweb.core.models import (
@@ -60,66 +59,7 @@ def admin_dashboard(request):
             {"month": m["month"].strftime("%Y-%m"), "count": m["count"]}
             for m in monthly_qs
         ]
-        
-        weekly_qs = (
-        Report.objects
-        .annotate(week=TruncWeek("created_at"))
-        .values("week")
-        .annotate(count=Count("id"))
-        .order_by("week")
-    )
-    weekly_stats = []
-    try:
-        weekly_qs = (
-            Report.objects
-            .annotate(week=TruncWeek("created_at"))
-            .values("week")
-            .annotate(count=Count("id"))
-            .order_by("week")
-        )
-    except NotSupportedError:
-        weekly_qs = []
-    else:
-        weekly_stats = [
-            {"week": w["week"].strftime("%Y-%m-%d"), "count": w["count"]}
-            for w in weekly_qs
-            if w["week"] is not None
-        ]
-
-    response_qs = Report.objects.filter(
-        assigned_to__isnull=False,
-        updated_at__gt=F("created_at"),
-    ).annotate(
-        response_time=ExpressionWrapper(
-            F("updated_at") - F("created_at"),
-            output_field=DurationField(),
-        )
-    )
-    avg_response = response_qs.aggregate(avg=Avg("response_time"))["avg"]
-
-    closure_qs = Report.objects.filter(
-        status=ReportStatus.RESOLVED,
-        updated_at__gt=F("created_at"),
-    ).annotate(
-        closure_time=ExpressionWrapper(
-            F("updated_at") - F("created_at"),
-            output_field=DurationField(),
-        )
-    )
-    avg_closure = closure_qs.aggregate(avg=Avg("closure_time"))["avg"]
-
-    average_response_hours = round(avg_response.total_seconds() / 3600, 1) if avg_response else None
-    average_closure_days = round(avg_closure.total_seconds() / 86400, 1) if avg_closure else None
-
-    average_response_display = f"{average_response_hours:.1f} hrs" if average_response_hours is not None else "N/A"
-    average_closure_display = f"{average_closure_days:.1f} days" if average_closure_days is not None else "N/A"
-
-    reopened_reports = Report.objects.filter(
-        status=ReportStatus.PENDING,
-        updated_at__gt=F("created_at"),
-    ).count()
-        
-    cache.set("dashboard_monthly_stats", monthly_stats, 300)
+        cache.set("dashboard_monthly_stats", monthly_stats, 300)
 
     type_stats = cache.get("dashboard_type_stats") or []
     if not type_stats:
@@ -141,11 +81,7 @@ def admin_dashboard(request):
         "resolution_rate": resolution_rate,
         "recent_reports": recent_reports,
         "monthly_stats": monthly_stats,
-        "weekly_stats": weekly_stats,
         "type_stats": type_stats,
-        "average_response_display": average_response_display,
-        "average_closure_display": average_closure_display,
-        "reopened_reports": reopened_reports,
     }
     return render(request, 'admin_dashboard.html', ctx)
 
