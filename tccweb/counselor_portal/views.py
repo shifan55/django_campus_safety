@@ -228,6 +228,81 @@ def dashboard(request):
     }
     return render(request, "counselor_dashboard.html", context)
 
+@login_required
+@user_passes_test(_is_counselor)
+def my_cases(request):
+    """List the cases claimed by the logged-in counselor."""
+
+    base_qs = (
+        Report.objects.filter(assigned_to=request.user)
+        .select_related("reporter")
+    )
+
+    status_filter = request.GET.get("status", "")
+    search_query = request.GET.get("q", "").strip()
+
+    reports_qs = base_qs
+
+    if status_filter:
+        reports_qs = reports_qs.filter(status=status_filter)
+
+    if search_query:
+        if search_query.isdigit():
+            reports_qs = reports_qs.filter(id=int(search_query))
+        else:
+            reports_qs = reports_qs.filter(
+                Q(reporter__username__icontains=search_query)
+                | Q(reporter_name__icontains=search_query)
+            )
+
+    latest_message = (
+        ChatMessage.objects.filter(report=OuterRef("pk"))
+        .order_by("-timestamp")
+    )
+
+    reports_qs = reports_qs.annotate(
+        latest_message_ts=Subquery(latest_message.values("timestamp")[:1]),
+        has_unread=Exists(
+            ChatMessage.objects.filter(
+                report=OuterRef("pk"),
+                recipient=request.user,
+                is_read=False,
+            )
+        ),
+    ).order_by("-latest_message_ts", "-updated_at", "-created_at")
+
+    reports = list(reports_qs)
+
+    for report in reports:
+        report.last_activity = (
+            report.latest_message_ts or report.updated_at or report.created_at
+        )
+
+    status_counts = {
+        row["status"]: row["total"]
+        for row in base_qs.order_by().values("status").annotate(total=Count("id"))
+    }
+
+    status_summary = [
+        {
+            "value": value,
+            "label": label,
+            "count": status_counts.get(value, 0),
+        }
+        for value, label in ReportStatus.choices
+    ]
+
+    context = {
+        "reports": reports,
+        "statuses": ReportStatus.choices,
+        "status_summary": status_summary,
+        "total_cases": base_qs.count(),
+        "status_filter": status_filter,
+        "search_query": search_query,
+        "has_filters": bool(status_filter or search_query),
+    }
+
+    return render(request, "counselor_my_cases.html", context)
 
 @login_required
 @user_passes_test(_is_counselor)

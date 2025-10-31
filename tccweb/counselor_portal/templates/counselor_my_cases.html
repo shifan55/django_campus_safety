@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load text_extras %}
+{% block title %}My Cases{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        <div>
+            <h1 class="mb-1">My Cases</h1>
+            <p class="text-muted mb-0">A focused view of the reports you've claimed and are actively managing.</p>
+        </div>
+        <div class="text-md-end">
+            <div class="badge text-bg-primary fs-6">{{ total_cases }} total case{{ total_cases|pluralize }}</div>
+            {% if reports %}
+            <div class="small text-muted">Showing {{ reports|length }} case{{ reports|length|pluralize }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="get" class="row g-2 mb-4">
+        <div class="col-md-4 col-lg-3">
+            <input type="text" name="q" value="{{ search_query }}" class="form-control" placeholder="Search by ID or name">
+        </div>
+        <div class="col-md-4 col-lg-3">
+            <select name="status" class="form-select">
+                <option value="">All statuses</option>
+                {% for value, label in statuses %}
+                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 col-lg-2">
+            <button type="submit" class="btn btn-primary w-100">Apply</button>
+        </div>
+        {% if has_filters %}
+        <div class="col-md-2 col-lg-2">
+            <a href="{% url 'counselor_my_cases' %}" class="btn btn-outline-secondary w-100">Clear</a>
+        </div>
+        {% endif %}
+    </form>
+
+    <div class="row g-3 mb-4">
+        {% for status in status_summary %}
+        <div class="col-sm-6 col-lg-3">
+            <div class="card h-100 border-light-subtle">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <span class="fw-semibold">{{ status.label }}</span>
+                        <span class="badge bg-{{ status.value|status_badge }}">{{ status.count }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Report #</th>
+                    <th scope="col">Incident Type</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Reporter</th>
+                    <th scope="col">Last Activity</th>
+                    <th scope="col" class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for report in reports %}
+                <tr>
+                    <td class="fw-semibold">#{{ report.id }}</td>
+                    <td>{{ report.get_incident_type_display }}</td>
+                    <td>
+                        <span class="badge bg-{{ report.status|status_badge }}">{{ report.get_status_display }}</span>
+                    </td>
+                    <td>
+                        {% if report.reporter %}
+                            {{ report.reporter.get_full_name|default:report.reporter.username }}
+                        {% else %}
+                            {{ report.reporter_name|default:"Anonymous" }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if report.last_activity %}
+                        <div>{{ report.last_activity|date:"M j, Y g:i a" }}</div>
+                        <small class="text-muted">Updated {{ report.last_activity|timesince }} ago</small>
+                        {% else %}
+                        <span class="text-muted">No activity yet</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if report.has_unread %}
+                        <span class="badge text-bg-danger me-2">Unread</span>
+                        {% endif %}
+                        <a href="{% url 'counselor_case_detail' report.id %}" class="btn btn-sm btn-primary">Open Case</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">You haven't claimed any cases yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
