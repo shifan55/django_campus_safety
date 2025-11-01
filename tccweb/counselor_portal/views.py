@@ -22,6 +22,7 @@ from django.conf import settings
 from django.core.paginator import Paginator
 from django.contrib import messages
 from django.utils import timezone
+from django.urls import reverse
 from datetime import timedelta, datetime
 import csv
 import json
@@ -453,6 +454,27 @@ def analytics_dashboard(request):
     
     now = timezone.now()
     
+    latest_message = (
+        ChatMessage.objects.filter(report=OuterRef("pk"))
+        .order_by("-timestamp")
+    )
+
+    reports_qs = reports_qs.annotate(
+        latest_message_ts=Subquery(latest_message.values("timestamp")[:1]),
+        latest_message_sender=Subquery(latest_message.values("sender")[:1]),
+    )
+
+    queue_case = Case(
+        When(status=ReportStatus.RESOLVED, then=Value("closed")),
+        When(assigned_to__isnull=True, then=Value("new")),
+        When(latest_message_sender=request.user.id, then=Value("waiting_on_student")),
+        When(assigned_to=request.user, then=Value("assigned_to_me")),
+        default=Value("assigned_to_me"),
+        output_field=CharField(),
+    )
+
+    reports_qs = reports_qs.annotate(queue_state=queue_case)
+    
     # KPI Calculations
     # 1. Total cases handled
     total_cases = reports_qs.count()
@@ -491,36 +513,194 @@ def analytics_dashboard(request):
     
     # Chart Data
     # 1. Reports per week
-    weekly_reports = reports_qs.annotate(
-        week=TruncWeek('created_at')
-    ).values('week').annotate(count=Count('id')).order_by('week')
+    weekly_reports = (
+        reports_qs.annotate(week=TruncWeek('created_at'))
+        .values('week')
+        .annotate(count=Count('id'))
+        .order_by('week')
+    )
     
     weekly_chart_data = {
         'x': [str(item['week']) for item in weekly_reports],
         'y': [item['count'] for item in weekly_reports],
     }
     
-    # 2. Reports by status
+    # 2. Reports per month (for toggled view)
+    monthly_reports = (
+        reports_qs.annotate(month=TruncMonth('created_at'))
+        .values('month')
+        .annotate(count=Count('id'))
+        .order_by('month')
+    )
+
+    monthly_chart_data = {
+        'x': [str(item['month']) for item in monthly_reports],
+        'y': [item['count'] for item in monthly_reports],
+    }
+
+    # 3. Reports by status
     status_data = reports_qs.values('status').annotate(count=Count('id'))
     status_chart_data = {
         'labels': [item['status'].replace('_', ' ').title() for item in status_data],
         'values': [item['count'] for item in status_data],
     }
     
-    # 3. Reports by incident type
+     # 3. Reports by incident type
     incident_data = reports_qs.values('incident_type').annotate(count=Count('id'))
     incident_chart_data = {
         'labels': [item['incident_type'].replace('_', ' ').title() for item in incident_data],
         'values': [item['count'] for item in incident_data],
     }
     
-    # 4. Queue distribution
-    assigned_count = reports_qs.filter(assigned_to=request.user).count()
-    unassigned_count = reports_qs.filter(assigned_to__isnull=True).count()
-    queue_chart_data = {
-        'labels': ['Assigned to Me', 'Unassigned'],
-        'values': [assigned_count, unassigned_count],
+    # 5. Pipeline (status by queue)
+    queue_metadata = {
+        'new': {
+            'label': 'New',
+            'badge': 'primary',
+        },
+        'assigned_to_me': {
+            'label': 'Assigned to Me',
+            'badge': 'info',
+        },
+        'waiting_on_student': {
+            'label': 'Waiting on Student',
+            'badge': 'warning',
+        },
+        'closed': {
+            'label': 'Closed',
+            'badge': 'success',
+        },
     }
+
+    status_label_map = dict(ReportStatus.choices)
+    queue_order = ['new', 'assigned_to_me', 'waiting_on_student', 'closed']
+    status_order = [choice[0] for choice in ReportStatus.choices]
+
+    pipeline_counts = (
+        reports_qs.values('queue_state', 'status')
+        .annotate(total=Count('id'))
+    )
+
+    pipeline_matrix = {
+        status: {queue: 0 for queue in queue_order}
+        for status in status_order
+    }
+
+    for row in pipeline_counts:
+        queue_key = row['queue_state'] or 'assigned_to_me'
+        status_key = row['status']
+        if status_key in pipeline_matrix and queue_key in pipeline_matrix[status_key]:
+            pipeline_matrix[status_key][queue_key] = row['total']
+
+    pipeline_series = []
+    for status in status_order:
+        values = [pipeline_matrix[status][queue] for queue in queue_order]
+        if any(values):
+            pipeline_series.append({
+                'name': status_label_map.get(status, status.replace('_', ' ').title()),
+                'values': values,
+            })
+
+    pipeline_chart_data = {
+        'queues': [queue_metadata[q]['label'] for q in queue_order],
+        'series': pipeline_series,
+    }
+
+    # 6. Queue distribution (donut chart)
+    queue_totals = reports_qs.values('queue_state').annotate(total=Count('id'))
+    queue_totals_map = {row['queue_state']: row['total'] for row in queue_totals}
+    queue_chart_data = {
+        'labels': [queue_metadata[q]['label'] for q in queue_order],
+        'values': [queue_totals_map.get(q, 0) for q in queue_order],
+    }
+    
+    claimed_cases_count = queue_totals_map.get('assigned_to_me', 0)
+    unassigned_queue_count = queue_totals_map.get('new', 0)
+
+    try:
+        unread_messages_count = ChatMessage.objects.filter(
+            recipient=request.user,
+            is_read=False,
+        ).count()
+    except OperationalError:
+        unread_messages_count = 0
+
+    recently_closed_cutoff = now - timedelta(days=7)
+    recently_closed_count = resolved_reports.filter(
+        updated_at__gte=recently_closed_cutoff
+    ).count()
+
+    reports_list = list(reports_qs)
+
+    sla_buckets = {
+        '<12h': 0,
+        '12-24h': 0,
+        '24-48h': 0,
+        '>48h': 0,
+    }
+
+    for report in reports_list:
+        last_activity = report.latest_message_ts or report.updated_at or report.created_at
+        if not last_activity:
+            continue
+        hours_open = (now - last_activity).total_seconds() / 3600
+        if hours_open < 12:
+            sla_buckets['<12h'] += 1
+        elif hours_open < 24:
+            sla_buckets['12-24h'] += 1
+        elif hours_open < 48:
+            sla_buckets['24-48h'] += 1
+        else:
+            sla_buckets['>48h'] += 1
+
+    total_sla = sum(sla_buckets.values()) or 1
+    sla_compliance = ((sla_buckets['<12h'] + sla_buckets['12-24h']) / total_sla) * 100
+
+    sla_chart_data = {
+        'buckets': list(sla_buckets.keys()),
+        'counts': list(sla_buckets.values()),
+        'score': round(sla_compliance, 1),
+    }
+
+    portal_summary_cards = [
+        {
+            'title': 'My Claimed Cases',
+            'count': claimed_cases_count,
+            'description': 'Active reports that you are currently shepherding.',
+            'url': reverse('counselor_my_cases'),
+            'icon': 'fa-user-check',
+            'badge_variant': 'info',
+            'badge_label': 'In Progress',
+        },
+        {
+            'title': 'Unassigned Queue',
+            'count': unassigned_queue_count,
+            'description': 'Reports waiting to be claimed from the shared counselor queue.',
+            'url': reverse('counselor_dashboard'),
+            'icon': 'fa-inbox',
+            'badge_variant': 'warning',
+            'badge_label': 'Needs Claim',
+        },
+        {
+            'title': 'Unread Messages',
+            'count': unread_messages_count,
+            'description': 'New student replies or admin notes that need your response.',
+            'url': reverse('counselor_messages'),
+            'icon': 'fa-comments',
+            'badge_variant': 'danger',
+            'badge_label': 'New Replies',
+        },
+        {
+            'title': 'Recently Closed',
+            'count': recently_closed_count,
+            'description': 'Cases resolved in the past week to celebrate and review.',
+            'url': reverse('counselor_analytics'),
+            'icon': 'fa-chart-line',
+            'badge_variant': 'success',
+            'badge_label': 'This Week',
+        },
+    ]
+
     
     context = {
         'total_cases': total_cases,
@@ -528,10 +708,18 @@ def analytics_dashboard(request):
         'avg_closure_days': round(avg_closure_days, 1),
         'avg_response_hours': round(avg_response_hours, 1),
         'weekly_chart': json.dumps(weekly_chart_data),
+        'monthly_chart': json.dumps(monthly_chart_data),
         'status_chart': json.dumps(status_chart_data),
         'incident_chart': json.dumps(incident_chart_data),
         'queue_chart': json.dumps(queue_chart_data),
+        'pipeline_chart': json.dumps(pipeline_chart_data),
+        'sla_chart': json.dumps(sla_chart_data),
         'time_range': time_range,
+        'portal_summary_cards': portal_summary_cards,
+        'claimed_cases_count': claimed_cases_count,
+        'unassigned_queue_count': unassigned_queue_count,
+        'unread_messages_count': unread_messages_count,
+        'recently_closed_count': recently_closed_count,
     }
     
     return render(request, 'counselor_analytics.html', context)

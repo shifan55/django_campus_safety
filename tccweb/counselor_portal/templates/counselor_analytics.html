@@ -1,14 +1,133 @@
 {% extends 'base.html' %}
 {% block title %}Counselor Analytics{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+    .portal-summary-card {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+
+    .portal-summary-card .card {
+        border: 1px solid var(--bs-border-color);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        min-height: 100%;
+    }
+
+    .portal-summary-card .icon-pill {
+        width: 3rem;
+        height: 3rem;
+        border-radius: 1rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--bs-primary-bg-subtle);
+        color: var(--bs-primary);
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .portal-summary-card .fa-arrow-right-long {
+        transition: transform 0.2s ease;
+    }
+
+    .portal-summary-card:focus-visible {
+        outline: none;
+    }
+
+    .portal-summary-card:hover .card,
+    .portal-summary-card:focus .card,
+    .portal-summary-card:focus-visible .card {
+        transform: translateY(-4px);
+        box-shadow: 0 1.25rem 2.5rem rgba(15, 23, 42, 0.15);
+        border-color: rgba(13, 110, 253, 0.35);
+    }
+
+    .portal-summary-card:hover .icon-pill,
+    .portal-summary-card:focus .icon-pill,
+    .portal-summary-card:focus-visible .icon-pill {
+        background-color: var(--bs-primary);
+        color: var(--bs-white);
+    }
+
+    .portal-summary-card:hover .fa-arrow-right-long,
+    .portal-summary-card:focus .fa-arrow-right-long,
+    .portal-summary-card:focus-visible .fa-arrow-right-long {
+        transform: translateX(4px);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .portal-summary-card .card,
+        .portal-summary-card .icon-pill,
+        .portal-summary-card .fa-arrow-right-long {
+            transition: none !important;
+        }
+    }
+
+    .chart-canvas {
+        min-height: 320px;
+    }
+
+    .nav-pills .nav-link {
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <h1 class="mb-3">Analytics Dashboard</h1>
+    {% if portal_summary_cards %}
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+        <h2 class="h4 mb-0">Portal Summary</h2>
+    </div>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 mb-4">
+        {% for card in portal_summary_cards %}
+        <div class="col">
+            <a href="{{ card.url }}" class="portal-summary-card" aria-label="{{ card.title }}">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body d-flex flex-column gap-3">
+                        <div class="d-flex align-items-start justify-content-between gap-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="icon-pill">
+                                    <i class="fa-solid {{ card.icon }}"></i>
+                                </span>
+                                <div>
+                                    <span class="badge bg-{{ card.badge_variant }} text-uppercase small fw-semibold">{{ card.badge_label }}</span>
+                                    <h2 class="h5 mb-0 mt-1">{{ card.title }}</h2>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-arrow-right-long text-secondary"></i>
+                        </div>
+                        <div>
+                            <p class="display-6 fw-bold mb-1">{{ card.count }}</p>
+                            <p class="mb-0 text-muted small">{{ card.description }}</p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
     
     <!-- Time Range Toggle -->
-    <div class="btn-group mb-4" role="group" aria-label="Time range selector">
-        <a href="?range=7" class="btn btn-outline-primary {% if time_range == '7' %}active{% endif %}">7 Days</a>
-        <a href="?range=30" class="btn btn-outline-primary {% if time_range == '30' %}active{% endif %}">30 Days</a>
-        <a href="?range=all" class="btn btn-outline-primary {% if time_range == 'all' %}active{% endif %}">All Time</a>
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div class="btn-group" role="group" aria-label="Time range selector">
+            <a href="?range=7" class="btn btn-outline-primary {% if time_range == '7' %}active{% endif %}">7 Days</a>
+            <a href="?range=30" class="btn btn-outline-primary {% if time_range == '30' %}active{% endif %}">30 Days</a>
+            <a href="?range=all" class="btn btn-outline-primary {% if time_range == 'all' %}active{% endif %}">All Time</a>
+        </div>
+
+        <ul class="nav nav-pills" id="timeSeriesTabs" role="tablist" aria-label="Time series view switcher">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" data-period="weekly" type="button" role="tab" aria-selected="true">Weekly View</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-period="monthly" type="button" role="tab" aria-selected="false">Monthly View</button>
+            </li>
+        </ul>
     </div>
 
     <!-- KPI Cards -->
@@ -48,51 +167,77 @@
     </div>
 
     <!-- Charts Section -->
-    <div class="row g-3">
-        <!-- Reports Over Time (Weekly) -->
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Reports Handled Over Time</h5>
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="card h-100">
+                <div class="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                    <div>
+                        <h5 class="mb-0">Reports Handled Over Time</h5>
+                        <small class="text-muted" id="timeSeriesSubtitle">Weekly totals</small>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <div id="weeklyChart" style="height: 400px;"></div>
+                    <div id="weeklyChart" class="chart-canvas" data-period="weekly"></div>
+                    <div id="monthlyChart" class="chart-canvas d-none" data-period="monthly"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Reports by Status -->
-        <div class="col-md-6">
-            <div class="card">
+        <div class="row g-3 mb-3">
+        <div class="col-lg-7">
+            <div class="card h-100">
                 <div class="card-header">
-                    <h5 class="mb-0">Reports by Status</h5>
+                    <h5 class="mb-0">Pipeline by Queue &amp; Status</h5>
                 </div>
                 <div class="card-body">
-                    <div id="statusChart" style="height: 300px;"></div>
+                    <div id="pipelineChart" class="chart-canvas"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Reports by Incident Type -->
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Reports by Incident Type</h5>
-                </div>
-                <div class="card-body">
-                    <div id="incidentChart" style="height: 300px;"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Queue Distribution -->
-        <div class="col-md-12">
-            <div class="card">
+       <div class="col-lg-5">
+            <div class="card h-100">
                 <div class="card-header">
                     <h5 class="mb-0">Queue Distribution</h5>
                 </div>
                 <div class="card-body">
-                    <div id="queueChart" style="height: 300px;"></div>
+                    <div id="queueChart" class="chart-canvas"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+        <div class="col-xl-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">SLA Health</h5>
+                </div>
+                <div class="card-body">
+                    <div id="slaGauge" class="chart-canvas"></div>
+                    <div class="mt-3">
+                        <h6 class="fw-semibold">Cases by Response Window</h6>
+                        <ul class="list-unstyled mb-0" id="slaLegend"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Reports by Status</h5>
+                </div>
+                <div class="card-body">
+                    <div id="statusChart" class="chart-canvas"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Reports by Incident Type</h5>
+                </div>
+                <div class="card-body">
+                    <div id="incidentChart" class="chart-canvas"></div>
                 </div>
             </div>
         </div>
@@ -105,30 +250,92 @@
 <script>
     // Parse JSON data
     const weeklyData = {{ weekly_chart|safe }};
+    const monthlyData = {{ monthly_chart|safe }};
     const statusData = {{ status_chart|safe }};
     const incidentData = {{ incident_chart|safe }};
     const queueData = {{ queue_chart|safe }};
+    const pipelineData = {{ pipeline_chart|safe }};
+    const slaData = {{ sla_chart|safe }};
 
-    // Weekly Reports Chart (Line)
-    if (weeklyData.x.length > 0) {
-        const weeklyTrace = {
-            x: weeklyData.x,
-            y: weeklyData.y,
-            type: 'scatter',
-            mode: 'lines+markers',
-            name: 'Reports',
-            line: { color: '#007bff', width: 2 },
-            marker: { size: 8 }
-        };
-        const weeklyLayout = {
-            title: 'Reports Handled Weekly',
-            xaxis: { title: 'Week' },
-            yaxis: { title: 'Number of Reports' }
-        };
-        Plotly.newPlot('weeklyChart', [weeklyTrace], weeklyLayout);
-    } else {
-        document.getElementById('weeklyChart').innerHTML = '<p class="text-center text-muted">No data available for the selected time range</p>';
+
+    const plotConfig = {responsive: true, displayModeBar: false};
+
+    function purgeIfPlotted(id) {
+        const el = document.getElementById(id);
+        if (el && el.data) {
+            Plotly.purge(id);
+        }
     }
+
+    function renderTimeSeries(period) {
+        const weeklyChartEl = document.getElementById('weeklyChart');
+        const monthlyChartEl = document.getElementById('monthlyChart');
+        const subtitle = document.getElementById('timeSeriesSubtitle');
+
+        if (period === 'monthly') {
+            weeklyChartEl.classList.add('d-none');
+            monthlyChartEl.classList.remove('d-none');
+            subtitle.textContent = 'Monthly totals';
+            if (monthlyData.x.length > 0) {
+                purgeIfPlotted('monthlyChart');
+                monthlyChartEl.innerHTML = '';
+                const monthlyTrace = {
+                    x: monthlyData.x,
+                    y: monthlyData.y,
+                    type: 'bar',
+                    marker: {color: '#4e73df'}
+                };
+                const monthlyLayout = {
+                    margin: {t: 10, r: 10, b: 40, l: 50},
+                    xaxis: {title: 'Month'},
+                    yaxis: {title: 'Reports'},
+                    hovermode: 'x unified',
+                };
+                Plotly.newPlot('monthlyChart', [monthlyTrace], monthlyLayout, plotConfig);
+            } else {
+                purgeIfPlotted('monthlyChart');
+                monthlyChartEl.innerHTML = '<p class="text-center text-muted">No monthly data available for the selected time range</p>';
+            }
+        } else {
+            monthlyChartEl.classList.add('d-none');
+            weeklyChartEl.classList.remove('d-none');
+            subtitle.textContent = 'Weekly totals';
+            if (weeklyData.x.length > 0) {
+                purgeIfPlotted('weeklyChart');
+                weeklyChartEl.innerHTML = '';
+                const weeklyTrace = {
+                    x: weeklyData.x,
+                    y: weeklyData.y,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: 'Reports',
+                    line: { color: '#0d6efd', width: 3 },
+                    marker: { size: 8, color: '#0d6efd' },
+                    hovertemplate: '%{y} reports<br>%{x|%b %d, %Y}<extra></extra>',
+                };
+                const weeklyLayout = {
+                    margin: {t: 10, r: 10, b: 40, l: 50},
+                    xaxis: { title: 'Week' },
+                    yaxis: { title: 'Reports' },
+                    hovermode: 'x unified',
+                };
+                Plotly.newPlot('weeklyChart', [weeklyTrace], weeklyLayout, plotConfig);
+            } else {
+                purgeIfPlotted('weeklyChart');
+                weeklyChartEl.innerHTML = '<p class="text-center text-muted">No weekly data available for the selected time range</p>';
+            }
+        }
+    }
+
+    renderTimeSeries('weekly');
+
+    document.querySelectorAll('#timeSeriesTabs .nav-link').forEach((tab) => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('#timeSeriesTabs .nav-link').forEach(btn => btn.classList.remove('active'));
+            tab.classList.add('active');
+            renderTimeSeries(tab.dataset.period);
+        });
+    });
 
     // Status Chart (Pie)
     if (statusData.values.length > 0) {
@@ -136,9 +343,10 @@
             labels: statusData.labels,
             values: statusData.values,
             type: 'pie',
-            marker: { colors: ['#28a745', '#ffc107', '#dc3545', '#6c757d'] }
+            marker: { colors: ['#0d6efd', '#ffc107', '#20c997', '#6c757d'] },
+            hovertemplate: '<b>%{label}</b><br>%{value} reports<extra></extra>'
         };
-        Plotly.newPlot('statusChart', [statusTrace]);
+        Plotly.newPlot('statusChart', [statusTrace], {margin: {t: 10, b: 10}}, plotConfig);
     } else {
         document.getElementById('statusChart').innerHTML = '<p class="text-center text-muted">No data available</p>';
     }
@@ -149,27 +357,100 @@
             x: incidentData.labels,
             y: incidentData.values,
             type: 'bar',
-            marker: { color: '#007bff' }
+            marker: { color: '#6610f2' },
+            hovertemplate: '%{y} reports<br>%{x}<extra></extra>'
         };
         const incidentLayout = {
-            yaxis: { title: 'Number of Reports' }
+            margin: {t: 10, r: 10, b: 80, l: 40},
+            xaxis: { automargin: true },
+            yaxis: { title: 'Reports' }
         };
-        Plotly.newPlot('incidentChart', [incidentTrace], incidentLayout);
+        Plotly.newPlot('incidentChart', [incidentTrace], incidentLayout, plotConfig);
     } else {
         document.getElementById('incidentChart').innerHTML = '<p class="text-center text-muted">No data available</p>';
     }
 
-    // Queue Distribution Chart (Pie)
+    // Queue Distribution Chart (Donut)
     if (queueData.values.length > 0 && queueData.values.some(v => v > 0)) {
         const queueTrace = {
             labels: queueData.labels,
             values: queueData.values,
             type: 'pie',
-            marker: { colors: ['#17a2b8', '#ffc107'] }
+            hole: 0.55,
+            marker: { colors: ['#6f42c1', '#0dcaf0', '#ffc107', '#198754'] },
+            hovertemplate: '<b>%{label}</b><br>%{value} cases<extra></extra>'
         };
-        Plotly.newPlot('queueChart', [queueTrace]);
+        const queueLayout = {
+            margin: {t: 10, b: 10},
+            legend: {orientation: 'h'}
+        };
+        Plotly.newPlot('queueChart', [queueTrace], queueLayout, plotConfig);
     } else {
         document.getElementById('queueChart').innerHTML = '<p class="text-center text-muted">No data available</p>';
+    }
+
+    // Pipeline Chart (Stacked Bar)
+    if (pipelineData.series.length > 0) {
+        const pipelineColors = ['#0d6efd', '#fd7e14', '#20c997', '#6f42c1'];
+        const traces = pipelineData.series.map((series, index) => ({
+            x: pipelineData.queues,
+            y: series.values,
+            name: series.name,
+            type: 'bar',
+            marker: {color: pipelineColors[index % pipelineColors.length]},
+            hovertemplate: '<b>%{x}</b><br>' + series.name + ': %{y}<extra></extra>'
+        }));
+        const pipelineLayout = {
+            barmode: 'stack',
+            margin: {t: 10, r: 10, b: 40, l: 50},
+            yaxis: {title: 'Reports'},
+            legend: {orientation: 'h'},
+        };
+        Plotly.newPlot('pipelineChart', traces, pipelineLayout, plotConfig);
+    } else {
+        document.getElementById('pipelineChart').innerHTML = '<p class="text-center text-muted">No pipeline data available</p>';
+    }
+
+    // SLA Gauge
+    if (slaData && slaData.buckets.length > 0) {
+        const gaugeTrace = {
+            type: 'indicator',
+            mode: 'gauge+number',
+            value: slaData.score,
+            number: {suffix: '%'},
+            title: {text: 'Within 24h'},
+            gauge: {
+                axis: {range: [0, 100]},
+                bar: {color: '#0d6efd'},
+                steps: [
+                    {range: [0, 50], color: '#dc3545'},
+                    {range: [50, 80], color: '#ffc107'},
+                    {range: [80, 100], color: '#198754'}
+                ]
+            }
+        };
+        Plotly.newPlot('slaGauge', [gaugeTrace], {margin: {t: 20, b: 0}}, plotConfig);
+
+        const slaLegend = document.getElementById('slaLegend');
+        slaLegend.innerHTML = '';
+        const legendColors = ['#0d6efd', '#0dcaf0', '#ffc107', '#dc3545'];
+        slaData.buckets.forEach((bucket, index) => {
+            const item = document.createElement('li');
+            item.classList.add('d-flex', 'align-items-center', 'mb-1');
+            const swatch = document.createElement('span');
+            swatch.classList.add('me-2', 'rounded-pill');
+            swatch.style.width = '12px';
+            swatch.style.height = '12px';
+            swatch.style.display = 'inline-block';
+            swatch.style.backgroundColor = legendColors[index % legendColors.length];
+            const label = document.createElement('span');
+            label.textContent = `${bucket}: ${slaData.counts[index]} cases`;
+            item.appendChild(swatch);
+            item.appendChild(label);
+            slaLegend.appendChild(item);
+        });
+    } else {
+        document.getElementById('slaGauge').innerHTML = '<p class="text-center text-muted">No SLA data available</p>';
     }
 </script>
 
