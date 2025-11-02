@@ -11,8 +11,10 @@ import logging
 
 # Use the project's default cache backend for storing dashboard statistics
 cache = caches["default"]
-from django.db.models import Count
-from django.db.models.functions import TruncMonth
+from collections import OrderedDict
+
+from django.db.models import Count, Q
+from django.db.models.functions import TruncMonth, TruncWeek
 from django.http import HttpResponse
 import csv
 from tccweb.core.models import (
@@ -73,6 +75,112 @@ def admin_dashboard(request):
         ]
         cache.set("dashboard_type_stats", type_stats, 300)
 
+    status_label_map = dict(ReportStatus.choices)
+
+    status_summary = cache.get("dashboard_status_summary")
+    if status_summary is None:
+        status_qs = (
+            Report.objects.values("status")
+            .annotate(count=Count("id"))
+            .order_by("status")
+        )
+        status_summary = [
+            {
+                "status": row["status"],
+                "label": status_label_map.get(row["status"], row["status"].title()),
+                "count": row["count"],
+            }
+            for row in status_qs
+        ]
+        cache.set("dashboard_status_summary", status_summary, 300)
+
+    counselor_stats = cache.get("dashboard_counselor_stats")
+    if counselor_stats is None:
+        counselor_qs = (
+            User.objects.filter(assigned_reports__isnull=False)
+            .annotate(
+                total=Count("assigned_reports", distinct=True),
+                pending=Count(
+                    "assigned_reports",
+                    filter=Q(assigned_reports__status=ReportStatus.PENDING),
+                ),
+                under_review=Count(
+                    "assigned_reports",
+                    filter=Q(assigned_reports__status=ReportStatus.UNDER_REVIEW),
+                ),
+                resolved=Count(
+                    "assigned_reports",
+                    filter=Q(assigned_reports__status=ReportStatus.RESOLVED),
+                ),
+            )
+            .order_by("-total")[:6]
+        )
+        counselor_stats = [
+            {
+                "name": user.get_full_name() or user.username,
+                "pending": user.pending,
+                "under_review": user.under_review,
+                "resolved": user.resolved,
+                "total": user.total,
+            }
+            for user in counselor_qs
+        ]
+        cache.set("dashboard_counselor_stats", counselor_stats, 300)
+
+    outcome_stats = cache.get("dashboard_outcome_stats")
+    if outcome_stats is None:
+        outcome_qs = (
+            Report.objects
+            .annotate(month=TruncMonth("created_at"))
+            .values("month", "status")
+            .annotate(count=Count("id"))
+            .order_by("month")
+        )
+        month_map = OrderedDict()
+        for row in outcome_qs:
+            month = row["month"]
+            if not month:
+                continue
+            month_key = month.strftime("%Y-%m")
+            if month_key not in month_map:
+                month_map[month_key] = {
+                    "month": month_key,
+                    "label": month.strftime("%b %Y"),
+                    "pending": 0,
+                    "under_review": 0,
+                    "resolved": 0,
+                }
+            month_map[month_key][row["status"]] = row["count"]
+        outcome_stats = list(month_map.values())
+        cache.set("dashboard_outcome_stats", outcome_stats, 300)
+
+    timeline_stats = cache.get("dashboard_timeline_stats")
+    if timeline_stats is None:
+        weekly_qs = (
+            Report.objects
+            .annotate(week=TruncWeek("created_at"))
+            .values("week", "status")
+            .annotate(count=Count("id"))
+            .order_by("week")
+        )
+        week_map = OrderedDict()
+        for row in weekly_qs:
+            week = row["week"]
+            if not week:
+                continue
+            week_key = week.strftime("%Y-%m-%d")
+            if week_key not in week_map:
+                week_map[week_key] = {
+                    "start": week_key,
+                    "label": week.strftime("Week of %b %d, %Y"),
+                    "pending": 0,
+                    "under_review": 0,
+                    "resolved": 0,
+                }
+            week_map[week_key][row["status"]] = row["count"]
+        timeline_stats = list(week_map.values())
+        cache.set("dashboard_timeline_stats", timeline_stats, 300)
+
     ctx = {
         "total_reports": total_reports,
         "resolved_reports": resolved_reports,
@@ -82,6 +190,11 @@ def admin_dashboard(request):
         "recent_reports": recent_reports,
         "monthly_stats": monthly_stats,
         "type_stats": type_stats,
+        "status_summary": status_summary,
+        "counselor_stats": counselor_stats,
+        "outcome_stats": outcome_stats,
+        "timeline_stats": timeline_stats,
+        "status_labels": status_label_map,
     }
     return render(request, 'admin_dashboard.html', ctx)
 
