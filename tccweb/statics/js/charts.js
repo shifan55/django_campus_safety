@@ -261,7 +261,6 @@ function initTypeChart(data) {
 /**
  * Initialize status distribution pie chart
  */
-function initStatusChart() {
 function initStatusPieChart(data) {
     const ctx = document.getElementById('statusPieChart');
     if (!ctx) return;
