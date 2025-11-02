@@ -1,6 +1,6 @@
 /**
  * Chart.js integration for Safe Campus Platform
-* Handles data visualization for admin dashboard with interactive insights
+ * Handles data visualization for admin dashboard with interactive insights
  */
 
 let monthlyChart;
@@ -18,14 +18,16 @@ const STATUS_PALETTE = {
     default: { background: 'rgba(108, 117, 125, 0.75)', border: 'rgb(108, 117, 125)' }
 };
 
-if (typeof Chart !== 'undefined' && Chart.register && window['chartjs-plugin-zoom']) {
-    Chart.register(window['chartjs-plugin-zoom']);
+if (typeof Chart !== 'undefined' && Chart.register) {
+    const zoomPlugin = window['chartjs-plugin-zoom']?.default || window['chartjs-plugin-zoom'];
+    if (zoomPlugin) {
+        Chart.register(zoomPlugin);
+    }
 }
 
 /**
  * Initialize all charts with provided data
  */
-
 function initializeCharts(
     monthlyData = [],
     typeData = [],
@@ -38,7 +40,6 @@ function initializeCharts(
     statusLabelMap = labelsMap || {};
 
     initMonthlyChart(monthlyData);
-    
     initTypeChart(typeData);
     
     initStatusPieChart(statusData);
@@ -57,14 +58,13 @@ function initializeCharts(
 function initMonthlyChart(data) {
     const ctx = document.getElementById('monthlyChart');
     if (!ctx) return;
-    
+
     const processed = processMonthlyData(data);
 
     if (monthlyChart) {
         monthlyChart.destroy();
     }
 
-    
     monthlyChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -147,7 +147,7 @@ function initMonthlyChart(data) {
                 mode: 'nearest',
                 axis: 'x',
                 intersect: false
-                },
+            },
             onHover: (event, activeElements) => {
                 if (event?.native?.target) {
                     event.native.target.style.cursor = activeElements.length ? 'pointer' : 'default';
@@ -164,6 +164,7 @@ function initMonthlyChart(data) {
             }
         }
     });
+
     monthlyChart.$rawData = processed;
 }
 
@@ -179,7 +180,7 @@ function initTypeChart(data) {
     if (typeChart) {
         typeChart.destroy();
     }
-    
+
     typeChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
@@ -234,7 +235,7 @@ function initTypeChart(data) {
             animation: {
                 animateScale: true,
                 animateRotate: true
-                },
+            },
             onHover: (event, activeElements) => {
                 if (event?.native?.target) {
                     event.native.target.style.cursor = activeElements.length ? 'pointer' : 'default';
@@ -253,16 +254,19 @@ function initTypeChart(data) {
             }
         }
     });
+
     typeChart.$total = processed.total;
 }
 
 /**
-  * Initialize status distribution pie chart
+ * Initialize status distribution pie chart
  */
+function initStatusChart() {
 function initStatusPieChart(data) {
     const ctx = document.getElementById('statusPieChart');
     if (!ctx) return;
-        const processed = processStatusData(data);
+
+    const processed = processStatusData(data);
 
     if (statusPieChart) {
         statusPieChart.destroy();
@@ -384,7 +388,6 @@ function initCounselorStackedChart(data) {
             },
             scales: {
                 x: {
-                    stacked: true,
                     grid: { display: false }
                 },
                 y: {
@@ -581,7 +584,7 @@ function initTimelineChart(data) {
                         text: 'Reports'
                     }
                 }
-                },
+            },
             interaction: {
                 intersect: false,
                 mode: 'nearest'
@@ -608,6 +611,7 @@ function initTimelineChart(data) {
             }
         }
     });
+
     timelineChart.$rawData = processed;
 }
 
@@ -618,44 +622,39 @@ function processMonthlyData(rawData) {
     const months = [];
     const data = [];
     const now = new Date();
-    
+
     for (let i = 11; i >= 0; i--) {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
         const monthLabel = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        
+
         months.push(monthLabel);
-        
         const monthData = rawData.find(item => item.month === monthKey);
         data.push(monthData ? monthData.count : 0);
     }
-    
-    
+    return { labels: months, data };
 }
 
 /**
  * Process type data for chart consumption
- * @param {Array} rawData - Raw type data from backend
- * @returns {Object} Processed data with labels and values
  */
 function processTypeData(rawData) {
     const labels = [];
     const data = [];
     const colors = [];
     let total = 0;
-    
+
     rawData.forEach(item => {
         const label = item.type
             .split('_')
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' ');
-        
         labels.push(label);
         data.push(item.count);
         total += item.count;
-        colors.push(getPaletteColor(label, colors.length)); 
+        colors.push(getPaletteColor(label, colors.length));
     });
-    
+
     if (!labels.length) {
         labels.push('No Data');
         data.push(1);
@@ -782,7 +781,6 @@ function updateChartData(chartType, newData) {
             monthlyChart.data.datasets[0].data = monthlyProcessed.data;
             monthlyChart.update();
             break;
-            
         case 'type':
             if (!typeChart) return;
             const typeProcessed = processTypeData(newData);
@@ -792,7 +790,6 @@ function updateChartData(chartType, newData) {
             typeChart.$total = typeProcessed.total;
             typeChart.update();
             break;
-            
         case 'status':
             if (!statusPieChart) return;
             const statusProcessed = processStatusData(newData);
@@ -836,7 +833,7 @@ function setupResponsiveCharts() {
             }
         });
     }, 300));
-    
+
     document.addEventListener('visibilitychange', function() {
         const charts = [monthlyChart, typeChart, statusPieChart, counselorStackedChart, outcomeStackedChart, timelineChart];
         charts.forEach(chart => {
@@ -856,22 +853,23 @@ function setupResponsiveCharts() {
 async function refreshCharts() {
     try {
         showChartLoading();
-        
+
         const response = await fetch('/api/reports-data');
         if (!response.ok) {
             throw new Error('Failed to fetch chart data');
         }
-        
         const data = await response.json();
-        
+
         updateChartData('monthly', data.monthly || []);
         updateChartData('type', data.types || []);
         updateChartData('status', data.status || []);
         updateChartData('counselor', data.counselors || []);
         updateChartData('outcome', data.outcomes || []);
         updateChartData('timeline', data.timeline || []);
+
         hideChartLoading();
         
+
         if (window.SafeCampus?.showNotification) {
             window.SafeCampus.showNotification('Charts updated successfully', 'success', 3000);
         }
@@ -880,16 +878,22 @@ async function refreshCharts() {
         console.error('Error refreshing charts:', error);
         hideChartLoading();
         
+
         if (window.SafeCampus?.showNotification) {
             window.SafeCampus.showNotification('Failed to update charts', 'error');
         }
     }
 }
 
+function refreshData() {
+    return refreshCharts();
+}
+
 /**
  * Show loading indicators on charts
  */
 function showChartLoading() {
+    
     const chartContainers = [
         'monthlyChart',
         'typeChart',
@@ -898,7 +902,7 @@ function showChartLoading() {
         'outcomeStackedChart',
         'timelineChart'
     ];
-    
+
     chartContainers.forEach(id => {
         const container = document.getElementById(id)?.parentElement;
         if (container && !container.querySelector('.chart-loading')) {
@@ -924,6 +928,7 @@ function hideChartLoading() {
 function exportChart(chartType, filename) {
     let chart;
     
+
     switch (chartType) {
         case 'monthly':
             chart = monthlyChart;
@@ -945,6 +950,7 @@ function exportChart(chartType, filename) {
             break;
     }
     
+
     if (chart) {
         const url = chart.toBase64Image();
         const link = document.createElement('a');
@@ -952,6 +958,7 @@ function exportChart(chartType, filename) {
         link.href = url;
         link.click();
         
+
         if (window.SafeCampus?.showNotification) {
             window.SafeCampus.showNotification('Chart exported successfully', 'success', 3000);
         }
@@ -1062,6 +1069,7 @@ window.ChartFunctions = {
     initializeCharts,
     updateChartData,
     refreshCharts,
+    refreshData,
     exportChart
 };
 

@@ -518,10 +518,15 @@ body {
 }
 
 /* Chart container styling */
-.chart-container {
+.chart-canvas {
   position: relative;
   height: 300px;
-  margin: 1rem 0;
+  margin: 0;
+}
+
+.chart-canvas > canvas {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .chart-insight {
