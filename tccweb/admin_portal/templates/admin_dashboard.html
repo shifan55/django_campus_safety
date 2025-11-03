@@ -126,99 +126,27 @@
     <!-- Charts Section -->
     <div class="row mb-4">
         <div class="col-lg-8 mb-3">
-            <div class="card h-100">
+            <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Monthly Report Trends</h5>
                 </div>
-                <div class="card-body position-relative">
-                    <div class="ratio ratio-21x9 chart-canvas">
-                        <canvas id="monthlyChart"></canvas>
-                    </div>
-                    <p class="text-muted small mb-0 mt-3">Hover to compare month-over-month totals or click a point to surface detailed insights.</p>
+                <div class="card-body">
+                    <canvas id="monthlyChart" height="300"></canvas>
                 </div>
             </div>
         </div>
         
-
         <div class="col-lg-4 mb-3">
-            <div class="card mb-3">
+            <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Report Types</h5>
                 </div>
                 <div class="card-body">
-                    <div class="ratio ratio-1x1 chart-canvas">
-                        <canvas id="typeChart"></canvas>
-                    </div>
-                    <p class="text-muted small mb-0 mt-3">Click a segment to explore the share of each report type.</p>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-balance-scale me-2"></i>Case Status Distribution</h5>
-                </div>
-                <div class="card-body">
-                    <div class="ratio ratio-1x1 chart-canvas">
-                        <canvas id="statusPieChart"></canvas>
-                    </div>
-                    <p class="text-muted small mb-0 mt-3">Select a slice to reveal progress across case statuses.</p>
+                    <canvas id="typeChart" height="300"></canvas>
                 </div>
             </div>
         </div>
     </div>
-
-    <div class="row mb-4">
-        <div class="col-lg-8 mb-3">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-stream me-2"></i>Interactive Case Timeline</h5>
-                </div>
-                <div class="card-body">
-                    <div class="ratio ratio-21x9 chart-canvas">
-                        <canvas id="timelineChart"></canvas>
-                    </div>
-                    <p class="text-muted small mb-0 mt-3">Drag to zoom into a specific time frame or click a point to inspect weekly trends.</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4 mb-3">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Chart Insights</h5>
-                </div>
-                <div class="card-body">
-                    <div id="chartInsight" class="chart-insight text-muted">Select a data point to surface contextual insights and drill deeper into the metrics.</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-lg-6 mb-3">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-users-cog me-2"></i>Counselor Performance Breakdown</h5>
-                </div>
-                <div class="card-body">
-                    <div class="ratio ratio-16x9 chart-canvas">
-                        <canvas id="counselorStackedChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6 mb-3">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-layer-group me-2"></i>Case Outcomes by Month</h5>
-                </div>
-                <div class="card-body">
-                    <div class="ratio ratio-16x9 chart-canvas">
-                        <canvas id="outcomeStackedChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
 
     <!-- Recent Reports -->
     <div class="row">
@@ -332,7 +260,10 @@
             </div>
             <div class="modal-body" id="reportModalBody">
                 <!-- Report details will be loaded here -->
-            <button type="button" class="btn btn-primary" id="saveReportChanges">Save Changes</button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="saveReportChanges">Save Changes</button>
             </div>
         </div>
     </div>
@@ -357,11 +288,6 @@
 {% block extra_scripts %}
 {{ monthly_stats|json_script:"monthly-stats" }}
 {{ type_stats|json_script:"type-stats" }}
-{{ status_summary|json_script:"status-summary" }}
-{{ counselor_stats|json_script:"counselor-stats" }}
-{{ outcome_stats|json_script:"outcome-stats" }}
-{{ timeline_stats|json_script:"timeline-stats" }}
-{{ status_labels|json_script:"status-labels" }}
 
 <script src="{% static 'js/charts.js' %}"></script>
 <script>
@@ -370,13 +296,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Monthly trends chart
     const monthlyData = JSON.parse(document.getElementById('monthly-stats').textContent);
     const typeData = JSON.parse(document.getElementById('type-stats').textContent);
-    const statusData = JSON.parse(document.getElementById('status-summary').textContent);
-    const counselorData = JSON.parse(document.getElementById('counselor-stats').textContent);
-    const outcomeData = JSON.parse(document.getElementById('outcome-stats').textContent);
-    const timelineData = JSON.parse(document.getElementById('timeline-stats').textContent);
-    const statusLabels = JSON.parse(document.getElementById('status-labels').textContent);
-
-    initializeCharts(monthlyData, typeData, statusData, counselorData, outcomeData, timelineData, statusLabels);
+    
+    initializeCharts(monthlyData, typeData);
 });
 
 // Filter reports by status
