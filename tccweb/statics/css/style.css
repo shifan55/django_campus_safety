@@ -224,8 +224,6 @@ body {
   font-weight: 700;
 }
 
-}
-
 .btn-priority-high:hover,
 .btn-urgent:hover,
 .btn-priority-high:focus,
@@ -524,6 +522,24 @@ body {
   position: relative;
   height: 300px;
   margin: 1rem 0;
+}
+
+.chart-details {
+  font-size: 0.95rem;
+  border: 1px solid rgba(13, 110, 253, 0.15);
+  background-color: rgba(13, 110, 253, 0.08);
+  color: #0b3d58;
+}
+
+.chart-details .status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  margin: 0.2rem 0.35rem 0 0;
+  border-radius: 999px;
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.65);
 }
 
 /* Responsive adjustments */

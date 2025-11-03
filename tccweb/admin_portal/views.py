@@ -34,6 +34,7 @@ except ImportError:
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def admin_dashboard(request):
+    monthly_qs = [] 
     total_reports = Report.objects.count()
     resolved_reports = Report.objects.filter(status=ReportStatus.RESOLVED).count()
     pending_reports = Report.objects.filter(status=ReportStatus.PENDING).count()
@@ -46,32 +47,67 @@ def admin_dashboard(request):
         .order_by("-created_at")[:10]
     )
 
-    monthly_stats = cache.get("dashboard_monthly_stats")
+    status_labels = {code: label for code, label in ReportStatus.choices}
+    status_codes = list(status_labels.keys())
+
+    monthly_stats = cache.get("dashboard_monthly_stats_v2")
     if monthly_stats is None:
         monthly_qs = (
             Report.objects
             .annotate(month=TruncMonth("created_at"))
-            .values("month")
+            .values("month", "status")
             .annotate(count=Count("id"))
             .order_by("month")
         )
-        monthly_stats = [
-            {"month": m["month"].strftime("%Y-%m"), "count": m["count"]}
-            for m in monthly_qs
-        ]
-        cache.set("dashboard_monthly_stats", monthly_stats, 300)
 
-    type_stats = cache.get("dashboard_type_stats") or []
+    monthly_data = {}
+    for record in monthly_qs:
+        month_key = record["month"].strftime("%Y-%m")
+        bucket = monthly_data.setdefault(
+            month_key,
+            {
+                "month": month_key,
+                "count": 0,
+                "statuses": {code: 0 for code in status_codes},
+            },
+        )
+        status = record["status"]
+        if status in bucket["statuses"]:
+            bucket["statuses"][status] += record["count"]
+        else:
+            bucket["statuses"][status] = record["count"]
+        bucket["count"] += record["count"]
+
+    monthly_stats = list(monthly_data.values())
+    cache.set("dashboard_monthly_stats_v2", monthly_stats, 300)
+
+    type_stats = cache.get("dashboard_type_stats_v2") or []
     if not type_stats:
         type_qs = (
-            Report.objects.values("incident_type")
-            .annotate(count=Count("id")).order_by("-count")
+            Report.objects
+            .values("incident_type", "status")
+            .annotate(count=Count("id"))
         )
-        type_stats = [
-            {"type": r["incident_type"], "count": r["count"]}
-            for r in type_qs
-        ]
-        cache.set("dashboard_type_stats", type_stats, 300)
+        type_data = {}
+        for record in type_qs:
+            type_key = record["incident_type"]
+            bucket = type_data.setdefault(
+                type_key,
+                {
+                    "type": type_key,
+                    "count": 0,
+                    "statuses": {code: 0 for code in status_codes},
+                },
+            )
+            status = record["status"]
+            if status in bucket["statuses"]:
+                bucket["statuses"][status] += record["count"]
+            else:
+                bucket["statuses"][status] = record["count"]
+            bucket["count"] += record["count"]
+
+        type_stats = sorted(type_data.values(), key=lambda item: item["count"], reverse=True)
+        cache.set("dashboard_type_stats_v2", type_stats, 300)
 
     ctx = {
         "total_reports": total_reports,
@@ -82,6 +118,7 @@ def admin_dashboard(request):
         "recent_reports": recent_reports,
         "monthly_stats": monthly_stats,
         "type_stats": type_stats,
+        "status_labels": status_labels,
     }
     return render(request, 'admin_dashboard.html', ctx)
 
@@ -164,36 +201,76 @@ def admin_case_assignment(request):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def admin_analytics(request):
-    monthly_stats = cache.get("dashboard_monthly_stats")
+    status_labels = {code: label for code, label in ReportStatus.choices}
+    status_codes = list(status_labels.keys())
+
+    monthly_stats = cache.get("dashboard_monthly_stats_v2")
     if monthly_stats is None:
         monthly_qs = (
             Report.objects
             .annotate(month=TruncMonth('created_at'))
-            .values('month')
+            .values('month', 'status')
             .annotate(count=Count('id'))
             .order_by('month')
         )
-        monthly_stats = [
-            {'month': m['month'].strftime('%Y-%m'), 'count': m['count']} for m in monthly_qs
-        ]
-        cache.set("dashboard_monthly_stats", monthly_stats, 300)
+        monthly_data = {}
+        for record in monthly_qs:
+            month_key = record['month'].strftime('%Y-%m')
+            bucket = monthly_data.setdefault(
+                month_key,
+                {
+                    'month': month_key,
+                    'count': 0,
+                    'statuses': {code: 0 for code in status_codes},
+                },
+            )
+            status = record['status']
+            if status in bucket['statuses']:
+                bucket['statuses'][status] += record['count']
+            else:
+                bucket['statuses'][status] = record['count']
+            bucket['count'] += record['count']
 
-    type_stats = cache.get("dashboard_type_stats") or []
+        monthly_stats = list(monthly_data.values())
+        cache.set("dashboard_monthly_stats_v2", monthly_stats, 300)
+
+    type_stats = cache.get("dashboard_type_stats_v2") or []
     if not type_stats:
         type_qs = (
-            Report.objects.values('incident_type')
-            .annotate(count=Count('id')).order_by('-count')
+            Report.objects.values('incident_type', 'status')
+            .annotate(count=Count('id'))
         )
-        type_stats = [
-            {'type': r['incident_type'], 'count': r['count']} for r in type_qs
-        ]
-        cache.set("dashboard_type_stats", type_stats, 300)
+        type_data = {}
+        for record in type_qs:
+            type_key = record['incident_type']
+            bucket = type_data.setdefault(
+                type_key,
+                {
+                    'type': type_key,
+                    'count': 0,
+                    'statuses': {code: 0 for code in status_codes},
+                },
+            )
+            status = record['status']
+            if status in bucket['statuses']:
+                bucket['statuses'][status] += record['count']
+            else:
+                bucket['statuses'][status] = record['count']
+            bucket['count'] += record['count']
+
+        type_stats = sorted(type_data.values(), key=lambda item: item['count'], reverse=True)
+        cache.set("dashboard_type_stats_v2", type_stats, 300)
 
     locations = Report.objects.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
     return render(
         request,
         'admin_analytics.html',
-        {'monthly_stats': monthly_stats, 'type_stats': type_stats, 'reports': locations},
+        {
+            'monthly_stats': monthly_stats,
+            'type_stats': type_stats,
+            'reports': locations,
+            'status_labels': status_labels,
+        },
     )
 
 @login_required

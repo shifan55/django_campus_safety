@@ -132,6 +132,7 @@
                 </div>
                 <div class="card-body">
                     <canvas id="monthlyChart" height="300"></canvas>
+                    <div id="monthlyChartDetails" class="chart-details alert alert-info mt-3 d-none" role="status" aria-live="polite"></div>
                 </div>
             </div>
         </div>
@@ -143,6 +144,7 @@
                 </div>
                 <div class="card-body">
                     <canvas id="typeChart" height="300"></canvas>
+                    <div id="typeChartDetails" class="chart-details alert alert-info mt-3 d-none" role="status" aria-live="polite"></div>
                 </div>
             </div>
         </div>
@@ -288,6 +290,7 @@
 {% block extra_scripts %}
 {{ monthly_stats|json_script:"monthly-stats" }}
 {{ type_stats|json_script:"type-stats" }}
+{{ status_labels|json_script:"status-labels" }}
 
 <script src="{% static 'js/charts.js' %}"></script>
 <script>
@@ -297,7 +300,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const monthlyData = JSON.parse(document.getElementById('monthly-stats').textContent);
     const typeData = JSON.parse(document.getElementById('type-stats').textContent);
     
-    initializeCharts(monthlyData, typeData);
+    const statusLabels = JSON.parse(document.getElementById('status-labels').textContent);
+
+    initializeCharts(monthlyData, typeData, statusLabels);
 });
 
 // Filter reports by status
