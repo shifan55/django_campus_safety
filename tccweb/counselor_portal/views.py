@@ -97,6 +97,76 @@ def dashboard(request):
     queue_counts_qs = reports_qs.values("queue_state").annotate(total=Count("id"))
     queue_counts = {row["queue_state"]: row["total"] for row in queue_counts_qs}
 
+    metrics_qs = reports_qs
+    queue_filter = request.GET.get("queue", "all")
+    queue_metadata = {
+        "new": {
+            "label": "New",
+            "description": "Unassigned reports/cases that no counselor has taken",
+            "badge": "primary",
+        },
+        "assigned_to_me": {
+            "label": "Assigned to Me",
+            "description": "Reports currently being handled by you",
+            "badge": "info",
+        },
+        "waiting_on_student": {
+            "label": "Waiting on Student",
+            "description": "Reports where you replied last and are waiting for student response",
+            "badge": "warning",
+        },
+        "closed": {
+            "label": "Closed",
+            "description": "Completed, archived, or resolved reports",
+            "badge": "success",
+        },
+    }
+
+    if queue_filter and queue_filter != "all":
+        reports_qs = reports_qs.filter(queue_state=queue_filter)
+
+    if request.GET.get("export") == "csv":
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = "attachment; filename=assigned_reports.csv"
+        writer = csv.writer(response)
+        writer.writerow(["ID", "Type", "Status", "Queue", "Assigned To", "Last Update", "Submitted"])
+        for r in reports_qs:
+            writer.writerow([
+                r.id,
+                r.get_incident_type_display(),
+                r.get_status_display(),
+                queue_metadata.get(r.queue_state, {}).get("label", ""),
+                r.assigned_to.username if r.assigned_to else "Unassigned",
+                (r.latest_message_ts or r.created_at).strftime("%Y-%m-%d %H:%M"),
+                r.created_at.strftime("%Y-%m-%d"),
+            ])
+        return response
+
+    queue_case = Case(
+        When(status=ReportStatus.RESOLVED, then=Value("closed")),
+        When(assigned_to__isnull=True, then=Value("new")),
+        When(latest_message_sender=request.user.id, then=Value("waiting_on_student")),
+        When(assigned_to=request.user, then=Value("assigned_to_me")),
+        default=Value("assigned_to_me"),
+        output_field=CharField(),
+    )
+    reports_qs = reports_qs.annotate(queue_state=queue_case)
+
+    queue_priority = Case(
+        When(queue_state="new", then=Value(0)),
+        When(queue_state="assigned_to_me", then=Value(1)),
+        When(queue_state="waiting_on_student", then=Value(2)),
+        When(queue_state="closed", then=Value(3)),
+        default=Value(4),
+        output_field=IntegerField(),
+    )
+
+    reports_qs = reports_qs.annotate(queue_priority=queue_priority)
+
+    queue_counts_qs = reports_qs.values("queue_state").annotate(total=Count("id"))
+    queue_counts = {row["queue_state"]: row["total"] for row in queue_counts_qs}
+
+    metrics_qs = reports_qs
     queue_filter = request.GET.get("queue", "all")
     queue_metadata = {
         "new": {
@@ -141,13 +211,87 @@ def dashboard(request):
             ])
         return response
     
+    now = timezone.now()
+    current_window_start = now - timedelta(days=7)
+    previous_window_start = now - timedelta(days=14)
+
+    def build_trend(current_value, previous_value):
+        change = current_value - previous_value
+        if change > 0:
+            icon = "fa-arrow-trend-up"
+            color = "text-success"
+        elif change < 0:
+            icon = "fa-arrow-trend-down"
+            color = "text-danger"
+        else:
+            icon = "fa-arrow-right-long"
+            color = "text-muted"
+
+        percent = None
+        if previous_value:
+            percent = round(abs(change) / previous_value * 100, 1)
+
+        return {
+            "change": change,
+            "display_change": f"{change:+d}",
+            "icon": icon,
+            "color": color,
+            "percent": percent,
+            "label": "vs prev 7 days",
+        }
+
+    case_load_current = metrics_qs.filter(created_at__gte=current_window_start).count()
+    case_load_previous = metrics_qs.filter(
+        created_at__gte=previous_window_start,
+        created_at__lt=current_window_start,
+    ).count()
+
+    messages_current = ChatMessage.objects.filter(
+        recipient=request.user,
+        timestamp__gte=current_window_start,
+    ).count()
+    messages_previous = ChatMessage.objects.filter(
+        recipient=request.user,
+        timestamp__gte=previous_window_start,
+        timestamp__lt=current_window_start,
+    ).count()
+
+    appointments_current = metrics_qs.filter(
+        support_needed=True,
+        created_at__gte=current_window_start,
+    ).count()
+    appointments_previous = metrics_qs.filter(
+        support_needed=True,
+        created_at__gte=previous_window_start,
+        created_at__lt=current_window_start,
+    ).count()
+
+    kpi_cards = [
+        {
+            "title": "Case Load (7d)",
+            "value": case_load_current,
+            "subtitle": "New reports entering your queue in the last 7 days",
+            "icon": "fa-briefcase-medical",
+            "trend": build_trend(case_load_current, case_load_previous),
+        },
+        {
+            "title": "Messages Received (7d)",
+            "value": messages_current,
+            "subtitle": "Direct messages sent to you in the last 7 days",
+            "icon": "fa-comments",
+            "trend": build_trend(messages_current, messages_previous),
+        },
+        {
+            "title": "Appointments Scheduled (7d)",
+            "value": appointments_current,
+            "subtitle": "Reports requesting support in the last 7 days",
+            "icon": "fa-calendar-check",
+            "trend": build_trend(appointments_current, appointments_previous),
+        },
+    ]
+    
     reports_qs = reports_qs.order_by("queue_priority", "-latest_message_ts", "-created_at")
 
-    stats = (
-        reports_qs.order_by()
-        .values("status")
-        .annotate(total=Count("id"))
-    )
     locations = reports_qs.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
     paginator = Paginator(reports_qs, 25)
     page_number = request.GET.get("page")
@@ -219,7 +363,7 @@ def dashboard(request):
     
     context = {
         "reports": reports,
-        "stats": stats,
+        "kpi_cards": kpi_cards,
         "statuses": ReportStatus.choices,
         "locations": locations,
         "queue_summary": queue_summary,
