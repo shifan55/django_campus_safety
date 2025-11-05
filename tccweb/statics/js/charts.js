@@ -6,112 +6,18 @@
 let monthlyChart;
 let typeChart;
 let statusChart;
-let monthlyBreakdowns = [];
-let typeBreakdowns = [];
-let statusLabelsMap = {};
-
-const STATUS_COLOR_MAP = {
-    pending: { background: 'rgba(255, 193, 7, 0.85)', border: 'rgb(255, 193, 7)' },
-    under_review: { background: 'rgba(13, 202, 240, 0.85)', border: 'rgb(13, 202, 240)' },
-    resolved: { background: 'rgba(25, 135, 84, 0.85)', border: 'rgb(25, 135, 84)' },
-    closed: { background: 'rgba(108, 117, 125, 0.85)', border: 'rgb(108, 117, 125)' },
-};
-
-const STATUS_COLOR_FALLBACKS = [
-    { background: 'rgba(54, 162, 235, 0.75)', border: 'rgb(54, 162, 235)' },
-    { background: 'rgba(255, 99, 132, 0.75)', border: 'rgb(255, 99, 132)' },
-    { background: 'rgba(75, 192, 192, 0.75)', border: 'rgb(75, 192, 192)' },
-    { background: 'rgba(153, 102, 255, 0.75)', border: 'rgb(153, 102, 255)' },
-    { background: 'rgba(255, 159, 64, 0.75)', border: 'rgb(255, 159, 64)' },
-];
-
-/**
- * Format a status key into a readable label.
- * @param {string} statusKey
- * @returns {string}
- */
-function formatStatusLabel(statusKey) {
-    if (!statusKey) {
-        return 'Unknown';
-    }
-    if (statusLabelsMap[statusKey]) {
-        return statusLabelsMap[statusKey];
-    }
-    return statusKey
-        .toString()
-        .split('_')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-}
-
-/**
- * Retrieve colour styles for a given status, falling back to palette when needed.
- * @param {string} statusKey
- * @param {number} index
- * @returns {{background: string, border: string}}
- */
-function getStatusColors(statusKey, index = 0) {
-    if (STATUS_COLOR_MAP[statusKey]) {
-        return STATUS_COLOR_MAP[statusKey];
-    }
-    return STATUS_COLOR_FALLBACKS[index % STATUS_COLOR_FALLBACKS.length];
-}
-
-/**
- * Clear and hide the chart detail container.
- * @param {string} elementId
- */
-function clearChartDetails(elementId) {
-    const el = document.getElementById(elementId);
-    if (!el) return;
-    el.classList.add('d-none');
-    el.innerHTML = '';
-}
-
-/**
- * Render status pills for a drilldown summary.
- * @param {Object} statusCounts
- * @param {number} total
- * @returns {string}
- */
-function renderStatusPills(statusCounts = {}, total = 0) {
-    const entries = Object.entries(statusCounts);
-    if (!entries.length) {
-        return '<span class="text-muted">No data available.</span>';
-    }
-
-    let markup = '';
-    entries.forEach(([statusKey, value], index) => {
-        const count = Number(value) || 0;
-        if (count <= 0) {
-            return;
-        }
-        const percentage = total ? ((count / total) * 100).toFixed(1) : '0.0';
-        const colors = getStatusColors(statusKey, index);
-        const pill = `<span class="status-pill" style="border: 1px solid ${colors.border}; color: ${colors.border};">${formatStatusLabel(statusKey)} <span class="fw-normal">${count} (${percentage}%)</span></span>`;
-        markup += pill;
-    });
-
-    return markup || '<span class="text-muted">No data available.</span>';
-}
 
 /**
  * Initialize all charts with provided data
  * @param {Array} monthlyData - Monthly report data
  * @param {Array} typeData - Report type distribution data
  */
-function initializeCharts(monthlyData = [], typeData = [], statusLabels = {}) {
-    statusLabelsMap = statusLabels || {};
-    monthlyBreakdowns = [];
-    typeBreakdowns = [];
-    clearChartDetails('monthlyChartDetails');
-    clearChartDetails('typeChartDetails');
-
+function initializeCharts(monthlyData = [], typeData = []) {
     // Initialize monthly trends chart
-    initMonthlyChart(monthlyData, statusLabelsMap);
+    initMonthlyChart(monthlyData);
     
     // Initialize report types chart
-    initTypeChart(typeData, statusLabelsMap);
+    initTypeChart(typeData);
     
     // Initialize status distribution chart if container exists
     const statusContainer = document.getElementById('statusChart');
@@ -127,19 +33,31 @@ function initializeCharts(monthlyData = [], typeData = [], statusLabels = {}) {
  * Initialize monthly trends line chart
  * @param {Array} data - Monthly data array
  */
-function initMonthlyChart(data, statusLabels = {}) {
+function initMonthlyChart(data) {
     const ctx = document.getElementById('monthlyChart');
     if (!ctx) return;
     
     // Process data for Chart.js
-    const processedData = processMonthlyData(data, statusLabels);
-    monthlyBreakdowns = processedData.breakdowns;
+    const processedData = processMonthlyData(data);
     
     monthlyChart = new Chart(ctx, {
-        type: 'bar',
+        type: 'line',
         data: {
             labels: processedData.labels,
-            datasets: processedData.datasets
+            datasets: [{
+                label: 'Reports Submitted',
+                data: processedData.data,
+                borderColor: 'rgb(54, 162, 235)',
+                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: 'rgb(54, 162, 235)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 6,
+                pointHoverRadius: 8
+            }]
         },
         options: {
             responsive: true,
@@ -154,46 +72,32 @@ function initMonthlyChart(data, statusLabels = {}) {
                     }
                 },
                 legend: {
-                    position: 'bottom',
-                    labels: {
-                        usePointStyle: true,
-                        padding: 18,
-                        font: {
-                            size: 12
-                        }
-                    }
+                    display: false
                 },
                 tooltip: {
                     mode: 'index',
                     intersect: false,
-                    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     titleColor: '#fff',
                     bodyColor: '#fff',
-                    borderColor: 'rgba(255, 255, 255, 0.45)',
+                    borderColor: 'rgb(54, 162, 235)',
                     borderWidth: 1,
-                    cornerRadius: 8,
-                    displayColors: true,
+                    cornerRadius: 6,
+                    displayColors: false,
                     callbacks: {
                         title: function(context) {
                             return `Month: ${context[0].label}`;
                         },
                         label: function(context) {
                             const value = context.parsed.y;
-                            return `${context.dataset.label}: ${value}`;
-                        },
-                        footer: function(tooltipItems) {
-                            if (!tooltipItems.length) return '';
-                            const index = tooltipItems[0].dataIndex;
-                            const breakdown = monthlyBreakdowns[index];
-                            const total = breakdown?.total ?? 0;
-                            return `Total: ${total} report${total === 1 ? '' : 's'}`;
+                            return `${value} report${value !== 1 ? 's' : ''} submitted`;
                         }
                     }
                 }
             },
             scales: {
                 x: {
-                    stacked: true,
+                    display: true,
                     title: {
                         display: true,
                         text: 'Month'
@@ -203,31 +107,21 @@ function initMonthlyChart(data, statusLabels = {}) {
                     }
                 },
                 y: {
-                    stacked: true,
+                    display: true,
                     title: {
                         display: true,
                         text: 'Number of Reports'
                     },
-                    beginAtZero: true
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
                 }
             },
             interaction: {
-                mode: 'index',
+                mode: 'nearest',
+                axis: 'x',
                 intersect: false
-                },
-            onClick: (event, elements) => {
-                if (!elements.length) {
-                    clearChartDetails('monthlyChartDetails');
-                    return;
-                }
-                const index = elements[0].index;
-                showMonthlyDrilldown(index);
-            },
-            onHover: (event, elements) => {
-                const target = event.native?.target;
-                if (target) {
-                    target.style.cursor = elements.length ? 'pointer' : 'default';
-                }
             }
         }
     });
@@ -237,13 +131,12 @@ function initMonthlyChart(data, statusLabels = {}) {
  * Initialize report types doughnut chart
  * @param {Array} data - Type distribution data
  */
-function initTypeChart(data, statusLabels = {}) {
+function initTypeChart(data) {
     const ctx = document.getElementById('typeChart');
     if (!ctx) return;
     
     // Process data for Chart.js
-    const processedData = processTypeData(data, statusLabels);
-    typeBreakdowns = processedData.breakdowns;
+    const processedData = processTypeData(data);
     
     typeChart = new Chart(ctx, {
         type: 'doughnut',
@@ -261,8 +154,7 @@ function initTypeChart(data, statusLabels = {}) {
                 ],
                 borderColor: '#fff',
                 borderWidth: 2,
-                hoverBorderWidth: 4,
-                hoverOffset: 8
+                hoverBorderWidth: 4
             }]
         },
         options: {
@@ -304,27 +196,6 @@ function initTypeChart(data, statusLabels = {}) {
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
                             const percentage = ((value / total) * 100).toFixed(1);
                             return `${value} reports (${percentage}%)`;
-                            },
-                        afterBody: function(context) {
-                            if (!context.length) return [];
-                            const index = context[0].dataIndex;
-                            const breakdown = typeBreakdowns[index];
-                            if (!breakdown || !breakdown.statuses) return [];
-                            const total = breakdown.total || 0;
-                            return Object.entries(breakdown.statuses)
-                                .filter(([, value]) => value > 0)
-                                .map(([statusKey, value]) => {
-                                    const count = Number(value) || 0;
-                                    const pct = total ? ((count / total) * 100).toFixed(1) : '0.0';
-                                    return `${formatStatusLabel(statusKey)}: ${count} (${pct}%)`;
-                                });
-                        },
-                        footer: function(context) {
-                            if (!context.length) return '';
-                            const index = context[0].dataIndex;
-                            const breakdown = typeBreakdowns[index];
-                            const total = breakdown?.total ?? 0;
-                            return `Total: ${total} report${total === 1 ? '' : 's'}`;
                         }
                     }
                 }
@@ -333,20 +204,6 @@ function initTypeChart(data, statusLabels = {}) {
             animation: {
                 animateScale: true,
                 animateRotate: true
-                },
-            onClick: (event, elements) => {
-                if (!elements.length) {
-                    clearChartDetails('typeChartDetails');
-                    return;
-                }
-                const index = elements[0].index;
-                showTypeDrilldown(index);
-            },
-            onHover: (event, elements) => {
-                const target = event.native?.target;
-                if (target) {
-                    target.style.cursor = elements.length ? 'pointer' : 'default';
-                }
             }
         }
     });
@@ -437,97 +294,27 @@ function initStatusChart() {
  * @param {Array} rawData - Raw monthly data from backend
  * @returns {Object} Processed data with labels and values
  */
-function processMonthlyData(rawData, statusLabels = {}) {
+function processMonthlyData(rawData) {
+    // Generate last 12 months
+    const months = [];
+    const data = [];
     const now = new Date();
-    const labels = [];
-    const totals = [];
-    const breakdowns = [];
-
-    let statuses = Object.keys(statusLabels || {});
-    const discoveredStatuses = new Set();
-    rawData.forEach(item => {
-        if (item?.statuses) {
-            Object.keys(item.statuses).forEach(status => discoveredStatuses.add(status));
-        }
-    });
-    if (!statuses.length && discoveredStatuses.size) {
-        statuses = Array.from(discoveredStatuses);
-    }
-
-    const datasetMap = {};
-    statuses.forEach(status => {
-        datasetMap[status] = [];
-    });
     
     for (let i = 11; i >= 0; i--) {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
         const monthLabel = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
         
-        labels.push(monthLabel);
-
-        const monthData = rawData.find(item => item.month === monthKey) || {};
-        const statusCounts = monthData.statuses || {};
-        const breakdownStatuses = {};
-        let total = 0;
-
-        if (statuses.length) {
-            statuses.forEach(status => {
-                const value = Number(statusCounts[status] ?? 0);
-                datasetMap[status].push(value);
-                breakdownStatuses[status] = value;
-                total += value;
-            });
-        } else {
-            const value = Number(monthData.count ?? 0);
-            total = value;
-        }
-
-        totals.push(total);
-        breakdowns.push({
-            label: monthLabel,
-            month: monthKey,
-            total,
-            statuses: statuses.length ? breakdownStatuses : { total }
-        });
+        months.push(monthLabel);
+        
+        // Find matching data or default to 0
+        const monthData = rawData.find(item => item.month === monthKey);
+        data.push(monthData ? monthData.count : 0);
     }
     
-    let datasets;
-    if (statuses.length) {
-        datasets = statuses.map((status, index) => {
-            const values = datasetMap[status] || [];
-            const colors = getStatusColors(status, index);
-            const hasValues = values.some(point => point > 0);
-            return {
-                label: formatStatusLabel(status),
-                data: values,
-                backgroundColor: colors.background,
-                borderColor: colors.border,
-                borderWidth: 1,
-                borderRadius: 4,
-                maxBarThickness: 48,
-                stack: 'status',
-                hidden: !hasValues && statuses.length > 1
-            };
-        });
-    } else {
-        datasets = [{
-            label: 'Reports Submitted',
-            data: totals,
-            backgroundColor: 'rgba(54, 162, 235, 0.65)',
-            borderColor: 'rgb(54, 162, 235)',
-            borderWidth: 1,
-            borderRadius: 4,
-            maxBarThickness: 48,
-            stack: 'status'
-        }];
-    }
-
-
     return {
-        ​labels,
-        datasets,
-        breakdowns
+        labels: months,
+        data: data
     };
 }
 
@@ -536,118 +323,30 @@ function processMonthlyData(rawData, statusLabels = {}) {
  * @param {Array} rawData - Raw type data from backend
  * @returns {Object} Processed data with labels and values
  */
-function processTypeData(rawData, statusLabels = {}) {
+function processTypeData(rawData) {
     const labels = [];
     const data = [];
-    const breakdowns = [];
-
-    let statuses = Object.keys(statusLabels || {});
-    const discoveredStatuses = new Set();
-    rawData.forEach(item => {
-        if (item?.statuses) {
-            Object.keys(item.statuses).forEach(status => discoveredStatuses.add(status));
-        }
-    });
-    if (!statuses.length && discoveredStatuses.size) {
-        statuses = Array.from(discoveredStatuses);
-    }
     
     rawData.forEach(item => {
         // Convert snake_case to Title Case
-        const label = item.type.split('_').map(word =>  
+        const label = item.type.split('_').map(word => 
             word.charAt(0).toUpperCase() + word.slice(1)
         ).join(' ');
         
         labels.push(label);
-        const count = Number(item.count ?? 0);
-        data.push(count);
-
-        const statusBreakdown = {};
-        if (statuses.length) {
-            statuses.forEach(status => {
-                statusBreakdown[status] = Number(item.statuses?.[status] ?? 0);
-            });
-        } else if (item.statuses) {
-            Object.entries(item.statuses).forEach(([status, value]) => {
-                statusBreakdown[status] = Number(value ?? 0);
-            });
-        } else {
-            statusBreakdown.total = count;
-        }
-
-        breakdowns.push({
-            label,
-            total: count,
-            statuses: statusBreakdown
-        });
+        data.push(item.count);
     });
     
     // If no data, show placeholder
     if (labels.length === 0) {
         labels.push('No Data');
         data.push(1);
-        breakdowns.push({
-            label: 'No Data',
-            total: 1,
-            statuses: { total: 1 }
-        });
     }
     
     return {
         labels: labels,
-        data: data,
-        breakdowns: breakdowns
+        data: data
     };
-}
-
-/**
- * Display a drilldown summary for a monthly data point.
- * @param {number} index
- */
-function showMonthlyDrilldown(index) {
-    if (!monthlyBreakdowns.length) return;
-    const breakdown = monthlyBreakdowns[index];
-    if (!breakdown) return;
-
-    const detailsEl = document.getElementById('monthlyChartDetails');
-    if (!detailsEl) return;
-
-    const pills = renderStatusPills(breakdown.statuses, breakdown.total);
-    detailsEl.innerHTML = `
-        <strong>${breakdown.label}</strong><br>
-        <span class="text-muted">Total Cases: ${breakdown.total}</span>
-        <div class="mt-2 d-flex flex-wrap">${pills}</div>
-    `;
-    detailsEl.classList.remove('d-none');
-
-    if (window.SafeCampus?.announceToScreenReader) {
-        window.SafeCampus.announceToScreenReader(`${breakdown.label} breakdown displayed with ${breakdown.total} total cases`);
-    }
-}
-
-/**
- * Display a drilldown summary for a report type.
- * @param {number} index
- */
-function showTypeDrilldown(index) {
-    if (!typeBreakdowns.length) return;
-    const breakdown = typeBreakdowns[index];
-    if (!breakdown) return;
-
-    const detailsEl = document.getElementById('typeChartDetails');
-    if (!detailsEl) return;
-
-    const pills = renderStatusPills(breakdown.statuses, breakdown.total);
-    detailsEl.innerHTML = `
-        <strong>${breakdown.label}</strong><br>
-        <span class="text-muted">Total Cases: ${breakdown.total}</span>
-        <div class="mt-2 d-flex flex-wrap">${pills}</div>
-    `;
-    detailsEl.classList.remove('d-none');
-
-    if (window.SafeCampus?.announceToScreenReader) {
-        window.SafeCampus.announceToScreenReader(`${breakdown.label} distribution displayed with ${breakdown.total} total cases`);
-    }
 }
 
 /**
@@ -662,24 +361,20 @@ function updateChartData(chartType, newData) {
     switch (chartType) {
         case 'monthly':
             chart = monthlyChart;
-            processedData = processMonthlyData(newData, statusLabelsMap);
+            processedData = processMonthlyData(newData);
             if (chart) {
                 chart.data.labels = processedData.labels;
-                chart.data.datasets = processedData.datasets;
-                monthlyBreakdowns = processedData.breakdowns;
-                clearChartDetails('monthlyChartDetails');
+                chart.data.datasets[0].data = processedData.data;
                 chart.update('active');
             }
             break;
             
         case 'type':
             chart = typeChart;
-            processedData = processTypeData(newData, statusLabelsMap);
+            processedData = processTypeData(newData);
             if (chart) {
                 chart.data.labels = processedData.labels;
                 chart.data.datasets[0].data = processedData.data;
-                typeBreakdowns = processedData.breakdowns;
-                clearChartDetails('typeChartDetails');
                 chart.update('active');
             }
             break;
@@ -742,13 +437,9 @@ async function refreshCharts() {
         
         const data = await response.json();
         
-        if (data.status_labels) {
-            statusLabelsMap = data.status_labels;
-        }
-
         // Update charts
-       updateChartData('monthly', data.monthly || []);
-        updateChartData('type', data.types || []);
+        updateChartData('monthly', data.monthly);
+        updateChartData('type', data.types);
         
         // Hide loading indicators
         hideChartLoading();
