@@ -6,5 +6,7 @@ class CaseNoteForm(forms.ModelForm):
     class Meta:
         model = CaseNote
         fields = ["note"]
-        widgets = {"note": forms.Textarea(attrs={"rows": 3})}
+        widgets = {
+            "note": forms.Textarea(attrs={"rows": 3, "class": "form-control"})
+        }
    

@@ -304,9 +304,37 @@ class ReportForm(forms.ModelForm):
 
 class MessageForm(forms.Form):
     message = forms.CharField(
-        widget=forms.Textarea(attrs={"rows": 2, "class": "form-control"})
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "class": "form-control chat-input",
+                "placeholder": "Type your message...",
+            }
+        ),
+    )
+    attachment = forms.FileField(
+        required=False,
+        widget=forms.ClearableFileInput(
+            attrs={
+                "class": "form-control",
+                "accept": ".pdf,image/*",
+                "aria-label": "Attach a file",
+            }
+        ),
     )
     parent_id = forms.IntegerField(
         required=False,
         widget=forms.HiddenInput(attrs={"id": "parent_id"}),
     )
+    
+    def clean(self):
+        cleaned = super().clean()
+        message = cleaned.get("message", "").strip()
+        attachment = cleaned.get("attachment")
+        if not message and not attachment:
+            raise forms.ValidationError(
+                "Please enter a message or attach a file before sending."
+            )
+        cleaned["message"] = message
+        return cleaned

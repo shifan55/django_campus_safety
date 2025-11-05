@@ -1,43 +1,123 @@
 {% extends 'base.html' %}
-{% load chat_filters %}
+{% load chat_filters text_extras %}
 {% block title %}Report Messages{% endblock %}
 {% block content %}
-<div class="container mt-4">
-    <h2>Messages for Report #{{ report.id }}</h2>
-    <form method="post" class="mb-3">
-        {% csrf_token %}
-        {{ msg_form.as_p }}
-        <button class="btn btn-primary" name="send_msg">Send</button>
-    </form>
-    <ul class="list-group">
-        {% for message in chat_messages %}
-            <li class="list-group-item">
-                <strong>{{ message.sender.username }}:</strong> {{ message|decrypt:request.user|linebreaksbr }}
-                <br><small class="text-muted">{{ message.timestamp }}</small>
-                <a href="#" class="reply-link" data-parent="{{ message.id }}">Reply</a>
-                {% if message.replies.all %}
-                <ul class="list-group mt-2">
-                    {% for reply in message.replies.all %}
-                    <li class="list-group-item">
-                        <strong>{{ reply.sender.username }}:</strong> {{ reply|decrypt:request.user|linebreaksbr }}
-                        <br><small class="text-muted">{{ reply.timestamp }}</small>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-            </li>
-        {% empty %}
-            <li class="list-group-item">No messages yet.</li>
-        {% endfor %}
-    </ul>
+<div class="container mt-4 conversation-layout">
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-8">
+            <div class="card shadow-sm chat-card">
+                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h2 class="h5 mb-1">Report #{{ report.id }}</h2>
+                        <p class="text-muted small mb-0">
+                            Status: <span class="badge bg-{{ report.status|status_badge }} align-middle">{{ report.get_status_display }}</span>
+                            {% if report.assigned_to %}
+                                <span class="ms-2">Counselor: {{ report.assigned_to.get_full_name|default:report.assigned_to.username }}</span>
+                            {% else %}
+                                <span class="ms-2 text-warning">Awaiting counselor assignment</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <span class="badge rounded-pill bg-primary">Tracking code: {{ report.tracking_code }}</span>
+                </div>
+                <div class="card-body chat-body" id="chat-thread">
+                    {% if chat_messages %}
+                        {% for message in chat_messages %}
+                            {% include 'partials/chat_message.html' with message=message viewer=request.user report=report %}
+                            {% for reply in message.replies.all %}
+                                {% include 'partials/chat_message.html' with message=reply viewer=request.user report=report is_reply=True %}
+                            {% endfor %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-comments fa-2x mb-3"></i>
+                            <p class="mb-0">No messages yet. You can reach out to your counselor below once assigned.</p>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    {% if report.assigned_to %}
+                        <form method="post" enctype="multipart/form-data" class="chat-composer">
+                            {% csrf_token %}
+                            {{ msg_form.non_field_errors }}
+                            {{ msg_form.parent_id }}
+                            <div id="reply-indicator" class="alert alert-secondary py-2 px-3 d-none align-items-center justify-content-between">
+                                <div class="small mb-0"><strong>Replying to <span class="reply-to"></span></strong></div>
+                                <a href="#" id="cancel-reply" class="small text-decoration-none">Cancel</a>
+                            </div>
+                            <div class="mb-3">
+                                {{ msg_form.message }}
+                                {% for error in msg_form.message.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="d-flex flex-column flex-md-row gap-3 align-items-md-center">
+                                <div class="flex-grow-1">
+                                    <label class="form-label small text-muted mb-1">Attachment (optional)</label>
+                                    {{ msg_form.attachment }}
+                                    {% for error in msg_form.attachment.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="ms-md-auto d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary" name="send_msg">
+                                        <i class="fas fa-paper-plane me-1"></i>Send
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    {% else %}
+                        <p class="text-muted mb-0">Your case is being reviewed. Messaging will open once a counselor is assigned.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 <script>
-document.querySelectorAll('.reply-link').forEach(function(link){
-    link.addEventListener('click', function(e){
-        e.preventDefault();
-        document.getElementById('parent_id').value = this.dataset.parent;
-        document.getElementById('id_message').focus();
+(function() {
+    const replyLinks = document.querySelectorAll('.reply-link');
+    const parentInput = document.getElementById('parent_id');
+    const messageBox = document.querySelector('.chat-composer textarea');
+    const replyIndicator = document.getElementById('reply-indicator');
+
+    replyLinks.forEach((link) => {
+        link.addEventListener('click', function (event) {
+            event.preventDefault();
+            if (!parentInput) {
+                return;
+            }
+            parentInput.value = this.dataset.parent || '';
+            if (messageBox) {
+                messageBox.focus();
+            }
+            if (replyIndicator) {
+                replyIndicator.classList.remove('d-none');
+                const nameTarget = replyIndicator.querySelector('.reply-to');
+                if (nameTarget) {
+                    nameTarget.textContent = this.dataset.author || '';
+                }
+            }
+        });
     });
-});
+
+    const cancelReply = document.getElementById('cancel-reply');
+    if (cancelReply) {
+        cancelReply.addEventListener('click', function (event) {
+            event.preventDefault();
+            if (parentInput) {
+                parentInput.value = '';
+            }
+            if (replyIndicator) {
+                replyIndicator.classList.add('d-none');
+            }
+        });
+    }
+
+    const chatThread = document.getElementById('chat-thread');
+    if (chatThread) {
+        chatThread.scrollTop = chatThread.scrollHeight;
+    }
+})();
 </script>
 {% endblock %}

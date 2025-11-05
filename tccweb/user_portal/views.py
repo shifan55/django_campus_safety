@@ -246,7 +246,7 @@ def track_report(request):
 @user_passes_test(lambda u: not u.is_staff)
 def report_messages(request, report_id):
     report = get_object_or_404(Report, id=report_id, reporter=request.user)
-    msg_form = MessageForm(request.POST or None)
+    msg_form = MessageForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and msg_form.is_valid() and report.assigned_to:
         parent_id = msg_form.cleaned_data.get("parent_id")
         parent = ChatMessage.objects.filter(id=parent_id, report=report).first() if parent_id else None
@@ -256,6 +256,7 @@ def report_messages(request, report_id):
             recipient=report.assigned_to,
             message=msg_form.cleaned_data["message"],
             parent=parent,
+            attachment=msg_form.cleaned_data.get("attachment"),
         )
         return redirect("report_messages", report_id=report.id)
     ChatMessage.objects.filter(report=report, recipient=request.user, is_read=False).update(is_read=True)

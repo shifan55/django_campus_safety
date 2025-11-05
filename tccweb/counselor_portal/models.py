@@ -88,6 +88,12 @@ class ChatMessage(models.Model):
     )
     timestamp = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False, db_index=True)
+    attachment = models.FileField(
+        upload_to="chat_attachments/",
+        blank=True,
+        null=True,
+        help_text="Optional file shared within the conversation.",
+    )
 
     class Meta:
         ordering = ["timestamp"]
@@ -119,7 +125,15 @@ class ChatMessage(models.Model):
         ).decode()
 
     @classmethod
-    def create(cls, report, sender, recipient, message, parent=None):
+    def create(
+        cls,
+        report,
+        sender,
+        recipient,
+        message,
+        parent=None,
+        attachment=None,
+    ):
         return cls.objects.create(
             report=report,
             sender=sender,
@@ -127,6 +141,7 @@ class ChatMessage(models.Model):
             parent=parent,
             cipher_for_sender=cls._encrypt_for(sender, message),
             cipher_for_recipient=cls._encrypt_for(recipient, message),
+            attachment=attachment,
         )
 
     def get_body_for(self, user) -> str:

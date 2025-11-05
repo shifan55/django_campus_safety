@@ -1,98 +1,190 @@
 {% extends 'base.html' %}
 {% load text_extras chat_filters %}
-{% load text_extras %}
 {% block title %}Case Detail{% endblock %}
 {% block content %}
-<div class="container mt-4">
-    <h2>Report #{{ report.id }}</h2>
-    <p><strong>Type:</strong> {{ report.get_incident_type_display }}</p>
-    <p><strong>Status:</strong> <span class="badge bg-{{ report.status|status_badge }}">{{ report.get_status_display }}</span></p>
-    <p><strong>Assignee:</strong>
-        {% if report.assigned_to %}
-            {{ report.assigned_to.get_full_name|default:report.assigned_to.username }}
-        {% else %}
-            <span class="text-muted">Unassigned</span>
-        {% endif %}
-    </p>
+<div class="container mt-4 conversation-layout">
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h2 class="h4 mb-1">Report #{{ report.id }}</h2>
+                            <p class="text-muted mb-0">{{ report.get_incident_type_display }}</p>
+                        </div>
+                        <span class="badge bg-{{ report.status|status_badge }} align-self-start">{{ report.get_status_display }}</span>
+                    </div>
+                    <dl class="row small mb-0">
+                        <dt class="col-5 text-uppercase text-muted">Assignee</dt>
+                        <dd class="col-7">
+                            {% if report.assigned_to %}
+                                {{ report.assigned_to.get_full_name|default:report.assigned_to.username }}
+                            {% else %}
+                                <span class="text-muted">Unassigned</span>
+                            {% endif %}
+                        </dd>
+                        <dt class="col-5 text-uppercase text-muted">Submitted</dt>
+                        <dd class="col-7">{{ report.created_at|date:"M j, Y g:i a" }}</dd>
+                    </dl>
+                </div>
+            </div>
 
-    {% if not is_owner and not report.assigned_to %}
-    <div class="alert alert-info">Claim this report to begin counseling and enable case actions.</div>
-    <form method="post" class="mb-3">
-        {% csrf_token %}
-        <button class="btn btn-primary" name="take_case">Assign to Me</button>
-    </form>
+    <div class="card shadow-sm mt-4">
+                <div class="card-header fw-semibold">Case Notes</div>
+                <div class="card-body">
+                    {% if is_owner %}
+                        <form method="post" class="case-note-form mb-4">
+                            {% csrf_token %}
+                            {{ note_form.non_field_errors }}
+                            <div class="mb-3">
+                                {{ note_form.note.label_tag }}
+                                {{ note_form.note }}
+                                {% for error in note_form.note.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <button class="btn btn-primary w-100" name="add_note">
+                                <i class="fas fa-plus-circle me-1"></i>Add Note
+                            </button>
+                        </form>
+                    {% else %}
+                        <p class="text-muted small mb-0">Assign the report to yourself to add private counseling notes.</p>
+                    {% endif %}
 
-    {% elif is_owner and report.status != 'resolved' %}
-    <form method="post" class="mb-3">
-        {% csrf_token %}
-        <button class="btn btn-success" name="resolve_case">Mark Resolved</button>
-    </form>
-    {% endif %}
-
-    <hr>
-    <h3>Case Notes</h3>
-    {% if is_owner %}
-    <form method="post" class="mb-3">
-        {% csrf_token %}
-        {{ note_form.as_p }}
-        <button class="btn btn-primary" name="add_note">Add Note</button>
-    </form>
-    {% else %}
-    <p class="text-muted">Assign the report to yourself to add private counseling notes.</p>
-    {% endif %}
-    <ul class="list-group mb-4">
-        {% for note in notes %}
-            <li class="list-group-item">
-                <small class="text-muted">{{ note.created_at }}</small><br>
-                {{ note.note|linebreaksbr }}
-            </li>
-        {% empty %}
-            <li class="list-group-item">No notes yet.</li>
-        {% endfor %}
-    </ul>
-
-    <h3>Messages</h3>
-    {% if report.reporter and is_owner %}
-    <form method="post" class="mb-3">
-        {% csrf_token %}
-        {{ msg_form.as_p }}
-        <button class="btn btn-secondary" name="send_msg">Send</button>
-    </form>
-    {% elif not report.reporter %}
-    <p class="text-muted">Reporter is anonymous; messaging disabled.</p>
-    {% else %}
-    <p class="text-muted">Assign the report to yourself to reply to the student.</p>
-    {% endif %}
-    <ul class="list-group">
-        {% for message in chat_messages %}
-            <li class="list-group-item">
-                <strong>{{ message.sender.username }}:</strong> {{ message|decrypt:request.user|linebreaksbr }}
-                <br><small class="text-muted">{{ message.timestamp }}</small>
-                <a href="#" class="reply-link" data-parent="{{ message.id }}">Reply</a>
-                {% if message.replies.all %}
-                <ul class="list-group mt-2">
-                    {% for reply in message.replies.all %}
-                    <li class="list-group-item">
-                        <strong>{{ reply.sender.username }}:</strong> {{ reply|decrypt:request.user|linebreaksbr }}
-                        <br><small class="text-muted">{{ reply.timestamp }}</small>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-            </li>
-        {% empty %}
-            <li class="list-group-item">No messages.</li>
-        {% endfor %}
-    </ul>
+    <div class="note-timeline">
+                        {% for note in notes %}
+                            <div class="note-entry">
+                                <div class="small text-muted">{{ note.created_at|date:"M j, Y g:i a" }}</div>
+                                <div>{{ note.note|linebreaksbr }}</div>
+                            </div>
+                        {% empty %}
+                            <p class="text-muted small mb-0">No notes yet.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="card shadow-sm chat-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="h5 mb-0">Conversation</h3>
+                        <p class="text-muted small mb-0">Counselor ↔ Student</p>
+                    </div>
+                    {% if report.reporter %}
+                        <span class="badge rounded-pill bg-secondary">Tracking code: {{ report.tracking_code }}</span>
+                    {% else %}
+                        <span class="badge rounded-pill bg-warning text-dark">Anonymous reporter</span>
+                    {% endif %}
+                </div>
+                <div class="card-body chat-body" id="chat-thread">
+                    {% if chat_messages %}
+                        {% for message in chat_messages %}
+                            {% include 'partials/chat_message.html' with message=message viewer=request.user report=report %}
+                            {% for reply in message.replies.all %}
+                                {% include 'partials/chat_message.html' with message=reply viewer=request.user report=report is_reply=True %}
+                            {% endfor %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-comments fa-2x mb-3"></i>
+                            <p class="mb-0">No messages yet. Start the conversation below.</p>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    {% if report.reporter and is_owner %}
+                        <form method="post" enctype="multipart/form-data" class="chat-composer">
+                            {% csrf_token %}
+                            {{ msg_form.non_field_errors }}
+                            {{ msg_form.parent_id }}
+                            <div id="reply-indicator" class="alert alert-secondary py-2 px-3 d-none align-items-center justify-content-between">
+                                <div class="small mb-0"><strong>Replying to <span class="reply-to"></span></strong></div>
+                                <a href="#" id="cancel-reply" class="small text-decoration-none">Cancel</a>
+                            </div>
+                            <div class="mb-3">
+                                {{ msg_form.message }}
+                                {% for error in msg_form.message.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="d-flex flex-column flex-md-row gap-3 align-items-md-center">
+                                <div class="flex-grow-1">
+                                    <label class="form-label small text-muted mb-1">Attachment (optional)</label>
+                                    {{ msg_form.attachment }}
+                                    {% for error in msg_form.attachment.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="ms-md-auto d-flex gap-2">
+                                    <button type="submit" class="btn btn-secondary" name="send_msg">
+                                        <i class="fas fa-paper-plane me-1"></i>Send
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    {% elif not report.reporter %}
+                        <p class="text-muted mb-0">Reporter is anonymous; messaging disabled.</p>
+                    {% else %}
+                        <p class="text-muted mb-0">Assign the report to yourself to reply to the student.</p>
+                    {% endif %}
+                    {% if is_owner and report.status != 'resolved' %}
+                        <form method="post" class="text-end mt-4">
+                            {% csrf_token %}
+                            <button class="btn btn-success" name="resolve_case">
+                                <i class="fas fa-check-circle me-1"></i>Mark Resolved
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
-document.querySelectorAll('.reply-link').forEach(function(link){
-    link.addEventListener('click', function(e){
-        e.preventDefault();
-        document.getElementById('parent_id').value = this.dataset.parent;
-        document.getElementById('id_message').focus();
+(function() {
+    const replyLinks = document.querySelectorAll('.reply-link');
+    const parentInput = document.getElementById('parent_id');
+    const messageBox = document.querySelector('.chat-composer textarea');
+    const replyIndicator = document.getElementById('reply-indicator');
+
+    replyLinks.forEach((link) => {
+        link.addEventListener('click', function (event) {
+            event.preventDefault();
+            if (!parentInput) {
+                return;
+            }
+            parentInput.value = this.dataset.parent || '';
+            if (messageBox) {
+                messageBox.focus();
+            }
+            if (replyIndicator) {
+                replyIndicator.classList.remove('d-none');
+                const nameTarget = replyIndicator.querySelector('.reply-to');
+                if (nameTarget) {
+                    nameTarget.textContent = this.dataset.author || '';
+                }
+            }
+        });
     });
-});
+    const cancelReply = document.getElementById('cancel-reply');
+    if (cancelReply) {
+        cancelReply.addEventListener('click', function (event) {
+            event.preventDefault();
+            if (parentInput) {
+                parentInput.value = '';
+            }
+            if (replyIndicator) {
+                replyIndicator.classList.add('d-none');
+            }
+        });
+    }
+
+    const chatThread = document.getElementById('chat-thread');
+    if (chatThread) {
+        chatThread.scrollTop = chatThread.scrollHeight;
+    }
+})();
 </script>
 {% endblock %}

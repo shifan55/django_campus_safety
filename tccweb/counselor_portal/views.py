@@ -454,7 +454,7 @@ def my_cases(request):
 def case_detail(request, report_id):
     report = get_object_or_404(Report, id=report_id, assigned_to=request.user)
     note_form = CaseNoteForm(request.POST or None)
-    msg_form = MessageForm(request.POST or None)
+    msg_form = MessageForm(request.POST or None, request.FILES or None)
 
     if request.method == "POST":
         if "add_note" in request.POST and note_form.is_valid():
@@ -511,6 +511,7 @@ def case_detail(request, report_id):
                 recipient=report.reporter,
                 message=msg_form.cleaned_data["message"],
                 parent=parent,
+                attachment=msg_form.cleaned_data.get("attachment"),
             )
             return redirect("counselor_case_detail", report_id=report.id)
 
@@ -532,6 +533,7 @@ def case_detail(request, report_id):
         "chat_messages": chat_messages,
         "note_form": note_form,
         "msg_form": msg_form,
+        "is_owner": report.assigned_to_id == request.user.id,
     }
     return render(request, "counselor_case_detail.html", context)
 
