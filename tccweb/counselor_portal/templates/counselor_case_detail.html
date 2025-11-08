@@ -5,7 +5,7 @@
 <div class="container mt-4 conversation-layout">
     <div class="row g-4">
         <div class="col-lg-4">
-            <div class="card shadow-sm h-100">
+            <div class="card shadow-sm">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div>
@@ -29,7 +29,14 @@
                 </div>
             </div>
 
-    <div class="card shadow-sm mt-4">
+            <div class="card shadow-sm mt-4">
+                <div class="card-header fw-semibold">Case Timeline</div>
+                <div class="card-body">
+                    {% include 'partials/case_timeline.html' with events=timeline_events %}
+                </div>
+            </div>
+
+            <div class="card shadow-sm mt-4">
                 <div class="card-header fw-semibold">Case Notes</div>
                 <div class="card-body">
                     {% if is_owner %}
@@ -43,7 +50,7 @@
                                     <div class="invalid-feedback d-block">{{ error }}</div>
                                 {% endfor %}
                             </div>
-                            <button class="btn btn-primary w-100" name="add_note">
+                            <button class="btn btn-primary" name="add_note">
                                 <i class="fas fa-plus-circle me-1"></i>Add Note
                             </button>
                         </form>
@@ -51,7 +58,7 @@
                         <p class="text-muted small mb-0">Assign the report to yourself to add private counseling notes.</p>
                     {% endif %}
 
-    <div class="note-timeline">
+                        <div class="note-timeline">
                         {% for note in notes %}
                             <div class="note-entry">
                                 <div class="small text-muted">{{ note.created_at|date:"M j, Y g:i a" }}</div>
@@ -63,6 +70,76 @@
                     </div>
                 </div>
             </div>
+
+            {% if emotion_overview.timeline %}
+            <div class="card shadow-sm mt-4 emotion-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">Emotional Insights</span>
+                    <span class="badge rounded-pill bg-light text-muted text-uppercase small">Real-time AI</span>
+                </div>
+                <div class="card-body">
+                    {% if emotion_overview.latest %}
+                    <div class="d-flex flex-column gap-2 mb-3">
+                        <div class="text-muted small text-uppercase">Latest tone</div>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <span class="emotion-dot risk-{{ emotion_overview.latest.risk }}" aria-hidden="true"></span>
+                            <span class="fw-semibold text-capitalize">{{ emotion_overview.latest.label_display }}</span>
+                            {% if emotion_overview.latest.confidence %}
+                                <span class="badge rounded-pill emotion-{{ emotion_overview.latest.label }} text-uppercase small">Confidence {{ emotion_overview.latest.confidence }}%</span>
+                            {% else %}
+                                <span class="badge rounded-pill emotion-neutral text-uppercase small">Confidence pending</span>
+                            {% endif %}
+                        </div>
+                        <p class="small text-muted mb-0">{{ emotion_overview.latest.explanation }}</p>
+                    </div>
+                    {% endif %}
+                    <div class="insight-risk row g-3 mb-3">
+                        <div class="col-6">
+                            <div class="insight-tile">
+                                <span class="label text-uppercase small text-muted">Critical alerts</span>
+                                <div class="display-6 fw-semibold text-danger">{{ emotion_overview.critical_count }}</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="insight-tile">
+                                <span class="label text-uppercase small text-muted">Elevated alerts</span>
+                                <div class="display-6 fw-semibold text-warning">{{ emotion_overview.elevated_count }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-muted small text-uppercase mb-2">Trend (last {{ emotion_overview.timeline|length }} updates)</div>
+                    <ul class="emotion-timeline list-unstyled mb-3">
+                        {% for entry in emotion_overview.timeline %}
+                        <li class="emotion-timeline-item">
+                            <span class="emotion-dot risk-{{ entry.risk }}" aria-hidden="true"></span>
+                            <div>
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <span class="fw-semibold text-capitalize">{{ entry.label_display }}</span>
+                                    {% if entry.confidence %}
+                                        <span class="badge rounded-pill emotion-{{ entry.label }} text-uppercase small">{{ entry.confidence }}% confidence</span>
+                                    {% else %}
+                                        <span class="badge rounded-pill emotion-neutral text-uppercase small">Confidence pending</span>
+                                    {% endif %}
+                                    <span class="small text-muted">{{ entry.timestamp|date:"M j, g:i a" }}</span>
+                                </div>
+                                <p class="small text-muted mb-0">{{ entry.explanation }}</p>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% if emotion_overview.distribution %}
+                    <div class="text-muted small text-uppercase mb-2">Emotion distribution</div>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for item in emotion_overview.distribution %}
+                            <span class="emotion-chip emotion-{{ item.key }}">{{ item.label }} · {{ item.count }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    <p class="small text-muted mt-3 mb-0">Trend is <strong class="text-capitalize">{{ emotion_overview.trend_direction }}</strong> based on recent polarity shifts.</p>
+                </div>
+            </div>
+            {% endif %}
+
         </div>
         <div class="col-lg-8">
             <div class="card shadow-sm chat-card">
@@ -98,6 +175,29 @@
                             {% csrf_token %}
                             {{ msg_form.non_field_errors }}
                             {{ msg_form.parent_id }}
+                            {% if suggested_replies %}
+                            <div class="mb-3">
+                                <div class="d-flex flex-column flex-lg-row gap-2 justify-content-lg-between align-items-lg-center mb-2">
+                                    <span class="text-muted small text-uppercase fw-semibold">Suggested Replies</span>
+                                    {% if latest_student_message %}
+                                        <span class="small text-muted">Based on: “{{ latest_student_message|truncatewords:12 }}”</span>
+                                    {% endif %}
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% for suggestion in suggested_replies %}
+                                        <button type="button"
+                                                class="btn btn-outline-primary btn-sm suggestion-chip"
+                                                data-suggestion="{{ suggestion.text|escapejs }}"
+                                                aria-label="Use suggested reply: {{ suggestion.text }}">
+                                            <span class="d-block fw-semibold small">{{ suggestion.tone }}</span>
+                                            <span class="small text-wrap">{{ suggestion.text }}</span>
+                                        </button>
+                                    {% endfor %}
+                                </div>
+                                <p class="text-muted small mt-2 mb-0">Suggestions are editable. Click one to pre-fill your response.</p>
+                            </div>
+                            {% endif %}
+                            
                             <div id="reply-indicator" class="alert alert-secondary py-2 px-3 d-none align-items-center justify-content-between">
                                 <div class="small mb-0"><strong>Replying to <span class="reply-to"></span></strong></div>
                                 <a href="#" id="cancel-reply" class="small text-decoration-none">Cancel</a>
@@ -168,6 +268,7 @@
             }
         });
     });
+
     const cancelReply = document.getElementById('cancel-reply');
     if (cancelReply) {
         cancelReply.addEventListener('click', function (event) {
@@ -184,6 +285,21 @@
     const chatThread = document.getElementById('chat-thread');
     if (chatThread) {
         chatThread.scrollTop = chatThread.scrollHeight;
+    }
+    const suggestionButtons = document.querySelectorAll('.suggestion-chip');
+    if (suggestionButtons.length && messageBox) {
+        suggestionButtons.forEach((button) => {
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                const suggestion = button.dataset.suggestion || '';
+                if (!suggestion) {
+                    return;
+                }
+                const current = messageBox.value.trim();
+                messageBox.value = current ? `${current}\n\n${suggestion}` : suggestion;
+                messageBox.focus();
+            });
+        });
     }
 })();
 </script>

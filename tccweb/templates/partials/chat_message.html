@@ -1,14 +1,22 @@
 {% load chat_filters %}
-<div class="chat-entry{% if message.sender_id == viewer.id %} chat-entry-self{% else %} chat-entry-other{% endif %}{% if is_reply %} chat-entry-reply{% endif %}">
+{% with is_self=message.sender_id %}
+<article
+    class="chat-entry{% if is_self %} chat-entry-self{% else %} chat-entry-other{% endif %}{% if is_reply %} chat-entry-reply{% endif %}"
+    data-message-id="{{ message.id }}"
+    role="listitem"
+    aria-live="polite"
+    aria-labelledby="chat-bubble-{{ message.id }}"
+    aria-describedby="chat-meta-{{ message.id }}"
+>
     <div class="chat-avatar" aria-hidden="true">
-        <span class="avatar-initial">
+        <span class="avatar-initial" aria-hidden="true">
             {{ message.sender.get_full_name|default:message.sender.username|first|upper }}
         </span>
     </div>
-    <div class="chat-content">
-        <div class="chat-meta d-flex flex-wrap justify-content-between align-items-start gap-2">
-            <div>
-                <span class="chat-author fw-semibold">
+    <div class="chat-content" role="group" aria-label="Conversation message from {{ message.sender.get_full_name|default:message.sender.username }}">
+        <header class="chat-meta d-flex flex-wrap justify-content-between align-items-start gap-2" id="chat-meta-{{ message.id }}">
+            <div class="d-flex flex-column">
+                <span class="chat-author fw-semibold text-uppercase">
                     {% if message.sender_id == report.assigned_to_id %}
                         Counselor
                     {% elif report.reporter and message.sender_id == report.reporter_id %}
@@ -17,18 +25,34 @@
                         {{ message.sender.get_full_name|default:message.sender.username }}
                     {% endif %}
                 </span>
-                <span class="chat-time text-muted small ms-2">{{ message.timestamp|date:"M j, Y g:i a" }}</span>
+                {% if message.sender.get_full_name and message.sender.get_full_name != message.sender.username %}
+                    <span class="chat-author-name text-muted small">{{ message.sender.get_full_name }}</span>
+                {% endif %}
             </div>
-            {% if report.reporter and report.assigned_to %}
-            <a href="#" class="small text-decoration-none reply-link" data-parent="{{ message.id }}" data-author="{% if message.sender_id == report.assigned_to_id %}Counselor{% elif report.reporter and message.sender_id == report.reporter_id %}Student{% else %}{{ message.sender.get_full_name|default:message.sender.username }}{% endif %}">
-                Reply
-            </a>
-            {% endif %}
-        </div>
+            <div class="chat-timestamp d-flex align-items-center gap-1 text-muted small">
+                <i class="far fa-clock" aria-hidden="true"></i>
+                <time class="chat-time" datetime="{{ message.timestamp|date:'c' }}" title="{{ message.timestamp|date:'l, F j, Y g:i a' }}">
+                    {{ message.timestamp|date:"M j, Y g:i a" }}
+                </time>
+            </div>
+        </header>
+
+        {% if is_reply %}
+            <p class="chat-reply-label text-muted small mb-2">
+                <i class="fas fa-reply me-1" aria-hidden="true"></i>
+                Replying to earlier message
+            </p>
+        {% endif %}
+
         {% with body=message|decrypt:viewer %}
-            <div class="chat-bubble{% if message.sender_id == viewer.id %} chat-bubble-self{% else %} chat-bubble-other{% endif %}">
+            <div
+                class="chat-bubble{% if is_self %} chat-bubble-self{% else %} chat-bubble-other{% endif %}"
+                id="chat-bubble-{{ message.id }}"
+                aria-labelledby="chat-meta-{{ message.id }}"
+                aria-describedby="chat-bubble-{{ message.id }}-content"
+            >
                 {% if body %}
-                    {{ body|linebreaksbr }}
+                    <p id="chat-bubble-{{ message.id }}-content">{{ body|linebreaksbr }}</p>
                 {% elif message.attachment %}
                     <span class="fst-italic text-muted">Attachment shared</span>
                 {% else %}
@@ -36,13 +60,58 @@
                 {% endif %}
             </div>
         {% endwith %}
+
+        {% if message.emotion and message.emotion != 'neutral' or message.risk_level and message.risk_level != 'normal' %}
+        <div class="chat-insights mt-2">
+            {% if message.emotion and message.emotion != 'neutral' %}
+                <span class="emotion-chip emotion-{{ message.emotion }}">{{ message.get_emotion_display }}</span>
+            {% endif %}
+            {% if message.risk_level and message.risk_level != 'normal' %}
+                <span class="emotion-chip risk-{{ message.risk_level }}">{{ message.get_risk_level_display }}</span>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if message.emotion_explanation %}
+            <p class="small text-muted mt-1 mb-0">{{ message.emotion_explanation }}</p>
+        {% endif %}
+
         {% if message.attachment %}
-            <div class="chat-attachment mt-2">
-                <i class="fas fa-paperclip me-1" aria-hidden="true"></i>
-                <a href="{{ message.attachment.url }}" target="_blank" rel="noopener" class="chat-attachment-link">
-                    {{ message.attachment.name|cut:'chat_attachments/' }}
+            <div class="chat-attachment mt-3" aria-label="Attached file">
+                <div class="chat-attachment-card d-flex align-items-center gap-2 p-2 rounded-3 border">
+                    <i class="fas fa-paperclip text-primary" aria-hidden="true"></i>
+                    <div class="flex-grow-1">
+                        <a
+                            href="{{ message.attachment.url }}"
+                            target="_blank"
+                            rel="noopener"
+                            class="chat-attachment-link fw-semibold d-inline-flex align-items-center"
+                            download
+                            aria-label="Download attachment: {{ message.attachment.name|cut:'chat_attachments/' }}"
+                        >
+                            {{ message.attachment.name|cut:'chat_attachments/' }}
+                        </a>
+                        <div class="visually-hidden">Opens in a new tab</div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if report.reporter and report.assigned_to %}
+            <div class="chat-actions d-flex gap-2 mt-2">
+                <a
+                    href="#"
+                    class="btn btn-outline-secondary btn-sm reply-link"
+                    data-parent="{{ message.id }}"
+                    data-author="{% if message.sender_id == report.assigned_to_id %}Counselor{% elif report.reporter and message.sender_id == report.reporter_id %}Student{% else %}{{ message.sender.get_full_name|default:message.sender.username }}{% endif %}"
+                    aria-describedby="chat-bubble-{{ message.id }}"
+                    title="Reply to this message"
+                >
+                    <i class="fas fa-reply me-1" aria-hidden="true"></i>
+                    <span>Reply</span>
+                    <span class="visually-hidden"> to this message</span>
                 </a>
             </div>
         {% endif %}
     </div>
-</div>
+</article>
+{% endwith %}

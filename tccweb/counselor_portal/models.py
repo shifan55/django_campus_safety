@@ -1,12 +1,68 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 from tccweb.core.models import Report
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 import base64
 
 """Models supporting counselor case notes and secure messaging."""
+class CounselorSpecialization(models.TextChoices):
+    """Areas of expertise used by the smart assignment engine."""
 
+    GENERAL = "general", "General Support"
+    ACADEMIC = "academic", "Academic Guidance"
+    EMOTIONAL = "emotional", "Emotional Wellness"
+    DISCIPLINARY = "disciplinary", "Disciplinary & Safety"
+
+
+class CounselorProfile(models.Model):
+    """Metadata that powers smart counselor assignment."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        related_name="counselor_profile",
+        on_delete=models.CASCADE,
+    )
+    specialization = models.CharField(
+        max_length=32,
+        choices=CounselorSpecialization.choices,
+        default=CounselorSpecialization.GENERAL,
+    )
+    max_active_cases = models.PositiveIntegerField(default=25)
+    auto_assign_enabled = models.BooleanField(default=True)
+    last_auto_assigned_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["specialization"], name="cns_profile_spec_idx"),
+            models.Index(fields=["auto_assign_enabled"], name="cns_profile_auto_idx"),
+        ]
+
+    def mark_assigned_now(self):
+        self.last_auto_assigned_at = timezone.now()
+        self.save(update_fields=["last_auto_assigned_at"])
+
+    def __str__(self):
+        return f"CounselorProfile<{self.user_id}>"
+    
+class EmotionLabel(models.TextChoices):
+    """Normalized set of detected emotional states for chat messages."""
+
+    ANXIOUS = "anxious", "Anxious"
+    ANGRY = "angry", "Angry"
+    STRESSED = "stressed", "Stressed"
+    CALM = "calm", "Calm"
+    NEUTRAL = "neutral", "Neutral"
+
+
+class RiskLevel(models.TextChoices):
+    """Risk posture detected in the student's latest update."""
+
+    NORMAL = "normal", "Stable"
+    ELEVATED = "elevated", "Elevated"
+    CRITICAL = "critical", "Critical"
+    
 
 class CaseNote(models.Model):
     """Private notes added by counselors for a report."""
@@ -94,6 +150,20 @@ class ChatMessage(models.Model):
         null=True,
         help_text="Optional file shared within the conversation.",
     )
+    
+    emotion = models.CharField(
+        max_length=16,
+        choices=EmotionLabel.choices,
+        default=EmotionLabel.NEUTRAL,
+    )
+    emotion_score = models.FloatField(default=0.0)
+    emotion_confidence = models.FloatField(default=0.0)
+    risk_level = models.CharField(
+        max_length=16,
+        choices=RiskLevel.choices,
+        default=RiskLevel.NORMAL,
+    )
+    emotion_explanation = models.TextField(blank=True)
 
     class Meta:
         ordering = ["timestamp"]
@@ -102,6 +172,7 @@ class ChatMessage(models.Model):
             models.Index(fields=["report"]),
             models.Index(fields=["sender"]),
             models.Index(fields=["recipient"]),
+            models.Index(fields=["risk_level"], name="chat_msg_risk_idx"),
         ]
 
     @staticmethod
@@ -133,7 +204,23 @@ class ChatMessage(models.Model):
         message,
         parent=None,
         attachment=None,
+        emotion_insight=None,
     ):
+        extra = {}
+        if emotion_insight:
+            extra.update(
+                {
+                    "emotion": emotion_insight.label
+                    if emotion_insight.label in EmotionLabel.values
+                    else EmotionLabel.NEUTRAL,
+                    "emotion_score": emotion_insight.polarity,
+                    "emotion_confidence": emotion_insight.confidence,
+                    "risk_level": emotion_insight.risk_level
+                    if emotion_insight.risk_level in RiskLevel.values
+                    else RiskLevel.NORMAL,
+                    "emotion_explanation": emotion_insight.explanation,
+                }
+            )
         return cls.objects.create(
             report=report,
             sender=sender,
@@ -142,6 +229,7 @@ class ChatMessage(models.Model):
             cipher_for_sender=cls._encrypt_for(sender, message),
             cipher_for_recipient=cls._encrypt_for(recipient, message),
             attachment=attachment,
+            **extra,
         )
 
     def get_body_for(self, user) -> str:

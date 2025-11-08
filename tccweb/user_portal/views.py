@@ -3,18 +3,64 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_GET
 from django.core.paginator import Paginator
 from django.db.models import Q
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from tccweb.core.models import Report, EducationalResource, SupportContact
 from tccweb.core.forms import LoginForm, RegistrationForm, AnonymousReportForm, ReportForm, MessageForm
-from tccweb.counselor_portal.models import ChatMessage
+from tccweb.counselor_portal.emotion import analyze_emotion
+from tccweb.counselor_portal.models import ChatMessage, RiskLevel
+from tccweb.counselor_portal.services import assign_counselor
 from django.conf import settings
 import logging
 
 logger = logging.getLogger(__name__)
 
+def _notify_counselor_new_message(report, sender, insight=None):
+    """Send a websocket notification to the assigned counselor."""
+
+    if sender.is_staff or not report.assigned_to_id:
+        return
+
+    channel_layer = get_channel_layer()
+    if channel_layer is None:
+        return
+
+    sender_name = sender.get_full_name() or sender.username
+    title = f"\ud83d\udd14 New message in Case #{report.id}"
+    icon = "🔔"
+    body = f"{sender_name} sent a new message."
+    variant = "info"
+
+    if insight:
+        if insight.risk_level == RiskLevel.CRITICAL:
+            title = f"🔴 Critical alert in Case #{report.id}"
+            icon = "🔴"
+            variant = "critical"
+        elif insight.risk_level == RiskLevel.ELEVATED:
+            title = f"🟠 Sensitive update in Case #{report.id}"
+            icon = "🟠"
+            variant = "elevated"
+        if insight.label and insight.label != "neutral":
+            body += f" Detected tone: {insight.display_label}."
+
+    async_to_sync(channel_layer.group_send)(
+        f"user_{report.assigned_to_id}",
+        {
+            "type": "notify",
+            "data": {
+                "title": title,
+                "body": body,
+                "url": reverse("counselor_case_detail", args=[report.id]),
+                "icon": icon,
+                "variant": variant,
+            },
+        },
+    )
 
 def index(request):
     try:
@@ -165,7 +211,9 @@ def report_anonymous(request):
                 reporter_email=form.cleaned_data.get('reporter_email', ''),
                 reporter_phone=form.cleaned_data.get('reporter_phone', ''),
                 is_anonymous=True,
+                awaiting_response=True,
             )
+            assign_counselor(report)
             messages.success(request, 'Report submitted successfully.')
             return redirect('report_success', tracking_code=report.tracking_code)
     return render(request, 'report_anonymous.html', context)
@@ -218,7 +266,9 @@ def submit_report(request):
             else:
                 report.reporter = request.user
             report.is_anonymous = form.cleaned_data.get('is_anonymous')
+            report.awaiting_response = True
             report.save()
+            assign_counselor(report)
             messages.success(request, 'Report submitted successfully.')
             return redirect('report_success', tracking_code=report.tracking_code)
     else:
@@ -250,6 +300,22 @@ def report_messages(request, report_id):
     if request.method == "POST" and msg_form.is_valid() and report.assigned_to:
         parent_id = msg_form.cleaned_data.get("parent_id")
         parent = ChatMessage.objects.filter(id=parent_id, report=report).first() if parent_id else None
+        prior_context = []
+        for history in (
+            ChatMessage.objects.filter(report=report, sender=request.user)
+            .order_by("-timestamp")[:5]
+        ):
+            try:
+                prior_context.append(history.get_body_for(request.user))
+            except Exception:  # pragma: no cover - encryption edge cases
+                continue
+        prior_context.reverse()
+
+        insight = analyze_emotion(
+            msg_form.cleaned_data["message"],
+            context=prior_context,
+        )
+        
         ChatMessage.create(
             report=report,
             sender=request.user,
@@ -257,7 +323,10 @@ def report_messages(request, report_id):
             message=msg_form.cleaned_data["message"],
             parent=parent,
             attachment=msg_form.cleaned_data.get("attachment"),
+            emotion_insight=insight,
         )
+        Report.objects.filter(pk=report.pk).update(awaiting_response=True)
+        _notify_counselor_new_message(report, request.user, insight)
         return redirect("report_messages", report_id=report.id)
     ChatMessage.objects.filter(report=report, recipient=request.user, is_read=False).update(is_read=True)
     chat_messages = (
@@ -269,6 +338,12 @@ def report_messages(request, report_id):
         request,
         "report_messages.html",
         {"report": report, "chat_messages": chat_messages, "msg_form": msg_form},
+        {
+            "report": report,
+            "chat_messages": chat_messages,
+            "msg_form": msg_form,
+            "timeline_events": report.timeline_events(),
+        },
     )
 
 @login_required

@@ -9,8 +9,22 @@ https://docs.djangoproject.com/en/5.2/howto/deployment/asgi/
 
 import os
 
+from channels.auth import AuthMiddlewareStack
+from channels.routing import ProtocolTypeRouter, URLRouter
+
 from django.core.asgi import get_asgi_application
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'tccweb.settings')
 
-application = get_asgi_application()
+django_asgi_app = get_asgi_application()
+
+import tccweb.routing  # noqa: E402  pylint: disable=wrong-import-position
+
+application = ProtocolTypeRouter(
+    {
+        "http": django_asgi_app,
+        "websocket": AuthMiddlewareStack(
+            URLRouter(tccweb.routing.websocket_urlpatterns)
+        ),
+    }
+)

@@ -1,0 +1,24 @@
+<div class="case-timeline">
+    {% for event in events %}
+        <div class="case-timeline-item{% if not event.is_complete %} case-timeline-item-pending{% endif %}">
+            <div class="case-timeline-icon" aria-hidden="true">
+                <i class="fas fa-{{ event.icon|default:'dot-circle' }}"></i>
+            </div>
+            <div class="case-timeline-content">
+                <div class="case-timeline-title">{{ event.label }}</div>
+                {% if event.timestamp %}
+                    <div class="case-timeline-time text-muted small">{{ event.timestamp|date:"M j, Y g:i a" }}</div>
+                {% elif event.description %}
+                    <div class="case-timeline-time text-muted small">{{ event.description }}</div>
+                {% else %}
+                    <div class="case-timeline-time text-muted small">Pending</div>
+                {% endif %}
+                {% if event.description and event.timestamp %}
+                    <div class="case-timeline-meta text-muted small">{{ event.description }}</div>
+                {% endif %}
+            </div>
+        </div>
+    {% empty %}
+        <p class="text-muted small mb-0">No timeline activity yet.</p>
+    {% endfor %}
+</div>

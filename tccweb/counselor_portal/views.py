@@ -1,3 +1,5 @@
+from collections import Counter
+
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
@@ -14,7 +16,7 @@ from django.db.models import (
     Value,
     When,
 )
-from django.db.models.functions import TruncWeek, TruncMonth
+from django.db.models.functions import TruncWeek, TruncMonth, Coalesce
 from django.db.utils import OperationalError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -26,12 +28,17 @@ from django.urls import reverse
 from datetime import timedelta, datetime
 import csv
 import json
+import logging
 
 
 from tccweb.core.models import Report, ReportStatus  # provides status choices for filtering
 from .forms import CaseNoteForm
 from tccweb.core.forms import MessageForm
-from .models import CaseNote, ChatMessage, AdminAlert
+from .models import CaseNote, ChatMessage, AdminAlert, RiskLevel, EmotionLabel
+from .services import generate_suggested_replies
+
+
+logger = logging.getLogger(__name__)
 
 
 def _is_counselor(user):
@@ -71,6 +78,10 @@ def dashboard(request):
                 report=OuterRef("pk"), recipient=request.user, is_read=False
             )
         ),
+    )
+    
+    reports_qs = reports_qs.annotate(
+        last_activity=Coalesce("latest_message_ts", "updated_at", "created_at")
     )
 
     queue_case = Case(
@@ -290,7 +301,7 @@ def dashboard(request):
         },
     ]
     
-    reports_qs = reports_qs.order_by("queue_priority", "-latest_message_ts", "-created_at")
+    reports_qs = reports_qs.order_by("queue_priority", "-last_activity", "-created_at")
 
     locations = reports_qs.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
     paginator = Paginator(reports_qs, 25)
@@ -312,14 +323,14 @@ def dashboard(request):
         time_since_creation_delta = now - report.created_at
         
         # Time since last message or update
-        if report.latest_message_ts:
-            time_since_last_activity_delta = now - report.latest_message_ts
+        if report.last_activity:
+            time_since_last_activity_delta = now - report.last_activity
         else:
             time_since_last_activity_delta = now - report.created_at
         
         # Store the reference datetime for timesince template filter
         report.created_at_ref = report.created_at
-        report.latest_activity_ref = report.latest_message_ts if report.latest_message_ts else report.created_at
+        report.latest_activity_ref = report.last_activity or report.created_at
         
         # Check priority status based on time since activity
         if time_since_last_activity_delta > timedelta(hours=48):
@@ -414,14 +425,13 @@ def my_cases(request):
                 is_read=False,
             )
         ),
-    ).order_by("-latest_message_ts", "-updated_at", "-created_at")
+    last_activity=Coalesce("latest_message_ts", "updated_at", "created_at"),
+    ).order_by("-last_activity", "-created_at")
 
     reports = list(reports_qs)
 
     for report in reports:
-        report.last_activity = (
-            report.latest_message_ts or report.updated_at or report.created_at
-        )
+        report.last_activity = report.last_activity or report.created_at
 
     status_counts = {
         row["status"]: row["total"]
@@ -467,7 +477,9 @@ def case_detail(request, report_id):
         
         if "resolve_case" in request.POST:
             report.status = ReportStatus.RESOLVED
-            report.save()
+            report.resolved_at = timezone.now()
+            report.awaiting_response = False
+            report.save(update_fields=["status", "awaiting_response"])
             admins = get_user_model().objects.filter(is_superuser=True)
             admin_emails = admins.values_list("email", flat=True)
             if admin_emails:
@@ -513,6 +525,7 @@ def case_detail(request, report_id):
                 parent=parent,
                 attachment=msg_form.cleaned_data.get("attachment"),
             )
+            Report.objects.filter(pk=report.pk).update(awaiting_response=False)
             return redirect("counselor_case_detail", report_id=report.id)
 
     notes = CaseNote.objects.filter(report=report).order_by("-created_at")
@@ -527,13 +540,94 @@ def case_detail(request, report_id):
     except OperationalError:
         chat_messages = []
     
+    latest_student_message = ""
+    suggested_replies = []
+    emotion_timeline = []
+    emotion_counts = Counter()
+    critical_alerts = 0
+    elevated_alerts = 0
+    if report.reporter:
+        try:
+            latest_incoming = (
+                ChatMessage.objects.filter(report=report, sender=report.reporter)
+                .order_by("-timestamp")
+                .first()
+            )
+        except OperationalError:
+            latest_incoming = None
+        if latest_incoming:
+            try:
+                latest_student_message = latest_incoming.get_body_for(request.user)
+            except Exception as exc:  # pragma: no cover - encryption edge cases
+                logger.warning("Unable to decrypt latest student message", exc_info=exc)
+                latest_student_message = ""
+            if latest_student_message:
+                suggested_replies = generate_suggested_replies(latest_student_message)
+
+        student_messages = (
+            ChatMessage.objects.filter(report=report, sender=report.reporter)
+            .order_by("timestamp")
+        )
+        for msg in student_messages:
+            entry = {
+                "timestamp": msg.timestamp,
+                "label": msg.emotion,
+                "label_display": msg.get_emotion_display(),
+                "risk": msg.risk_level,
+                "risk_display": msg.get_risk_level_display(),
+                "confidence": round(msg.emotion_confidence * 100),
+                "confidence_raw": msg.emotion_confidence,
+                "score": msg.emotion_score,
+                "explanation": msg.emotion_explanation,
+            }
+            if not entry["explanation"]:
+                entry["explanation"] = "AI could not detect strong emotional cues."
+            emotion_timeline.append(entry)
+            emotion_counts[msg.emotion] += 1
+            if msg.risk_level == RiskLevel.CRITICAL:
+                critical_alerts += 1
+            elif msg.risk_level == RiskLevel.ELEVATED:
+                elevated_alerts += 1
+
+    latest_emotion = emotion_timeline[-1] if emotion_timeline else None
+    recent_scores = [entry["score"] for entry in emotion_timeline[-3:]]
+    trend_direction = "steady"
+    if len(recent_scores) >= 2:
+        delta = recent_scores[-1] - recent_scores[0]
+        if delta > 0.1:
+            trend_direction = "improving"
+        elif delta < -0.1:
+            trend_direction = "declining"
+
+    emotion_distribution = [
+        {
+            "key": key,
+            "label": EmotionLabel(key).label if key in EmotionLabel.values else key.title(),
+            "count": count,
+        }
+        for key, count in emotion_counts.most_common()
+    ]
+
+    emotion_overview = {
+        "timeline": emotion_timeline[-10:],
+        "latest": latest_emotion,
+        "distribution": emotion_distribution,
+        "critical_count": critical_alerts,
+        "elevated_count": elevated_alerts,
+        "trend_direction": trend_direction,
+    }
+
+    
     context = {
         "report": report,
         "notes": notes,
         "chat_messages": chat_messages,
         "note_form": note_form,
         "msg_form": msg_form,
-        "is_owner": report.assigned_to_id == request.user.id,
+        "suggested_replies": suggested_replies,
+        "latest_student_message": latest_student_message,
+        "emotion_overview": emotion_overview,
+        "timeline_events": report.timeline_events(),
     }
     return render(request, "counselor_case_detail.html", context)
 
@@ -574,6 +668,8 @@ def claim_case(request, report_id):
     if request.method == "POST":
         report.assigned_to = request.user
         report.status = ReportStatus.UNDER_REVIEW
+        report.assigned_at = timezone.now()
+        report.resolved_at = None
         report.save()
         
         messages.success(request, f"Successfully claimed Report #{report.id}")

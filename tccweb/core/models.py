@@ -89,11 +89,98 @@ class Report(models.Model):
         related_name="assigned_reports",
         on_delete=models.SET_NULL,
     )
+    
+    assigned_at = models.DateTimeField(blank=True, null=True)
+    resolved_at = models.DateTimeField(blank=True, null=True)
 
     counselor_notes = models.TextField(blank=True)
     
+    awaiting_response = models.BooleanField(
+        default=True,
+        help_text="Whether the next action is expected from the assigned counselor.",
+    )
+    
     def __str__(self):
         return f"{self.get_incident_type_display()} on {self.incident_date:%Y-%m-%d}"
+    def timeline_events(self):
+        """Return ordered case timeline metadata for display."""
+
+        events = [
+            {
+                "label": "Report created",
+                "timestamp": self.created_at,
+                "description": None,
+                "icon": "calendar-day",
+                "is_complete": True,
+            }
+        ]
+
+        if self.assigned_to:
+            events.append(
+                {
+                    "label": "Counselor assigned",
+                    "timestamp": self.assigned_at or self.updated_at,
+                    "description": (
+                        self.assigned_to.get_full_name() or self.assigned_to.username
+                    ),
+                    "icon": "user-tie",
+                    "is_complete": bool(self.assigned_at or self.updated_at),
+                }
+            )
+        else:
+            events.append(
+                {
+                    "label": "Counselor assigned",
+                    "timestamp": None,
+                    "description": "Awaiting assignment",
+                    "icon": "user-tie",
+                    "is_complete": False,
+                }
+            )
+
+        if self.reporter_id:
+            first_student_reply = (
+                self.messages.filter(sender_id=self.reporter_id)
+                .order_by("timestamp")
+                .first()
+            )
+        else:
+            first_student_reply = None
+
+        events.append(
+            {
+                "label": "Student replied",
+                "timestamp": first_student_reply.timestamp if first_student_reply else None,
+                "description": None
+                if first_student_reply
+                else "Awaiting student response",
+                "icon": "comment-dots",
+                "is_complete": bool(first_student_reply),
+            }
+        )
+
+        if self.status == ReportStatus.RESOLVED:
+            events.append(
+                {
+                    "label": "Case closed",
+                    "timestamp": self.resolved_at or self.updated_at,
+                    "description": None,
+                    "icon": "check-circle",
+                    "is_complete": bool(self.resolved_at or self.updated_at),
+                }
+            )
+        else:
+            events.append(
+                {
+                    "label": "Case closed",
+                    "timestamp": None,
+                    "description": f"Status: {self.get_status_display()}",
+                    "icon": "check-circle",
+                    "is_complete": False,
+                }
+            )
+
+        return events
     
     class Meta:
         indexes = [
@@ -101,6 +188,8 @@ class Report(models.Model):
             models.Index(fields=["status"]),
             models.Index(fields=["reporter"]),
             models.Index(fields=["assigned_to"]),
+            models.Index(fields=["assigned_at"]),
+            models.Index(fields=["resolved_at"]),
         ]
 
 class EducationalResource(models.Model):

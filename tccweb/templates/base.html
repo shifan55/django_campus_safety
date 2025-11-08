@@ -219,6 +219,10 @@
         <i class="fas fa-arrow-up"></i>
     </button>
 
+    {% if user.is_authenticated and user.is_staff %}
+    <div id="notification-toasts" class="toast-container position-fixed bottom-0 end-0 p-3" aria-live="polite" aria-atomic="true"></div>
+    {% endif %}
+
     <!-- Global confirmation modal -->
     <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -338,6 +342,141 @@
 
     <!-- Custom JS -->
     <script src="{% static 'js/main.js' %}"></script>
+
+{% if user.is_authenticated and user.is_staff %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const container = document.getElementById('notification-toasts');
+            if (!container || typeof bootstrap === 'undefined') {
+                return;
+            }
+
+            const MAX_VISIBLE_TOASTS = 3;
+            const AUTO_HIDE_MS = 10000;
+            const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            const socket = new WebSocket(`${protocol}://${window.location.host}/ws/notifications/`);
+
+            const renderToast = (data) => {
+                while (container.children.length >= MAX_VISIBLE_TOASTS) {
+                    container.firstElementChild.remove();
+                }
+
+                const toastEl = document.createElement('div');
+                toastEl.className = 'toast notification-toast shadow-lg border-0 fade';
+                toastEl.setAttribute('role', 'alert');
+                toastEl.setAttribute('aria-live', 'assertive');
+                toastEl.setAttribute('aria-atomic', 'true');
+                toastEl.dataset.bsAutohide = 'true';
+                toastEl.dataset.bsDelay = AUTO_HIDE_MS;
+
+                const header = document.createElement('div');
+                header.className = 'toast-header d-flex align-items-center';
+
+                const icon = document.createElement('span');
+                icon.className = 'toast-icon';
+                icon.textContent = data.icon || '🔔';
+                header.appendChild(icon);
+
+                const title = document.createElement('div');
+                title.className = 'me-auto';
+                title.textContent = data.title || 'New notification';
+                header.appendChild(title);
+
+                const timestamp = document.createElement('small');
+                timestamp.className = 'text-muted ms-3';
+                timestamp.textContent = new Intl.DateTimeFormat(undefined, {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }).format(new Date());
+                header.appendChild(timestamp);
+
+                const closeBtn = document.createElement('button');
+                closeBtn.type = 'button';
+                closeBtn.className = 'btn-close';
+                closeBtn.setAttribute('data-bs-dismiss', 'toast');
+                closeBtn.setAttribute('aria-label', 'Dismiss notification');
+                header.appendChild(closeBtn);
+
+                const body = document.createElement('div');
+                body.className = 'toast-body';
+
+                if (data.body) {
+                    const bodyText = document.createElement('p');
+                    bodyText.className = 'mb-0';
+                    bodyText.textContent = data.body;
+                    body.appendChild(bodyText);
+                }
+
+                if (data.url) {
+                    const actionRow = document.createElement('div');
+                    actionRow.className = 'mt-3 d-flex gap-2';
+                    const primaryAction = document.createElement('a');
+                    primaryAction.href = data.url;
+                    primaryAction.className = 'btn btn-sm btn-primary';
+                    primaryAction.textContent = data.cta || 'Open case';
+                    actionRow.appendChild(primaryAction);
+                    body.appendChild(actionRow);
+                    toastEl.addEventListener('click', (event) => {
+                        if (!event.target.closest('a, button')) {
+                            primaryAction.click();
+                        }
+                    });
+                }
+
+                const progress = document.createElement('div');
+                progress.className = 'toast-progress';
+                progress.style.animationDuration = `${AUTO_HIDE_MS}ms`;
+
+                toastEl.appendChild(header);
+                toastEl.appendChild(body);
+                toastEl.appendChild(progress);
+                container.appendChild(toastEl);
+
+                const toast = bootstrap.Toast.getOrCreateInstance(toastEl, {
+                    autohide: true,
+                    delay: AUTO_HIDE_MS
+                });
+
+                let hideTimer = setTimeout(() => {
+                    toast.hide();
+                }, AUTO_HIDE_MS);
+
+                toastEl.addEventListener('mouseenter', () => {
+                    clearTimeout(hideTimer);
+                });
+
+                toastEl.addEventListener('mouseleave', () => {
+                    clearTimeout(hideTimer);
+                    hideTimer = setTimeout(() => toast.hide(), AUTO_HIDE_MS);
+                });
+
+                toastEl.addEventListener('hidden.bs.toast', () => {
+                    clearTimeout(hideTimer);
+                    toastEl.remove();
+                });
+
+                toast.show();
+            };
+
+            socket.addEventListener('message', (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    renderToast(data);
+                } catch (error) {
+                    console.error('Failed to render notification', error);
+                }
+            });
+
+            socket.addEventListener('close', () => {
+                console.debug('Notifications connection closed');
+            });
+
+            socket.addEventListener('error', (error) => {
+                console.error('Notifications connection error', error);
+            });
+        });
+    </script>
+    {% endif %}
     
     {% block extra_scripts %}{% endblock %}
 </body>

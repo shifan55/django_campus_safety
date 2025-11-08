@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import (
 )
 from django.core.cache import caches
 from django.core.paginator import Paginator
+from django.utils import timezone
 import logging
 
 # Use the project's default cache backend for storing dashboard statistics
@@ -147,9 +148,20 @@ def admin_case_assignment(request):
         status = request.POST.get('status')
         notes = request.POST.get('notes')
         report = get_object_or_404(Report, id=report_id)
+        previous_assignee = report.assigned_to_id
+        previous_status = report.status
         report.assigned_to_id = assigned_to or None
+        if report.assigned_to_id and report.assigned_to_id != previous_assignee:
+            report.assigned_at = timezone.now()
+        elif not report.assigned_to_id:
+            report.assigned_at = None
         if status:
             report.status = status
+            if status == ReportStatus.RESOLVED:
+                if previous_status != ReportStatus.RESOLVED:
+                    report.resolved_at = timezone.now()
+            elif previous_status == ReportStatus.RESOLVED:
+                report.resolved_at = None
         if notes is not None:
             report.counselor_notes = notes
         report.save()
