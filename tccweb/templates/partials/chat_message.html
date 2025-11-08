@@ -1,5 +1,5 @@
 {% load chat_filters %}
-{% with is_self=message.sender_id %}
+{% with is_self=message|is_sender:viewer %}
 <article
     class="chat-entry{% if is_self %} chat-entry-self{% else %} chat-entry-other{% endif %}{% if is_reply %} chat-entry-reply{% endif %}"
     data-message-id="{{ message.id }}"

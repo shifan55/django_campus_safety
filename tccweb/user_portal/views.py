@@ -14,7 +14,6 @@ from tccweb.core.models import Report, EducationalResource, SupportContact
 from tccweb.core.forms import LoginForm, RegistrationForm, AnonymousReportForm, ReportForm, MessageForm
 from tccweb.counselor_portal.emotion import analyze_emotion
 from tccweb.counselor_portal.models import ChatMessage, RiskLevel
-from tccweb.counselor_portal.services import assign_counselor
 from django.conf import settings
 import logging
 
@@ -213,7 +212,6 @@ def report_anonymous(request):
                 is_anonymous=True,
                 awaiting_response=True,
             )
-            assign_counselor(report)
             messages.success(request, 'Report submitted successfully.')
             return redirect('report_success', tracking_code=report.tracking_code)
     return render(request, 'report_anonymous.html', context)
@@ -268,7 +266,6 @@ def submit_report(request):
             report.is_anonymous = form.cleaned_data.get('is_anonymous')
             report.awaiting_response = True
             report.save()
-            assign_counselor(report)
             messages.success(request, 'Report submitted successfully.')
             return redirect('report_success', tracking_code=report.tracking_code)
     else:
@@ -334,17 +331,14 @@ def report_messages(request, report_id):
         .select_related("sender")
         .prefetch_related("replies__sender")
     )
-    return render(
-        request,
-        "report_messages.html",
-        {"report": report, "chat_messages": chat_messages, "msg_form": msg_form},
-        {
-            "report": report,
-            "chat_messages": chat_messages,
-            "msg_form": msg_form,
-            "timeline_events": report.timeline_events(),
-        },
-    )
+    context = {
+        "report": report,
+        "chat_messages": chat_messages,
+        "msg_form": msg_form,
+        "timeline_events": report.timeline_events(),
+    }
+
+    return render(request, "report_messages.html", context)
 
 @login_required
 @user_passes_test(lambda u: not u.is_staff)
@@ -364,8 +358,54 @@ def user_messages(request):
             threads_qs = threads_qs.filter(report__id=q)
         else:
             threads_qs = threads_qs.none()
-    return render(request, "user_messages.html", {"threads": threads_qs, "q": q})
+    
+    threads = list(threads_qs)
+    grouped = {}
 
+    for thread in threads:
+        replies = list(thread.replies.all())
+        last_msg = replies[-1] if replies else thread
+        thread.last_message = last_msg
+
+        sender = getattr(last_msg, "sender", None)
+        sender_name = ""
+        if sender:
+            sender_name = sender.get_full_name() or sender.username or ""
+        thread.last_sender_name = sender_name or "Unknown sender"
+
+        group = grouped.setdefault(
+            thread.report_id,
+            {
+                "report": thread.report,
+                "threads": [],
+                "last_message": None,
+                "last_sender_name": "",
+            },
+        )
+        group["threads"].append(thread)
+
+        if last_msg and (
+            group["last_message"] is None
+            or last_msg.timestamp > group["last_message"].timestamp
+        ):
+            group["last_message"] = last_msg
+            group["last_sender_name"] = thread.last_sender_name
+
+    for group in grouped.values():
+        if group["last_message"] is None and group["threads"]:
+            fallback_thread = group["threads"][0]
+            group["last_message"] = fallback_thread.last_message or fallback_thread
+            group["last_sender_name"] = fallback_thread.last_sender_name
+
+    thread_groups = sorted(grouped.values(), key=lambda g: g["report"].id)
+
+    context = {
+        "thread_groups": thread_groups,
+        "q": q,
+        "conversation_count": len(threads),
+        "threads": threads,
+    }
+    return render(request, "user_messages.html", context)
 
 
 def report_success(request, tracking_code):

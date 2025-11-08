@@ -2,27 +2,115 @@
 {% load chat_filters %}
 {% block title %}Messages{% endblock %}
 {% block content %}
-<div class="container mt-4">
-    <a href="{% url 'counselor_dashboard' %}" class="btn btn-secondary mb-3">&laquo; Back to Dashboard</a>
-    <h2>Recent Messages</h2>
-    <form method="get" class="mb-3">
-        <div class="input-group">
-            <input type="text" name="q" class="form-control" placeholder="Search by report #" value="{{ q }}">
-            <button class="btn btn-outline-secondary" type="submit">Search</button>
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10 col-xl-9">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                <div>
+                    <a href="{% url 'counselor_dashboard' %}" class="btn btn-link px-0 text-decoration-none">
+                        <i class="fa fa-arrow-left me-1"></i> Back to dashboard
+                    </a>
+                    <h1 class="h3 mb-0">Message Center</h1>
+                    <p class="text-muted small mb-0">
+                        Review the most recent update from each active report conversation.
+                        Tracking {{ conversation_count }} report{% if conversation_count != 1 %}s{% endif %}
+                        with new activity.
+                    </p>
+                </div>
+                <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold px-3 py-2">
+                    {{ thread_groups|length }} report{% if thread_groups|length != 1 %}s{% endif %}
+                </span>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-body border-bottom">
+                    <form method="get" class="row g-2 align-items-center">
+                        <div class="col-md">
+                            <label for="search-report" class="visually-hidden">Search by report number</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-transparent"><i class="fa fa-search"></i></span>
+                                <input
+                                    id="search-report"
+                                    type="text"
+                                    name="q"
+                                    class="form-control"
+                                    placeholder="Search by report #"
+                                    value="{{ q }}"
+                                >
+                            </div>
+                        </div>
+                        <div class="col-auto d-flex gap-2">
+                            <button class="btn btn-primary" type="submit">Search</button>
+                            {% if q %}
+                                <a href="{% url 'counselor_messages' %}" class="btn btn-outline-secondary">Reset</a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+
+                <div class="list-group list-group-flush">
+                    {% for group in thread_groups %}
+                        {% with report=group.report last_msg=group.last_message sender_name=group.last_sender_name %}
+                            <a
+                                class="list-group-item list-group-item-action px-3 py-4"
+                                href="{% url 'counselor_case_detail' report.id %}"
+                            >
+                                <div class="d-flex flex-wrap align-items-center justify-content-between mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <h2 class="h5 mb-0">Report #{{ report.id }}</h2>
+                                        <span class="badge {% if report.status == 'resolved' %}bg-success-subtle text-success{% elif report.status == 'under_review' %}bg-warning-subtle text-warning{% else %}bg-secondary-subtle text-secondary{% endif %}">
+                                            {{ report.get_status_display }}
+                                        </span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-3 small text-muted">
+                                        <span class="d-flex align-items-center gap-1">
+                                            <i class="fa fa-comments"></i>
+                                            {{ group.threads|length }} conversation{% if group.threads|length != 1 %}s{% endif %}
+                                        </span>
+                                        <span>
+                                            {% if last_msg %}
+                                                {{ last_msg.timestamp|date:"M j, Y g:i a" }}
+                                            {% else %}
+                                                No activity yet
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">{{ report.get_incident_type_display }}</p>
+                                <div class="d-flex gap-3 align-items-start">
+                                    <div
+                                        class="rounded-circle bg-primary bg-opacity-10 text-primary fw-semibold d-flex align-items-center justify-content-center flex-shrink-0"
+                                        style="width: 48px; height: 48px;"
+                                        aria-hidden="true"
+                                    >
+                                        {{ sender_name|default:"?"|slice:":1"|upper }}
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <p class="mb-1 text-body-secondary">
+                                            {% if last_msg %}
+                                                <strong>{{ sender_name }}</strong>
+                                                &ndash;
+                                                {{ last_msg|decrypt:request.user|default:"(No message content)"|truncatechars:160 }}
+                                            {% else %}
+                                                <em>No messages yet.</em>
+                                            {% endif %}
+                                        </p>
+                                        {% if report.awaiting_response %}
+                                            <span class="badge bg-danger-subtle text-danger">Awaiting counselor response</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </a>
+                        {% endwith %}
+                    {% empty %}
+                        <div class="list-group-item py-5 text-center text-muted">
+                            <i class="fa fa-comments display-6 d-block mb-3"></i>
+                            <p class="mb-0">No conversations found. Try adjusting your search or check back later.</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
         </div>
-    </form>
-    <ul class="list-group">
-        {% for thread in threads %}
-            {% with last_msg=thread.replies.last|default:thread %}
-            <li class="list-group-item">
-                <a href="{% url 'counselor_case_detail' thread.report.id %}">Report #{{ thread.report.id }}</a> -
-                <strong>{{ last_msg.sender.username }}</strong>: {{ last_msg|decrypt:request.user|truncatewords:20 }}
-                <br><small class="text-muted">{{ last_msg.timestamp }}</small>
-            </li>
-            {% endwith %}
-        {% empty %}
-            <li class="list-group-item">No messages.</li>
-        {% endfor %}
-    </ul>
+    </div>
 </div>
 {% endblock %}

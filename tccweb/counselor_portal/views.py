@@ -462,12 +462,17 @@ def my_cases(request):
 @login_required
 @user_passes_test(_is_counselor)
 def case_detail(request, report_id):
-    report = get_object_or_404(Report, id=report_id, assigned_to=request.user)
+    report = get_object_or_404(
+        Report,
+        Q(id=report_id)
+        & (Q(assigned_to=request.user) | Q(assigned_to__isnull=True)),
+    )
+    is_owner = report.assigned_to_id == request.user.id
     note_form = CaseNoteForm(request.POST or None)
     msg_form = MessageForm(request.POST or None, request.FILES or None)
 
     if request.method == "POST":
-        if "add_note" in request.POST and note_form.is_valid():
+        if "add_note" in request.POST and is_owner and note_form.is_valid():
             CaseNote.objects.create(
                 report=report,
                 counselor=request.user,
@@ -475,7 +480,7 @@ def case_detail(request, report_id):
             )
             return redirect("counselor_case_detail", report_id=report.id)
         
-        if "resolve_case" in request.POST:
+        if "resolve_case" in request.POST and is_owner:
             report.status = ReportStatus.RESOLVED
             report.resolved_at = timezone.now()
             report.awaiting_response = False
@@ -514,7 +519,12 @@ def case_detail(request, report_id):
                     )
             return redirect("counselor_case_detail", report_id=report.id)
         
-        if "send_msg" in request.POST and msg_form.is_valid() and report.reporter:
+        if (
+            "send_msg" in request.POST
+            and is_owner
+            and msg_form.is_valid()
+            and report.reporter
+        ):
             parent_id = msg_form.cleaned_data.get("parent_id")
             parent = ChatMessage.objects.filter(id=parent_id, report=report).first() if parent_id else None
             ChatMessage.create(
@@ -628,6 +638,7 @@ def case_detail(request, report_id):
         "latest_student_message": latest_student_message,
         "emotion_overview": emotion_overview,
         "timeline_events": report.timeline_events(),
+        "is_owner": is_owner,
     }
     return render(request, "counselor_case_detail.html", context)
 
@@ -637,8 +648,10 @@ def case_detail(request, report_id):
 def messages_view(request):
     """List message threads for the counselor, grouped by report."""
     q = request.GET.get("q", "").strip()
+    conversation_count = 0
+    thread_groups = []
     try:
-        threads = (
+        thread_qs = (
             ChatMessage.objects.filter(
                 Q(sender=request.user) | Q(recipient=request.user), parent__isnull=True
             )
@@ -648,15 +661,64 @@ def messages_view(request):
         )
         if q:
             if q.isdigit():
-                threads = threads.filter(report__id=q)
+                thread_qs = thread_qs.filter(report__id=q)
             else:
-                threads = threads.none()
-        ChatMessage.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+                thread_qs = thread_qs.none()
+
+        ChatMessage.objects.filter(recipient=request.user, is_read=False).update(
+            is_read=True
+        )
+
+        threads = list(thread_qs)
+        conversation_count = len(threads)
+        grouped = {}
+        for thread in threads:
+            replies = list(thread.replies.all())
+            last_msg = replies[-1] if replies else thread
+            thread.last_message = last_msg
+
+            sender = getattr(last_msg, "sender", None)
+            sender_name = ""
+            if sender:
+                sender_name = sender.get_full_name() or sender.username or ""
+            thread.last_sender_name = sender_name or "Unknown sender"
+
+            group = grouped.setdefault(
+                thread.report_id,
+                {
+                    "report": thread.report,
+                    "threads": [],
+                    "last_message": None,
+                    "last_sender_name": "",
+                },
+            )
+            group["threads"].append(thread)
+
+            if last_msg and (
+                group["last_message"] is None
+                or last_msg.timestamp > group["last_message"].timestamp
+            ):
+                group["last_message"] = last_msg
+                group["last_sender_name"] = thread.last_sender_name
+
+        for group in grouped.values():
+            if group["last_message"] is None and group["threads"]:
+                fallback_thread = group["threads"][0]
+                group["last_message"] = fallback_thread.last_message or fallback_thread
+                group["last_sender_name"] = fallback_thread.last_sender_name
+
+        thread_groups = sorted(grouped.values(), key=lambda g: g["report"].id)
     except OperationalError:
-        threads = []
-    return render(
-        request, "counselor_messages.html", {"threads": threads, "q": q}
-    )
+        conversation_count = 0
+        thread_groups = []
+
+    context = {
+        "thread_groups": thread_groups,
+        "q": q,
+        "conversation_count": conversation_count,
+        "threads": threads if 'threads' in locals() else [],
+    }
+    return render(request, "counselor_messages.html", context)
 
 
 @login_required
