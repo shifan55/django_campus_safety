@@ -18,11 +18,11 @@
                 </div>
             </div>
             <div class="page-actions">
-                <a href="{% url 'report_anonymous' %}" class="action-chip">
+                <a href="{% url 'report_anonymous' %}" class="action-chip action-chip-danger">
                     <i class="fas fa-user-secret"></i>
                     <span>Submit anonymously</span>
                 </a>
-                <a href="{% url 'register' %}" class="action-chip">
+                <a href="{% url 'register' %}" class="action-chip action-chip-success">
                     <i class="fas fa-user-plus"></i>
                     <span>Create account</span>
                 </a>
@@ -134,7 +134,7 @@
                             <div class="mt-4 p-4 rounded-4" style="border: 1px dashed var(--surface-border);">
                                 <h3 class="h6 fw-semibold mb-2"><i class="fas fa-user-secret me-2 text-primary"></i>No account? No problem.</h3>
                                 <p class="mb-3">You can still report anonymously at any time. We will provide follow-up guidance without collecting your personal details.</p>
-                                <a href="{% url 'report_anonymous' %}" class="action-chip">
+                                <a href="{% url 'report_anonymous' %}" class="action-chip action-chip-danger">
                                     <i class="fas fa-arrow-right"></i>
                                     <span>Submit an anonymous report</span>
                                 </a>

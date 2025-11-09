@@ -54,8 +54,18 @@
     </div>
 
     <div class="table-responsive">
-        <table class="table table-hover align-middle">
-            <thead class="table-light">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+            <div class="table-legend" aria-hidden="true">
+                <span class="legend-item"><span class="status-dot status-warning"></span><span>Pending</span></span>
+                <span class="legend-item"><span class="status-dot status-info"></span><span>Under review</span></span>
+                <span class="legend-item"><span class="status-dot status-success"></span><span>Resolved</span></span>
+                <span class="legend-item"><span class="status-dot status-secondary"></span><span>Other states</span></span>
+            </div>
+            <span class="small text-muted">Color keys reflect the live status of each report for faster scanning.</span>
+        </div>
+        <table class="table table-modern table-hover align-middle">
+            <caption class="text-muted small">Overview of all cases you currently manage.</caption>
+            <thead>
                 <tr>
                     <th scope="col">Report #</th>
                     <th scope="col">Incident Type</th>
@@ -68,31 +78,69 @@
             <tbody>
                 {% for report in reports %}
                 <tr>
-                    <td class="fw-semibold">#{{ report.id }}</td>
-                    <td>{{ report.get_incident_type_display }}</td>
-                    <td>
-                        <span class="badge bg-{{ report.status|status_badge }}">{{ report.get_status_display }}</span>
+                    <th scope="row" data-label="Report #">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="status-dot status-{{ report.status|status_badge }}" aria-hidden="true"></span>
+                            <div>
+                                <div class="fw-semibold">#{{ report.id }}</div>
+                                {% if report.has_unread %}
+                                <div class="status-stack mt-1">
+                                    <span class="status-pill status-pill-danger">
+                                        <i class="fas fa-envelope"></i>
+                                        Unread updates
+                                    </span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <span class="visually-hidden">Status {{ report.get_status_display }}</span>
+                    </th>
+                    <td data-label="Incident Type">
+                        <div class="d-flex flex-column">
+                            <span class="fw-semibold">{{ report.get_incident_type_display }}</span>
+                            <small class="text-muted">Filed {{ report.created_at|date:"M j, Y" }}</small>
+                        </div>
                     </td>
-                    <td>
+                    <td data-label="Status">
+                        <span class="status-pill status-pill-{{ report.status|status_badge }}">
+                            <i class="fas fa-signal"></i>
+                            {{ report.get_status_display }}
+                        </span>
+                    </td>
+                    <td data-label="Reporter">
                         {% if report.reporter %}
-                            {{ report.reporter.get_full_name|default:report.reporter.username }}
+                            <div class="fw-semibold">{{ report.reporter.get_full_name|default:report.reporter.username }}</div>
+                            <small class="text-muted">{{ report.reporter.email }}</small>
                         {% else %}
-                            {{ report.reporter_name|default:"Anonymous" }}
+                            <span class="badge text-bg-secondary">{{ report.reporter_name|default:"Anonymous" }}</span>
                         {% endif %}
                     </td>
-                    <td>
+                    <td data-label="Last Activity">
                         {% if report.last_activity %}
-                        <div>{{ report.last_activity|date:"M j, Y g:i a" }}</div>
-                        <small class="text-muted">Updated {{ report.last_activity|timesince }} ago</small>
+                        <div class="status-stack mb-2">
+                            <span class="status-pill status-pill-info">
+                                <i class="fas fa-clock"></i>
+                                {{ report.last_activity|timesince }} ago
+                            </span>
+                        </div>
+                        <small class="text-muted">Last touchpoint {{ report.last_activity|date:"M j, Y g:i a" }}</small>
                         {% else %}
-                        <span class="text-muted">No activity yet</span>
+                        <div class="status-stack mb-2">
+                            <span class="status-pill status-pill-neutral">
+                                <i class="fas fa-hourglass-half"></i>
+                                Awaiting first update
+                            </span>
+                        </div>
+                        <small class="text-muted">No activity recorded yet</small>
                         {% endif %}
                     </td>
-                    <td class="text-end">
-                        {% if report.has_unread %}
-                        <span class="badge text-bg-danger me-2">Unread</span>
-                        {% endif %}
-                        <a href="{% url 'counselor_case_detail' report.id %}" class="btn btn-sm btn-primary">Open Case</a>
+                    <td data-label="Actions" class="text-end">
+                        <div class="table-actions">
+                            <a href="{% url 'counselor_case_detail' report.id %}" class="btn btn-sm btn-primary btn-icon">
+                                <i class="fas fa-folder-open"></i>
+                                <span>Open</span>
+                            </a>
+                        </div>
                     </td>
                 </tr>
                 {% empty %}

@@ -427,7 +427,10 @@ def set_theme(request):
         theme = data.get('theme')
         if theme in ['light', 'dark']:
             request.session['theme'] = theme
-            return JsonResponse({'status': 'ok'})
+            return JsonResponse({'status': 'ok', 'theme': theme})
+        if theme == 'auto':
+            request.session.pop('theme', None)
+            return JsonResponse({'status': 'ok', 'theme': 'auto'})
     except Exception:
         logger.exception("Failed to set theme")
     return JsonResponse({'status': 'error'}, status=400)

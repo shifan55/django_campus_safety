@@ -15,11 +15,11 @@
                 </div>
             </div>
             <div class="page-actions">
-                <span class="action-chip">
+                <span class="action-chip action-chip-info">
                     <i class="fas fa-barcode"></i>
                     <span>Tracking code {{ report.tracking_code }}</span>
                 </span>
-                <a href="{% url 'user_messages' %}" class="action-chip">
+                <a href="{% url 'user_messages' %}" class="action-chip action-chip-info">
                     <i class="fas fa-arrow-left"></i>
                     <span>Back to messages</span>
                 </a>
@@ -45,7 +45,7 @@
                             <span class="ms-2 text-warning small">Awaiting counselor assignment</span>
                         {% endif %}
                     </div>
-                    <span class="action-chip">
+                    <span class="action-chip action-chip-info">
                         <i class="fas fa-clock"></i>
                         <span>Last updated {{ report.updated_at|default:report.created_at|date:"M j, Y" }}</span>
                     </span>

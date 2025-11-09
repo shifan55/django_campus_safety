@@ -4,111 +4,260 @@
 
 {% block extra_head %}
 <style>
-    /* Add subtle hover effect for resource cards */
+    .awareness-hero {
+        position: relative;
+        background: linear-gradient(135deg, var(--gradient-hero-start), var(--gradient-hero-end));
+        overflow: hidden;
+        border-radius: 0 0 32px 32px;
+        box-shadow: var(--shadow-soft);
+    }
+
+    .awareness-hero::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.22), transparent 55%),
+                    radial-gradient(circle at 85% 30%, rgba(14, 165, 233, 0.18), transparent 60%);
+        opacity: 0.9;
+    }
+
+    .awareness-hero .container {
+        position: relative;
+        z-index: 1;
+    }
+
+    .awareness-hero .hero-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.9rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.2);
+        color: rgba(255, 255, 255, 0.92);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+    }
+
+    .filter-card {
+        border-radius: 24px;
+        border: 1px solid var(--surface-border);
+        background: var(--surface-elevated);
+        box-shadow: var(--shadow-soft);
+        padding: 1.5rem;
+    }
+
+    .filter-card .input-group-text,
+    .filter-card .form-select,
+    .filter-card .form-control {
+        background-color: var(--surface-muted);
+        color: var(--text-primary);
+        border-color: transparent;
+    }
+
+    .filter-card .input-group-text {
+        border-radius: 14px 0 0 14px;
+    }
+
     .resource-item .card {
+        height: 100%;
+        border-radius: 22px;
+        border: 1px solid var(--surface-border);
+        background: var(--surface-elevated);
+        box-shadow: var(--shadow-soft);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
+
     .resource-item .card:hover {
+        transform: translateY(-6px);
+        box-shadow: var(--shadow-hover);
+    }
+
+    .resource-item .badge {
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .resource-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .support-card {
+        border-radius: 20px;
+        border: 1px solid var(--surface-border);
+        background: var(--surface-elevated);
+        box-shadow: var(--shadow-soft);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .support-card:hover {
         transform: translateY(-4px);
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        box-shadow: var(--shadow-hover);
     }
 
-        /* Dark mode friendly filter section */
-    .filter-section .input-group-text {
-        background-color: var(--bs-tertiary-bg);
-        color: var(--bs-body-color);
+    .support-card .card-body {
+        padding: 1.75rem;
     }
 
-    /* Highlight links for better visibility */
     .contact-info a,
     .emergency-links a {
         color: inherit;
         text-decoration: underline;
     }
-        /* Dark mode friendly filter section with better contrast */
-    .filter-section {
-        background-color: var(--bs-body-bg);
-        color: var(--bs-body-color);
-    }
-    .filter-section .input-group-text,
-    .filter-section .form-select,
-    .filter-section .form-control {
-        background-color: var(--bs-tertiary-bg);
-        color: var(--bs-body-color);
-        border-color: var(--bs-border-color);
+
+    .emergency-call {
+        display: block;
+        padding: 1.5rem 1rem;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.12);
+        color: inherit;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        text-decoration: none;
+        transition: transform 0.2s ease, background 0.2s ease;
     }
 
-    /* Highlight links for better visibility */
-    .contact-info a,
-    .emergency-links a {
+    .emergency-call:hover,
+    .emergency-call:focus {
+        transform: translateY(-4px);
+        background: rgba(255, 255, 255, 0.2);
         color: inherit;
-        text-decoration: underline;
+        }
+
+    .quick-tip-card {
+        border-radius: 18px;
+        border: 1px solid var(--surface-border);
+        background: var(--surface-elevated);
+        box-shadow: var(--shadow-soft);
+        height: 100%;
+    }
+
+    .quick-tip-card h5 {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    @media (max-width: 767.98px) {
+        .filter-card {
+            padding: 1.25rem;
+        }
+
+        .resource-item .card {
+            border-radius: 18px;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <!-- Header Section -->
-<section class="bg-primary text-white py-5">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-8">
-                <h1 class="display-5 fw-bold mb-3">Support & Educational Resources</h1>
-                <p class="lead">Access helpful information, support services, and educational materials about bullying prevention and response.</p>
+<section class="awareness-hero text-white py-5">
+    <div class="container py-4">
+        <span class="hero-chip"><i class="fas fa-shield-alt"></i> Campus Care Hub</span>
+        <div class="row align-items-center g-4 mt-2">
+            <div class="col-lg-7">
+                <h1 class="display-5 fw-bold mb-3">Support &amp; Educational Resources</h1>
+                <p class="lead mb-4">Access step-by-step guidance, trusted contacts, and awareness materials that help you prevent, respond to, and recover from bullying.</p>
+                <div class="d-flex flex-wrap gap-3">
+                    <a href="{% url 'submit_report' %}" class="btn btn-danger btn-lg btn-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Report an Incident</span>
+                    </a>
+                    <a href="#resources" class="btn btn-outline-light btn-lg btn-icon">
+                        <i class="fas fa-compass"></i>
+                        <span>Explore Support Resources</span>
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="d-flex flex-column gap-3 text-lg-end">
+                    <div class="d-flex align-items-center gap-3 justify-content-lg-end">
+                        <div class="display-6"><i class="fas fa-clock"></i></div>
+                        <div>
+                            <p class="text-uppercase small mb-1">Always Available</p>
+                            <p class="fw-semibold mb-0">24/7 confidential support</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-3 justify-content-lg-end">
+                        <div class="display-6"><i class="fas fa-book-reader"></i></div>
+                        <div>
+                            <p class="text-uppercase small mb-1">Learn &amp; Grow</p>
+                            <p class="fw-semibold mb-0">Curated guides &amp; training</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
 <!-- Filter Section -->
-<section class="py-4 bg-body-tertiary filter-section">
+<section class="py-5">
     <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <h5 class="mb-0">Filter Resources</h5>
+        <div class="filter-card" role="search">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+                <div>
+                    <h2 class="h5 mb-1">Fine-tune your resource list</h2>
+                    <p class="text-muted mb-0">Choose filters below to quickly surface the materials you need.</p>
+                </div>
+                <div class="text-md-end text-muted small">
+                    <i class="fas fa-database me-1"></i>{{ resources.paginator.count }} total entries
+                </div>
             </div>
-            <div class="col-md-6">
-                <form method="get" class="d-flex gap-2 flex-wrap justify-content-end" role="search">
-                    <div class="input-group input-group-sm">
-                        <label class="input-group-text" for="categoryFilter"><i class="fas fa-tags" aria-hidden="true"></i><span class="visually-hidden">Category</span></label>
-                        <select class="form-select" id="categoryFilter" name="category" aria-label="Filter by category" onchange="this.form.submit()">
-                            <option value="all" {% if category == 'all' %}selected{% endif %}>All Categories</option>
-                            <option value="prevention" {% if category == 'prevention' %}selected{% endif %}>Prevention</option>
-                            <option value="support" {% if category == 'support' %}selected{% endif %}>Support</option>
-                            <option value="awareness" {% if category == 'awareness' %}selected{% endif %}>Awareness</option>
-                        </select>
-                    </div>
-                    <div class="input-group input-group-sm">
-                        <label class="input-group-text" for="typeFilter"><i class="fas fa-shapes" aria-hidden="true"></i><span class="visually-hidden">Type</span></label>
-                        <select class="form-select" id="typeFilter" name="type" aria-label="Filter by type" onchange="this.form.submit()">
-                            <option value="all" {% if type == 'all' %}selected{% endif %}>All Types</option>
-                            <option value="article" {% if type == 'article' %}selected{% endif %}>Articles</option>
-                            <option value="video" {% if type == 'video' %}selected{% endif %}>Videos</option>
-                            <option value="quiz" {% if type == 'quiz' %}selected{% endif %}>Quizzes</option>
-                        </select>
-                    </div>
-                    <div class="input-group input-group-sm">
-                        <label class="input-group-text" for="searchFilter"><i class="fas fa-search" aria-hidden="true"></i><span class="visually-hidden">Search</span></label>
-                        <input type="text" class="form-control" id="searchFilter" name="q" value="{{ query }}" placeholder="Search..." aria-label="Search resources">
-                    </div>
-                    <div class="input-group input-group-sm">
-                        <label class="input-group-text" for="sortFilter"><i class="fas fa-sort" aria-hidden="true"></i><span class="visually-hidden">Sort</span></label>
-                        <select class="form-select" id="sortFilter" name="sort" aria-label="Sort resources" onchange="this.form.submit()">
-                            <option value="-created_at" {% if sort == '-created_at' %}selected{% endif %}>Newest</option>
-                            <option value="created_at" {% if sort == 'created_at' %}selected{% endif %}>Oldest</option>
-                            <option value="title" {% if sort == 'title' %}selected{% endif %}>Title A-Z</option>
-                            <option value="-title" {% if sort == '-title' %}selected{% endif %}>Title Z-A</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-sm">Apply</button>
-                </form>
-            </div>
+            <form method="get" class="row gy-3 gx-3">
+                <div class="col-sm-6 col-lg-3">
+                    <label for="categoryFilter" class="form-label text-uppercase small fw-semibold text-muted"><i class="fas fa-tags me-1"></i>Category</label>
+                    <select class="form-select" id="categoryFilter" name="category" onchange="this.form.submit()">
+                        <option value="all" {% if category == 'all' %}selected{% endif %}>All Categories</option>
+                        <option value="prevention" {% if category == 'prevention' %}selected{% endif %}>Prevention</option>
+                        <option value="support" {% if category == 'support' %}selected{% endif %}>Support</option>
+                        <option value="awareness" {% if category == 'awareness' %}selected{% endif %}>Awareness</option>
+                    </select>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <label for="typeFilter" class="form-label text-uppercase small fw-semibold text-muted"><i class="fas fa-shapes me-1"></i>Format</label>
+                    <select class="form-select" id="typeFilter" name="type" onchange="this.form.submit()">
+                        <option value="all" {% if type == 'all' %}selected{% endif %}>All Types</option>
+                        <option value="article" {% if type == 'article' %}selected{% endif %}>Articles</option>
+                        <option value="video" {% if type == 'video' %}selected{% endif %}>Videos</option>
+                        <option value="quiz" {% if type == 'quiz' %}selected{% endif %}>Quizzes</option>
+                    </select>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <label for="sortFilter" class="form-label text-uppercase small fw-semibold text-muted"><i class="fas fa-sort me-1"></i>Sort</label>
+                    <select class="form-select" id="sortFilter" name="sort" onchange="this.form.submit()">
+                        <option value="-created_at" {% if sort == '-created_at' %}selected{% endif %}>Newest first</option>
+                        <option value="created_at" {% if sort == 'created_at' %}selected{% endif %}>Oldest first</option>
+                        <option value="title" {% if sort == 'title' %}selected{% endif %}>Title A-Z</option>
+                        <option value="-title" {% if sort == '-title' %}selected{% endif %}>Title Z-A</option>
+                    </select>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <label for="searchFilter" class="form-label text-uppercase small fw-semibold text-muted"><i class="fas fa-search me-1"></i>Search</label>
+                    <input type="text" class="form-control" id="searchFilter" name="q" value="{{ query }}" placeholder="Search keywords...">
+                </div>
+                <div class="col-12 d-flex flex-wrap gap-2 justify-content-end">
+                    <button type="submit" class="btn btn-primary btn-icon">
+                        <i class="fas fa-filter"></i>
+                        <span>Apply filters</span>
+                    </button>
+                    {% if category != 'all' or type != 'all' or query or sort != '-created_at' %}
+                    <a href="{% url 'awareness' %}" class="btn btn-outline-secondary btn-icon">
+                        <i class="fas fa-undo"></i>
+                        <span>Reset</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
         </div>
     </div>
 </section>
 
 <!-- Recovery Resources -->
-<section class="py-5">
+<section class="py-5" id="resources">
     <div class="container">
         <div class="row mb-4">
             <div class="col-12">
@@ -117,13 +266,23 @@
             </div>
         </div>
         
-        <div id="resourcesLoading" class="text-center py-5">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+            <div class="status-stack" aria-hidden="true">
+                <span class="status-pill status-pill-primary"><i class="fas fa-file-alt"></i> Articles</span>
+                <span class="status-pill status-pill-success"><i class="fas fa-play"></i> Videos</span>
+                <span class="status-pill status-pill-warning"><i class="fas fa-question-circle"></i> Quizzes</span>
+                <span class="status-pill status-pill-secondary"><i class="fas fa-shapes"></i> Other</span>
+            </div>
+            <span class="small text-muted">Formats and categories are color-coded for quick scanning.</span>
+        </div>
+
+        <div id="resourcesLoading" class="text-center py-5" aria-live="assertive">
             <div class="spinner-border text-primary" role="status" aria-label="Loading resources">
                 <span class="visually-hidden">Loading...</span>
             </div>
         </div>
 
-                        <div id="resourcesContent" class="d-none">
+                        <div id="resourcesContent" class="d-none" aria-live="polite">
             {% if resources %}
             <div class="row g-4" id="resourcesContainer">
                 {% for resource in resources %}
@@ -131,55 +290,65 @@
                      data-category="{{ resource.category }}"
                      data-type="{{ resource.resource_type }}">
                     <div class="card h-100">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                            <span class="badge
-                                {% if resource.resource_type == 'article' %}bg-primary
-                                {% elif resource.resource_type == 'video' %}bg-success
-                                {% else %}bg-info
-                                {% endif %}">
-                                <i class="fas
-                                {% if resource.resource_type == 'article' %}fa-file-alt
-                                {% elif resource.resource_type == 'video' %}fa-play
-                                {% else %}fa-question-circle
-                                {% endif %} me-1"></i>
-                                {{ resource.resource_type|title }}
-                            </span>
+                        <div class="card-body d-flex flex-column gap-3">
+                            <div class="status-stack resource-meta">
+                                <span class="status-pill {% if resource.resource_type == 'article' %}status-pill-primary{% elif resource.resource_type == 'video' %}status-pill-success{% elif resource.resource_type == 'quiz' %}status-pill-warning{% else %}status-pill-secondary{% endif %}">
+                                    <i class="fas
+                                    {% if resource.resource_type == 'article' %}fa-file-alt
+                                    {% elif resource.resource_type == 'video' %}fa-play
+                                    {% elif resource.resource_type == 'quiz' %}fa-question-circle
+                                    {% else %}fa-shapes
+                                    {% endif %}"></i>
+                                    {{ resource.resource_type|title }}
+                                </span>
 
-                            <span class="badge bg-secondary">{{ resource.category|title }}</span>
+                                {% if resource.category %}
+                                <span class="status-pill status-pill-neutral">
+                                    <i class="fas fa-bookmark"></i>{{ resource.category|title }}
+                                </span>
+                                {% endif %}
                             </div>
 
-                            <h5 class="card-title">{{ resource.title }}</h5>
-                            <p class="card-text text-muted">{{ resource.content|striptags|truncatechars:150 }}</p>
+                            <div>
+                                <h3 class="h5 mb-2 text-break">{{ resource.title }}</h3>
+                                <p class="mb-0 text-muted">{{ resource.content|striptags|truncatechars:150 }}</p>
+                            </div>
 
-                            <div class="mt-auto">
-                                <small class="text-muted">
-                                    <i class="fas fa-calendar me-1"></i>{{ resource.created_at|date:"M d, Y" }}
-                                </small>
+                            <div class="mt-auto small text-muted">
+                                <div><i class="fas fa-calendar me-1"></i>Published {{ resource.created_at|date:"M d, Y" }}</div>
                                 {% if resource.created_by %}
-                                <br><small class="text-muted">
-                                    <i class="fas fa-user me-1"></i>{{ resource.created_by.username }}
-                                </small>
+                                <div><i class="fas fa-user me-1"></i>{{ resource.created_by.get_full_name|default:resource.created_by.username }}</div>
                                 {% endif %}
                             </div>
                         </div>
-                        <div class="card-footer bg-transparent">
-                            {% if resource.url %}
-                                <a class="btn btn-outline-primary btn-sm" href="{{ resource.url }}" target="_blank" rel="noopener">
-                                    <i class="fas fa-external-link-alt me-1"></i>Open Resource
-                                </a>
-                            {% elif resource.file %}
-                                <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
-                                        data-bs-target="#resourceModal" data-title="{{ resource.title|escapejs }}"
-                                        data-file="{{ resource.file.url|escapejs }}">
-                                    <i class="fas fa-download me-1"></i>Download Resource
-                                </button>
-                            {% else %}
-                                <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
-                                        data-bs-target="#resourceModal" data-resource-id="{{ resource.id }}">
-                                    <i class="fas fa-eye me-1"></i>View Resource
-                                </button>
-                            {% endif %}
+                        <div class="card-footer bg-transparent border-0 pt-0">
+                            <div class="d-flex flex-wrap gap-2">
+                                {% if resource.url %}
+                                    <a class="btn btn-outline-primary btn-sm btn-icon" href="{{ resource.url }}" target="_blank" rel="noopener">
+                                        <i class="fas fa-external-link-alt"></i>
+                                        <span>Open Resource</span>
+                                    </a>
+                                {% elif resource.file %}
+                                    <button class="btn btn-outline-primary btn-sm btn-icon" data-bs-toggle="modal"
+                                            data-bs-target="#resourceModal" data-title="{{ resource.title|escapejs }}"
+                                            data-file="{{ resource.file.url|escapejs }}">
+                                        <i class="fas fa-download"></i>
+                                        <span>Download</span>
+                                    </button>
+                                {% else %}
+                                    <button class="btn btn-outline-primary btn-sm btn-icon" data-bs-toggle="modal"
+                                            data-bs-target="#resourceModal" data-resource-id="{{ resource.id }}">
+                                        <i class="fas fa-eye"></i>
+                                        <span>View Details</span>
+                                    </button>
+                                {% endif %}
+                                {% if resource.url %}
+                                    <a class="btn btn-outline-secondary btn-sm btn-icon" href="{% url 'submit_report' %}" aria-label="Report concern after reading {{ resource.title }}">
+                                        <i class="fas fa-flag"></i>
+                                        <span>Need to act?</span>
+                                    </a>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -229,10 +398,10 @@
         <div class="row g-4">
             {% for contact in contacts %}
             <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
+                <div class="support-card h-100">
                     <div class="card-body">
                         <div class="d-flex align-items-start mb-3">
-                            <div class="bg-primary text-white rounded-circle p-2 me-3">
+                            <div class="bg-primary text-white rounded-circle p-2 me-3 shadow-sm">
                                 <i class="fas fa-user-tie"></i>
                             </div>
                             <div>
@@ -307,32 +476,32 @@
 
                 <div class="row g-4">
                     <div class="col-md-3">
-                        <div class="text-center">
-                            <a href="tel:119" class="btn"><i class="fas fa-phone-alt fa-2x mb-2"></i>
-                            <h5>Emergency</h5>
-                            <p class="mb-0"><strong>119</strong></p></a>
-                        </div>
+                         <a href="tel:119" class="emergency-call text-center">
+                            <i class="fas fa-phone-alt fa-2x mb-2"></i>
+                            <h5 class="fw-semibold mb-1">Emergency</h5>
+                            <p class="mb-0"><strong>119</strong></p>
+                        </a>
                     </div>
                     <div class="col-md-3">
-                        <div class="text-center">
-                           <a href="tel:(011)7999000" class="btn"> <i class="fas fa-shield-alt fa-2x mb-2"></i>
-                            <h5>Campus Hotline</h5>
-                            <p class="mb-0"><strong>(011)7999000</strong></p></a>
-                        </div>
+                        <a href="tel:(011)7999000" class="emergency-call text-center">
+                            <i class="fas fa-shield-alt fa-2x mb-2"></i>
+                            <h5 class="fw-semibold mb-1">Campus Hotline</h5>
+                            <p class="mb-0"><strong>(011)7999000</strong></p>
+                        </a>
                     </div>
                     <div class="col-md-3">
-                        <div class="text-center">
-                           <a href="tel:1926" class="btn"> <i class="fas fa-heart fa-2x mb-2"></i>
-                            <h5>Crisis Hotline</h5>
-                            <p class="mb-0"><strong>1926</strong></p></a>
-                        </div>
+                        <a href="tel:1926" class="emergency-call text-center">
+                            <i class="fas fa-heart fa-2x mb-2"></i>
+                            <h5 class="fw-semibold mb-1">Crisis Hotline</h5>
+                            <p class="mb-0"><strong>1926</strong></p>
+                        </a>
                     </div>
                     <div class="col-md-3">
-                        <div class="text-center">
-                           <a href="tel:1990" class="btn"> <i class="fas fa-user-md fa-2x mb-2"></i>
-                            <h5>Medical Emergency</h5>
-                            <p class="mb-0"><strong>1990</strong></p></a>
-                        </div>
+                        <a href="tel:1990" class="emergency-call text-center">
+                            <i class="fas fa-user-md fa-2x mb-2"></i>
+                            <h5 class="fw-semibold mb-1">Medical Emergency</h5>
+                            <p class="mb-0"><strong>1990</strong></p>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -350,30 +519,26 @@
                 
                 <div class="row g-4">
                     <div class="col-md-6">
-                        <div class="card h-100 border-0 bg-body">
-                            <div class="card-body">
-                                <h5 class="text-primary mb-3"><i class="fas fa-eye me-2"></i>Recognizing Bullying</h5>
-                                <ul class="list-unstyled">
-                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Repeated aggressive behavior</li>
-                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Power imbalances</li>
-                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Intentional harm (physical, verbal, social)</li>
-                                    <li class="mb-0"><i class="fas fa-check text-success me-2"></i>Targeting of differences</li>
-                                </ul>
-                            </div>
+                        <div class="quick-tip-card p-4">
+                            <h5 class="text-primary mb-3"><i class="fas fa-eye me-2"></i>Recognizing Bullying</h5>
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Repeated aggressive behavior</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Power imbalances</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Intentional harm (physical, verbal, social)</li>
+                                <li class="mb-0"><i class="fas fa-check text-success me-2"></i>Targeting of differences</li>
+                            </ul>
                         </div>
                     </div>
                     
                     <div class="col-md-6">
-                        <div class="card h-100 border-0 bg-body">
-                            <div class="card-body">
-                                <h5 class="text-success mb-3"><i class="fas fa-shield-alt me-2"></i>What You Can Do</h5>
-                                <ul class="list-unstyled">
-                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Document incidents</li>
-                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Tell someone you trust</li>
-                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Use available reporting systems</li>
-                                    <li class="mb-0"><i class="fas fa-check text-success me-2"></i>Seek professional support</li>
-                                </ul>
-                            </div>
+                        <div class="quick-tip-card p-4">
+                            <h5 class="text-success mb-3"><i class="fas fa-shield-alt me-2"></i>What You Can Do</h5>
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Document incidents</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Tell someone you trust</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Use available reporting systems</li>
+                                <li class="mb-0"><i class="fas fa-check text-success me-2"></i>Seek professional support</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -387,8 +552,9 @@
     <div class="container text-center">
         <h2 class="mb-3">Need to Report an Incident?</h2>
         <p class="lead mb-4">Don't wait. Your safety and well-being matter. Report incidents safely and confidentially.</p>
-        <a href="{% url 'report_anonymous' %}" class="btn btn-light btn-lg">
-            <i class="fas fa-shield-alt me-2"></i>Submit a Report
+        <a href="{% url 'report_anonymous' %}" class="btn btn-danger btn-lg btn-icon">
+            <i class="fas fa-shield-alt"></i>
+            <span>Submit a Report</span>
         </a>
     </div>
 </section>

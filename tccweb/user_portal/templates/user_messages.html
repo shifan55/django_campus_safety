@@ -15,11 +15,11 @@
                 </div>
             </div>
             <div class="page-actions">
-                <span class="action-chip">
+                <span class="action-chip action-chip-info">
                     <i class="fas fa-clipboard-list"></i>
                     <span>{{ thread_groups|length }} active report{% if thread_groups|length != 1 %}s{% endif %}</span>
                 </span>
-                <a href="{% url 'dashboard' %}" class="action-chip">
+                <a href="{% url 'dashboard' %}" class="action-chip action-chip-info">
                     <i class="fas fa-arrow-left"></i>
                     <span>Back to dashboard</span>
                 </a>

@@ -33,27 +33,48 @@
               <button type="submit" class="btn btn-primary">Create Counselor</button>
             </div>
           </form>
-          <h6>Existing Counselors</h6>
+          <h6 class="mt-4">Existing Counselors</h6>
           <div class="table-responsive">
-            <table class="table table-striped">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+              <div class="table-legend" aria-hidden="true">
+                <span class="legend-item"><span class="status-dot status-success"></span><span>Active counselor</span></span>
+              </div>
+              <span class="small text-muted">Review accounts regularly to ensure staffing remains current.</span>
+            </div>
+            <table class="table table-modern table-sm align-middle">
+              <caption class="text-muted small">Active counseling staff with portal access.</caption>
               <thead>
-                <tr><th>Username</th><th>Email</th><th>Action</th></tr>
+                <tr><th scope="col">Username</th><th scope="col">Email</th><th scope="col" class="text-end">Action</th></tr>
               </thead>
               <tbody>
                 {% for u in counselors %}
                 <tr>
-                  <td>{{ u.username }}</td>
-                  <td>{{ u.email }}</td>
-                  <td>
-                    <form method="post" class="d-inline">
-                      {% csrf_token %}
-                      <input type="hidden" name="user_id" value="{{ u.id }}">
-                      <button class="btn btn-warning btn-sm" name="action" value="revoke">Revoke</button>
-                    </form>
+                  <th scope="row" data-label="Username">
+                    <div class="d-flex align-items-start gap-3">
+                      <span class="status-dot status-success" aria-hidden="true"></span>
+                      <div>
+                        <div class="fw-semibold">{{ u.username }}</div>
+                        <small class="text-muted">Joined {{ u.date_joined|date:"M d, Y" }}</small>
+                      </div>
+                    </div>
+                    <span class="visually-hidden">Counselor account</span>
+                  </th>
+                  <td data-label="Email">{{ u.email|default:"—" }}</td>
+                  <td data-label="Action" class="text-end">
+                    <div class="table-actions">
+                      <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="user_id" value="{{ u.id }}">
+                        <button class="btn btn-warning btn-sm btn-icon" name="action" value="revoke">
+                          <i class="fas fa-user-slash"></i>
+                          <span>Revoke</span>
+                        </button>
+                      </form>
+                    </div>
                   </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="3" class="text-center">No counselors.</td></tr>
+                <tr><td colspan="3" class="text-center py-4 text-muted">No counselors.</td></tr>
                 {% endfor %}
               </tbody>
             </table>
@@ -66,25 +87,46 @@
         <div class="card-body">
           <h5 class="card-title">Admin Panel</h5>
           <div class="table-responsive">
-            <table class="table table-striped">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+              <div class="table-legend" aria-hidden="true">
+                <span class="legend-item"><span class="status-dot status-warning"></span><span>Pending approval</span></span>
+              </div>
+              <span class="small text-muted">Approve or revoke pending requests within two business days.</span>
+            </div>
+            <table class="table table-modern table-sm align-middle">
+              <caption class="text-muted small">Pending campus accounts awaiting admin approval.</caption>
               <thead>
-                <tr><th>Username</th><th>Email</th><th>Action</th></tr>
+                <tr><th scope="col">Username</th><th scope="col">Email</th><th scope="col" class="text-end">Action</th></tr>
               </thead>
               <tbody>
                 {% for u in students %}
                 <tr>
-                  <td>{{ u.username }}</td>
-                  <td>{{ u.email }}</td>
-                  <td>
-                    <form method="post" class="d-inline">
-                      {% csrf_token %}
-                      <input type="hidden" name="user_id" value="{{ u.id }}">
-                      <button class="btn btn-success btn-sm" name="action" value="approve">Approve</button>
-                    </form>
+                  <th scope="row" data-label="Username">
+                    <div class="d-flex align-items-start gap-3">
+                      <span class="status-dot status-warning" aria-hidden="true"></span>
+                      <div>
+                        <div class="fw-semibold">{{ u.username }}</div>
+                        <small class="text-muted">Requested {{ u.date_joined|date:"M d, Y" }}</small>
+                      </div>
+                    </div>
+                    <span class="visually-hidden">Pending user</span>
+                  </th>
+                  <td data-label="Email">{{ u.email|default:"—" }}</td>
+                  <td data-label="Action" class="text-end">
+                    <div class="table-actions">
+                      <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="user_id" value="{{ u.id }}">
+                        <button class="btn btn-success btn-sm btn-icon" name="action" value="approve">
+                          <i class="fas fa-user-check"></i>
+                          <span>Approve</span>
+                        </button>
+                      </form>
+                    </div>
                   </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="3" class="text-center">No pending users.</td></tr>
+                <tr><td colspan="3" class="text-center py-4 text-muted">No pending users.</td></tr>
                 {% endfor %}
               </tbody>
             </table>

@@ -5,34 +5,67 @@
 <div class="container py-4">
   <h1 class="mb-3">Case Assignment</h1>
   <div class="table-responsive">
-    <table class="table table-striped">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+      <div class="table-legend" aria-hidden="true">
+        <span class="legend-item"><span class="status-dot status-warning"></span><span>Pending</span></span>
+        <span class="legend-item"><span class="status-dot status-info"></span><span>Under review</span></span>
+        <span class="legend-item"><span class="status-dot status-success"></span><span>Resolved</span></span>
+        <span class="legend-item"><span class="status-dot status-secondary"></span><span>Other states</span></span>
+      </div>
+      <span class="small text-muted">Select a counselor and status, then save to update the assignment.</span>
+    </div>
+    <table class="table table-modern table-hover align-middle">
+      <caption class="text-muted small">Assign counselors, adjust statuses, and leave coordination notes.</caption>
       <thead>
         <tr>
-          <th>ID</th>
-          <th>Type</th>
-          <th>Status</th>
-          <th>Assigned To</th>
-          <th>Update</th>
+          <th scope="col">ID</th>
+          <th scope="col">Type</th>
+          <th scope="col">Status</th>
+          <th scope="col">Assigned To</th>
+          <th scope="col" class="text-end">Update</th>
         </tr>
       </thead>
       <tbody>
         {% for report in reports %}
         <tr>
-          <td>{{ report.id }}</td>
-          <td>{{ report.get_incident_type_display }}</td>
-          <td><span class="badge bg-{{ report.status|status_badge }}">{{ report.status|humanize_enum }}</span></td>
-          <td>{% if report.assigned_to %}{{ report.assigned_to.username }}{% else %}Unassigned{% endif %}</td>
-          <td>
-            <form method="post" class="d-flex align-items-center">
+          <th scope="row" data-label="ID">
+            <div class="d-flex align-items-center gap-3">
+              <span class="status-dot status-{{ report.status|status_badge }}" aria-hidden="true"></span>
+              <div class="fw-semibold">#{{ report.id }}</div>
+            </div>
+            <span class="visually-hidden">Status {{ report.status|humanize_enum }}</span>
+          </th>
+          <td data-label="Type">
+            <div class="d-flex flex-column">
+              <span class="fw-semibold">{{ report.get_incident_type_display }}</span>
+              <small class="text-muted">{{ report.created_at|date:"M d, Y" }}</small>
+            </div>
+          </td>
+          <td data-label="Status">
+            <span class="status-pill status-pill-{{ report.status|status_badge }}">
+              <i class="fas fa-signal"></i>
+              {{ report.status|humanize_enum }}
+            </span>
+          </td>
+          <td data-label="Assigned To">
+            {% if report.assigned_to %}
+            <div class="fw-semibold">{{ report.assigned_to.username }}</div>
+            <small class="text-muted">{{ report.assigned_to.email }}</small>
+            {% else %}
+            <span class="badge text-bg-secondary">Unassigned</span>
+            {% endif %}
+          </td>
+          <td data-label="Update" class="text-end">
+            <form method="post" class="table-actions flex-wrap justify-content-end gap-2">
               {% csrf_token %}
               <input type="hidden" name="report_id" value="{{ report.id }}">
-              <select name="assigned_to" class="form-select form-select-sm me-1">
+              <select name="assigned_to" class="form-select form-select-sm" aria-label="Assign counselor">
                 <option value="">--</option>
                 {% for u in users %}
                 <option value="{{ u.id }}" {% if report.assigned_to_id == u.id %}selected{% endif %}>{{ u.username }}</option>
                 {% endfor %}
               </select>
-              <select name="status" class="form-select form-select-sm me-1">
+              <select name="status" class="form-select form-select-sm" aria-label="Update status">
                 {% for val,label in statuses %}
                 <option value="{{ val }}" {% if report.status == val %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}

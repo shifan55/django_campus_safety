@@ -18,11 +18,11 @@
                 </div>
                 </div>
             <div class="page-actions">
-                <a href="{% url 'submit_report' %}" class="btn btn-primary btn-icon">
+                <a href="{% url 'submit_report' %}" class="btn btn-danger btn-icon">
                     <i class="fas fa-plus"></i>
                     <span>Start a new report</span>
                 </a>
-                <a href="{% url 'report_anonymous' %}" class="action-chip">
+                <a href="{% url 'report_anonymous' %}" class="action-chip action-chip-danger">
                     <i class="fas fa-user-secret"></i>
                     <span>Submit anonymously</span>
                 </a>
@@ -51,11 +51,11 @@
                     </div>
                     <div class="col-md-4 text-md-end">
                         <div class="d-flex flex-column gap-2 align-items-md-end">
-                            <a href="{% url 'profile' %}" class="action-chip">
+                            <a href="{% url 'profile' %}" class="action-chip action-chip-info">
                                 <i class="fas fa-user-cog"></i>
                                 <span>Manage profile</span>
                             </a>
-                            <a href="mailto:support@university.edu" class="action-chip">
+                            <a href="mailto:support@university.edu" class="action-chip action-chip-info">
                                 <i class="fas fa-envelope"></i>
                                 <span>Contact support</span>
                             </a>
@@ -210,7 +210,7 @@
                         <div class="page-card-body">
                             <h3 class="h5 mb-3 text-primary"><i class="fas fa-user-friends me-2"></i>Support services</h3>
                             <p>Connect with counselors, student advocates, and staff who can provide personalised help.</p>
-                            <a href="{% url 'awareness' %}#support" class="action-chip">
+                            <a href="{% url 'awareness' %}#support" class="action-chip action-chip-success">
                                 <i class="fas fa-arrow-right"></i>
                                 <span>View contacts</span>
                             </a>
@@ -222,7 +222,7 @@
                         <div class="page-card-body">
                             <h3 class="h5 mb-3 text-success"><i class="fas fa-graduation-cap me-2"></i>Educational resources</h3>
                             <p>Learn how to recognise warning signs, support peers, and make positive interventions.</p>
-                            <a href="{% url 'awareness' %}" class="action-chip">
+                            <a href="{% url 'awareness' %}" class="action-chip action-chip-info">
                                 <i class="fas fa-book-open"></i>
                                 <span>Browse guides</span>
                             </a>
@@ -235,11 +235,11 @@
                             <h3 class="h5 mb-3 text-warning"><i class="fas fa-exclamation-triangle me-2"></i>Emergency help</h3>
                             <p>Immediate assistance for crisis situations with clear contact options.</p>
                             <div class="d-flex flex-column gap-2">
-                                <a href="tel:1990" class="btn btn-primary btn-icon" aria-label="Call emergency number 1990">
+                                <a href="tel:1990" class="btn btn-danger btn-icon" aria-label="Call emergency number 1990">
                                     <i class="fas fa-phone"></i>
                                     <span>Call 1990</span>
                                 </a>
-                                <a href="mailto:support@university.edu" class="action-chip" aria-label="Email campus support">
+                                <a href="mailto:support@university.edu" class="action-chip action-chip-info" aria-label="Email campus support">
                                     <i class="fas fa-envelope"></i>
                                     <span>support@university.edu</span>
                                 </a>
