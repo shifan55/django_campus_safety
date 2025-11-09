@@ -1,20 +1,19 @@
-<div class="case-timeline">
+<div class="timeline" role="list">
     {% for event in events %}
-        <div class="case-timeline-item{% if not event.is_complete %} case-timeline-item-pending{% endif %}">
-            <div class="case-timeline-icon" aria-hidden="true">
-                <i class="fas fa-{{ event.icon|default:'dot-circle' }}"></i>
-            </div>
-            <div class="case-timeline-content">
-                <div class="case-timeline-title">{{ event.label }}</div>
-                {% if event.timestamp %}
-                    <div class="case-timeline-time text-muted small">{{ event.timestamp|date:"M j, Y g:i a" }}</div>
-                {% elif event.description %}
-                    <div class="case-timeline-time text-muted small">{{ event.description }}</div>
-                {% else %}
-                    <div class="case-timeline-time text-muted small">Pending</div>
+        <div class="timeline-item" role="listitem">
+            <div class="timeline-badge" aria-hidden="true"></div>
+            <div class="ms-4">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge badge-soft-primary"><i class="fas fa-{{ event.icon|default:'dot-circle' }} me-1"></i>{{ event.label }}</span>
+                    {% if event.timestamp %}
+                        <time class="small text-muted" datetime="{{ event.timestamp|date:'c' }}">{{ event.timestamp|date:"M j, Y g:i a" }}</time>
+                    {% endif %}
+                </div>
+                {% if event.description %}
+                    <p class="mb-0 mt-2 text-muted small">{{ event.description }}</p>
                 {% endif %}
-                {% if event.description and event.timestamp %}
-                    <div class="case-timeline-meta text-muted small">{{ event.description }}</div>
+                {% if not event.timestamp and not event.description %}
+                    <p class="mb-0 mt-2 text-muted small">Pending update</p>
                 {% endif %}
             </div>
         </div>

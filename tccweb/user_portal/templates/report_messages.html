@@ -2,31 +2,55 @@
 {% load chat_filters text_extras %}
 {% block title %}Report Messages{% endblock %}
 {% block content %}
-<div class="container mt-4 conversation-layout">
-    <div class="row justify-content-center">
-        <div class="col-lg-10 col-xl-8">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header fw-semibold">Case Timeline</div>
-                <div class="card-body">
+<div class="page-container">
+    <div class="container-xxl">
+        <header class="page-header">
+            <div class="title-group">
+                <span class="title-icon">
+                    <i class="fas fa-file-alt"></i>
+                </span>
+                <div>
+                    <h1 class="h2 mb-1">Report #{{ report.id }}</h1>
+                    <p class="mb-0">Review the timeline of updates and stay in touch with your assigned counselor.</p>
+                </div>
+            </div>
+            <div class="page-actions">
+                <span class="action-chip">
+                    <i class="fas fa-barcode"></i>
+                    <span>Tracking code {{ report.tracking_code }}</span>
+                </span>
+                <a href="{% url 'user_messages' %}" class="action-chip">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to messages</span>
+                </a>
+            </div>
+        </header>
+
+        <section class="page-section">
+            <div class="page-card mb-4">
+                <div class="page-card-header fw-semibold">Case timeline</div>
+                <div class="page-card-body">
                     {% include 'partials/case_timeline.html' with events=timeline_events %}
                 </div>
             </div>
-            <div class="card shadow-sm chat-card">
-                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+
+            <div class="page-card chat-card">
+                <div class="page-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <div>
-                        <h2 class="h5 mb-1">Report #{{ report.id }}</h2>
-                        <p class="text-muted small mb-0">
-                            Status: <span class="badge bg-{{ report.status|status_badge }} align-middle">{{ report.get_status_display }}</span>
-                            {% if report.assigned_to %}
-                                <span class="ms-2">Counselor: {{ report.assigned_to.get_full_name|default:report.assigned_to.username }}</span>
-                            {% else %}
-                                <span class="ms-2 text-warning">Awaiting counselor assignment</span>
-                            {% endif %}
-                        </p>
+                        <p class="mb-1 text-muted">Status</p>
+                        <span class="badge bg-{{ report.status|status_badge }}">{{ report.get_status_display }}</span>
+                        {% if report.assigned_to %}
+                            <span class="ms-2 text-muted small">Counselor: {{ report.assigned_to.get_full_name|default:report.assigned_to.username }}</span>
+                        {% else %}
+                            <span class="ms-2 text-warning small">Awaiting counselor assignment</span>
+                        {% endif %}
                     </div>
-                    <span class="badge rounded-pill bg-primary">Tracking code: {{ report.tracking_code }}</span>
+                    <span class="action-chip">
+                        <i class="fas fa-clock"></i>
+                        <span>Last updated {{ report.updated_at|default:report.created_at|date:"M j, Y" }}</span>
+                    </span>
                 </div>
-                <div class="card-body chat-body" id="chat-thread">
+                <div class="page-card-body chat-body" id="chat-thread">
                     {% if chat_messages %}
                         {% for message in chat_messages %}
                             {% include 'partials/chat_message.html' with message=message viewer=request.user report=report %}
@@ -36,14 +60,14 @@
                         {% endfor %}
                     {% else %}
                         <div class="text-center text-muted py-5">
-                            <i class="fas fa-comments fa-2x mb-3"></i>
+                            <i class="fas fa-comments fa-2x mb-3" aria-hidden="true"></i>
                             <p class="mb-0">No messages yet. You can reach out to your counselor below once assigned.</p>
                         </div>
                     {% endif %}
                 </div>
-                <div class="card-footer">
+                <div class="page-card-footer">
                     {% if report.assigned_to %}
-                        <form method="post" enctype="multipart/form-data" class="chat-composer">
+                        <form method="post" enctype="multipart/form-data" class="message-composer p-4">
                             {% csrf_token %}
                             {{ msg_form.non_field_errors }}
                             {{ msg_form.parent_id }}
@@ -77,14 +101,14 @@
                     {% endif %}
                 </div>
             </div>
-        </div>
+        </section>
     </div>
 </div>
 <script>
 (function() {
     const replyLinks = document.querySelectorAll('.reply-link');
-    const parentInput = document.getElementById('parent_id');
-    const messageBox = document.querySelector('.chat-composer textarea');
+    const parentInput = document.getElementById('{{ msg_form.parent_id.id_for_label }}');
+    const messageBox = document.getElementById('{{ msg_form.message.id_for_label }}');
     const replyIndicator = document.getElementById('reply-indicator');
 
     replyLinks.forEach((link) => {
@@ -110,20 +134,3 @@
     const cancelReply = document.getElementById('cancel-reply');
     if (cancelReply) {
         cancelReply.addEventListener('click', function (event) {
-            event.preventDefault();
-            if (parentInput) {
-                parentInput.value = '';
-            }
-            if (replyIndicator) {
-                replyIndicator.classList.add('d-none');
-            }
-        });
-    }
-
-    const chatThread = document.getElementById('chat-thread');
-    if (chatThread) {
-        chatThread.scrollTop = chatThread.scrollHeight;
-    }
-})();
-</script>
-{% endblock %}
