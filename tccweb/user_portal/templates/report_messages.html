@@ -1,310 +1,7 @@
 {% extends 'base.html' %}
 {% load chat_filters text_extras %}
 {% block title %}Report Messages{% endblock %}
-
-{% block extra_head %}
-<style>
-    .chat-card {
-        border: none;
-        border-radius: 28px;
-        overflow: hidden;
-        box-shadow: var(--shadow-soft);
-        background: var(--surface-elevated);
-    }
-
-    .chat-card .chat-shell {
-        display: flex;
-        flex-direction: column;
-        min-height: 520px;
-        background: var(--surface-elevated);
-    }
-
-    .chat-card .chat-shell-header {
-        background: linear-gradient(135deg, #075e54, #128c7e);
-        color: #fff;
-        padding: 1.25rem 1.75rem;
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1.5rem;
-    }
-
-    .chat-card .chat-contact {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .chat-card .chat-contact-avatar {
-        width: 56px;
-        height: 56px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.18);
-        display: grid;
-        place-items: center;
-        font-weight: 700;
-        font-size: 1.25rem;
-    }
-
-    .chat-card .chat-contact-details h2 {
-        font-size: 1.35rem;
-        margin-bottom: 0.2rem;
-    }
-
-    .chat-card .chat-contact-details p {
-        margin-bottom: 0;
-        opacity: 0.85;
-    }
-
-    .chat-card .chat-shell-header .chat-meta {
-        display: flex;
-        flex-direction: column;
-        gap: 0.35rem;
-        align-items: flex-end;
-        text-align: right;
-    }
-
-    .chat-card .chat-shell-body {
-        position: relative;
-        padding: 2rem 1.75rem 1.5rem;
-        background: #f0f2f5;
-        flex: 1;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 1.25rem;
-    }
-
-    .chat-card .chat-shell-body::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background-image: url('data:image/svg+xml,%3Csvg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M60 0L69 15H51L60 0Z" fill="%23e3ede8"/%3E%3Cpath d="M0 60L15 69V51L0 60Z" fill="%23e3ede8"/%3E%3Ccircle cx="90" cy="90" r="6" fill="%23d9fdd3"/%3E%3Ccircle cx="24" cy="24" r="4" fill="%23c9e4de"/%3E%3C/svg%3E');
-        opacity: 0.35;
-        pointer-events: none;
-    }
-
-    .chat-card .chat-shell-body > * {
-        position: relative;
-    }
-
-    .chat-card .chat-entry {
-        background: transparent;
-        border: none;
-        padding: 0;
-        margin-bottom: 0;
-        box-shadow: none;
-        display: flex;
-        gap: 0.75rem;
-        align-items: flex-start;
-    }
-
-    .chat-card .chat-entry .chat-avatar {
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        margin-right: 0;
-        background: #e7f0ea;
-        color: #075e54;
-        font-size: 1rem;
-        box-shadow: inset 0 0 0 2px rgba(7, 94, 84, 0.2);
-    }
-
-    .chat-card .chat-entry-self .chat-avatar {
-        background: #d1f1c8;
-        color: #1f2c34;
-        box-shadow: inset 0 0 0 2px rgba(12, 193, 115, 0.25);
-    }
-
-    .chat-card .chat-entry .chat-content {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .chat-card .chat-entry .chat-meta {
-        color: rgba(4, 27, 23, 0.7);
-        font-size: 0.75rem;
-    }
-
-    .chat-card .chat-entry .chat-bubble {
-        border: none;
-        box-shadow: 0 4px 12px rgba(11, 20, 26, 0.08);
-        position: relative;
-        padding: 0.95rem 1.15rem;
-        max-width: 52ch;
-        line-height: 1.5;
-    }
-
-    .chat-card .chat-entry-self .chat-bubble {
-        background: #d9fdd3;
-        color: #0b141a;
-        border-radius: 18px 18px 4px 18px;
-    }
-
-    .chat-card .chat-entry-self .chat-bubble::after {
-        content: "";
-        position: absolute;
-        right: -8px;
-        bottom: 0;
-        width: 12px;
-        height: 18px;
-        background: #d9fdd3;
-        clip-path: polygon(0 100%, 100% 0, 100% 100%);
-    }
-
-    .chat-card .chat-entry-other .chat-bubble {
-        background: #ffffff;
-        color: #1f2c34;
-        border-radius: 18px 18px 18px 4px;
-    }
-
-    .chat-card .chat-entry-other .chat-bubble::after {
-        content: "";
-        position: absolute;
-        left: -8px;
-        bottom: 0;
-        width: 12px;
-        height: 18px;
-        background: #ffffff;
-        clip-path: polygon(0 0, 0 100%, 100% 100%);
-    }
-
-    .chat-card .chat-entry .chat-insights {
-        display: flex;
-        gap: 0.35rem;
-        flex-wrap: wrap;
-    }
-
-    .chat-card .chat-shell-footer {
-        background: #f7f9fa;
-        border-top: 1px solid #d1d7db;
-        padding: 1.25rem 1.5rem 1.5rem;
-    }
-
-    .chat-composer {
-        background: #ffffff;
-        border-radius: 20px;
-        padding: 1rem 1.25rem;
-        border: 1px solid #d1d7db;
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-
-    .chat-composer-main {
-        display: flex;
-        align-items: flex-end;
-        gap: 0.75rem;
-    }
-
-    .chat-composer-tools {
-        display: flex;
-        align-items: center;
-    }
-
-    .chat-composer .chat-input {
-        border: none;
-        background: #f0f2f5;
-        border-radius: 16px;
-        padding: 0.85rem 1rem;
-        resize: vertical;
-        box-shadow: inset 0 1px 3px rgba(11, 20, 26, 0.08);
-    }
-
-    .chat-composer .chat-input:focus {
-        background: #ffffff;
-        box-shadow: 0 0 0 3px rgba(18, 140, 126, 0.2);
-    }
-
-    .chat-icon-btn {
-        width: 42px;
-        height: 42px;
-        border-radius: 50%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: #e7f5f3;
-        color: #0b806a;
-        border: none;
-        box-shadow: inset 0 0 0 2px rgba(18, 140, 126, 0.18);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .chat-icon-btn:hover,
-    .chat-icon-btn:focus {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(18, 140, 126, 0.25);
-        text-decoration: none;
-        color: #075e54;
-    }
-
-    .chat-send-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        padding-inline: 1.25rem;
-        border-radius: 999px;
-        font-weight: 600;
-    }
-
-    .chat-reply-banner {
-        background: #e7f5f3;
-        border-radius: 12px;
-        padding: 0.5rem 0.75rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.75rem;
-    }
-
-    .chat-reply-banner strong {
-        color: #075e54;
-    }
-
-    .chat-attachment-feedback {
-        color: #5f6b6d;
-    }
-
-    .chat-attachment-feedback.text-success {
-        color: #0b806a !important;
-    }
-
-    @media (max-width: 767.98px) {
-        .chat-card .chat-shell-header {
-            align-items: flex-start;
-        }
-
-        .chat-card .chat-shell-header .chat-meta {
-            width: 100%;
-            align-items: flex-start;
-            text-align: left;
-        }
-
-        .chat-card .chat-shell-body {
-            padding: 1.5rem 1.25rem 1.25rem;
-        }
-
-        .chat-composer {
-            padding: 0.75rem 0.85rem;
-        }
-
-        .chat-composer-main {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .chat-icon-btn {
-            width: 36px;
-            height: 36px;
-        }
-
-        .chat-send-btn {
-            justify-content: center;
-        }
-    }
-</style>
-{% endblock %}
+{% block extra_head %}{% endblock %}
 
 {% block content %}
 <div class="page-container">
@@ -339,158 +36,136 @@
                 </div>
             </div>
 
-            <div class="page-card chat-card">
-                <div class="chat-shell">
-                    <div class="chat-shell-header">
-                        <div class="chat-contact">
-                            <div class="chat-contact-avatar" aria-hidden="true">
-                                <i class="fas fa-user-shield"></i>
-                            </div>
-                            <div class="chat-contact-details">
-                                <h2 class="mb-0">Counselor Chat</h2>
+            <section class="chat" data-chat>
+                <header class="chat__header">
+                    <div class="chat__header-main">
+                        <div class="chat__header-avatar" aria-hidden="true">
+                            {% if report.assigned_to %}
+                                {{ report.assigned_to.get_full_name|default:report.assigned_to.username|first|upper }}
+                            {% else %}
+                                <i class="fas fa-user-shield" aria-hidden="true"></i>
+                            {% endif %}
+                        </div>
+                        <div class="chat__header-text">
+                            <h2 class="chat__header-title">Counselor Chat</h2>
+                            <div class="chat__header-status">
                                 {% if report.assigned_to %}
-                                    <p class="mb-0 small">You are chatting with {{ report.assigned_to.get_full_name|default:report.assigned_to.username }} about Report #{{ report.id }}</p>
+                                    <span>{{ report.assigned_to.get_full_name|default:report.assigned_to.username }}</span>
+                                    <span>Typically responds within a day</span>
                                 {% else %}
-                                    <p class="mb-0 small">Messaging opens once a counselor joins your case.</p>
+                                    <span>Waiting for counselor assignment</span>
                                 {% endif %}
                             </div>
                         </div>
-                        <div class="chat-meta text-white-50">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="status-pill status-pill-{{ report.status|status_badge }} text-uppercase small">
-                                    {{ report.get_status_display }}
-                                </span>
-                                <span class="badge rounded-pill bg-light text-dark fw-semibold">#{{ report.id }}</span>
-                            </div>
-                            <span class="small">Last updated {{ report.updated_at|default:report.created_at|date:"M j, Y" }}</span>
-                            {% if report.assigned_to %}
-                                <span class="small">Response time: typically within 24 hrs</span>
-                            {% endif %}
-                        </div>
                     </div>
-                    <div class="chat-shell-body" id="chat-thread">
-                    {% if chat_messages %}
-                        {% for message in chat_messages %}
-                            {% include 'partials/chat_message.html' with message=message viewer=request.user report=report %}
-                            {% for reply in message.replies.all %}
-                                {% include 'partials/chat_message.html' with message=reply viewer=request.user report=report is_reply=True %}
+                    <div class="chat__header-meta">
+                        <span class="badge rounded-pill bg-light text-dark">Report #{{ report.id }}</span>
+                        <span>Status: {{ report.get_status_display }}</span>
+                        <span>Updated {{ report.updated_at|default:report.created_at|date:"M j, Y" }}</span>
+                    </div>
+                    </header>
+                <div class="chat__scroll" data-chat-scroll aria-live="polite">
+                    <ul class="chat__list" data-chat-list role="log" aria-live="polite">
+                        {% if chat_messages %}
+                            {% for message in chat_messages %}
+                                {% ifchanged message.timestamp|date:'Y-m-d' %}
+                                    <li class="chat__divider" role="presentation">
+                                        <time datetime="{{ message.timestamp|date:'Y-m-d' }}">{{ message.timestamp|date:'l, F j' }}</time>
+                                    </li>
+                                {% endifchanged %}
+                                {% include 'partials/chat_message.html' with message=message viewer=request.user report=report %}
+                                {% for reply in message.replies.all %}
+                                    {% ifchanged reply.timestamp|date:'Y-m-d' %}
+                                        {% if message.timestamp|date:'Y-m-d' != reply.timestamp|date:'Y-m-d' or not forloop.first %}
+                                            <li class="chat__divider" role="presentation">
+                                                <time datetime="{{ reply.timestamp|date:'Y-m-d' }}">{{ reply.timestamp|date:'l, F j' }}</time>
+                                            </li>
+                                        {% endif %}
+                                    {% endifchanged %}
+                                    {% include 'partials/chat_message.html' with message=reply viewer=request.user report=report is_reply=True %}
+                                {% endfor %}
                             {% endfor %}
-                        {% endfor %}
-                    {% else %}
-                        <div class="text-center text-muted py-5">
-                            <i class="fas fa-comments fa-2x mb-3" aria-hidden="true"></i>
-                            <p class="mb-0">No messages yet. You can reach out to your counselor below once assigned.</p>
-                        </div>
-                    {% endif %}
-                    </div>
-                    <div class="chat-shell-footer">
+                        {% else %}
+                            <li class="chat__empty">
+                                <i class="fas fa-comments" aria-hidden="true"></i>
+                                <p>No messages yet. You can reach out once a counselor is assigned.</p>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <footer class="chat__footer">
                     {% if report.assigned_to %}
-                        <form method="post" enctype="multipart/form-data" class="chat-composer" novalidate>
+                        <form method="post" enctype="multipart/form-data" class="chat__composer" data-chat-composer novalidate>
                             {% csrf_token %}
-                            {{ msg_form.non_field_errors }}
-                            {{ msg_form.parent_id }}
-                            <div id="reply-indicator" class="chat-reply-banner d-none" role="status">
-                                <div class="small mb-0"><strong>Replying to <span class="reply-to"></span></strong></div>
-                                <a href="#" id="cancel-reply" class="small text-decoration-none">Cancel</a>
+                            {% if msg_form.non_field_errors %}
+                                <div class="chat__errors">
+                                    {% for error in msg_form.non_field_errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
+                            <input
+                                type="hidden"
+                                name="{{ msg_form.parent_id.html_name }}"
+                                id="{{ msg_form.parent_id.id_for_label }}"
+                                value="{{ msg_form.parent_id.value|default_if_none:'' }}"
+                                data-chat-parent-input="true"
+                            />
+
+                            <div class="chat__reply-indicator" data-chat-reply-indicator role="status">
+                                <span>Replying to <strong data-chat-reply-name></strong></span>
+                                <button type="button" class="chat__action" data-chat-reply-cancel>Cancel</button>
                             </div>
-                            <div class="chat-composer-main">
-                                <div class="chat-composer-tools">
-                                    <label for="{{ msg_form.attachment.id_for_label }}" class="chat-icon-btn" title="Attach a file">
+                            <div class="chat__input">
+                                <div class="chat__toolbar">
+                                    <button type="button" class="chat__icon-btn" data-chat-emoji title="Insert emoji" aria-label="Insert emoji">
+                                        <i class="far fa-face-smile" aria-hidden="true"></i>
+                                    </button>
+                                    <button type="button" class="chat__icon-btn" data-chat-attach-trigger aria-controls="{{ msg_form.attachment.id_for_label }}" title="Attach file" aria-label="Attach a file">
                                         <i class="fas fa-paperclip" aria-hidden="true"></i>
-                                        <span class="visually-hidden">Attach a file</span>
-                                    </label>
+                                        </button>
                                 </div>
-                                <div class="flex-grow-1">
-                                    {{ msg_form.message }}
-                                </div>
-                                <button type="submit" class="btn btn-primary chat-send-btn" name="send_msg">
+                                <textarea
+                                    id="{{ msg_form.message.id_for_label }}"
+                                    name="{{ msg_form.message.name }}"
+                                    class="chat__textarea"
+                                    placeholder="Write a message"
+                                    aria-label="Type your message"
+                                    data-chat-textarea="true"
+                                    {% if msg_form.message.field.required %}required{% endif %}
+                                    {% if msg_form.message.errors %}aria-invalid="true"{% endif %}
+                                >{{ msg_form.message.value|default_if_none:"" }}</textarea>
+                                <button type="submit" class="chat__send" name="send_msg" aria-label="Send message">
                                     <i class="fas fa-paper-plane" aria-hidden="true"></i>
-                                    <span>Send</span>
                                 </button>
                             </div>
-                            <div class="visually-hidden">
-                                {{ msg_form.attachment }}
-                            </div>
-                            <div class="chat-attachment-feedback small" id="attachment-feedback">
-                                You can attach PDFs or images as supporting evidence.
-                            </div>
-                            <div class="chat-error-list">
-                                {% for error in msg_form.message.errors %}
-                                    <div class="invalid-feedback d-block small">{{ error }}</div>
-                                {% endfor %}
-                                {% for error in msg_form.attachment.errors %}
-                                    <div class="invalid-feedback d-block small">{{ error }}</div>
-                                {% endfor %}
-                            </div>
+                            {% with widget=msg_form.attachment.field.widget %}
+                                <input
+                                    type="file"
+                                    id="{{ msg_form.attachment.id_for_label }}"
+                                    name="{{ msg_form.attachment.name }}"
+                                    class="visually-hidden"
+                                    data-chat-attachment="true"
+                                    {% if widget.attrs.accept %}accept="{{ widget.attrs.accept }}"{% endif %}
+                                    {% if widget.attrs.multiple %}multiple{% endif %}
+                                    {% if msg_form.attachment.field.required %}required{% endif %}
+                                >
+                            {% endwith %}
+
+                            <p class="chat__attachment-hint" data-chat-attachment-feedback>You can attach PDFs or images as supporting evidence.</p>
+
+                            {% if msg_form.message.errors or msg_form.attachment.errors %}
+                                <div class="chat__errors">
+                                    {% for error in msg_form.message.errors %}<span>{{ error }}</span>{% endfor %}
+                                    {% for error in msg_form.attachment.errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
                         </form>
                     {% else %}
                         <p class="text-muted mb-0">Your case is being reviewed. Messaging will open once a counselor is assigned.</p>
                     {% endif %}
-                    </div>
-                </div>
-            </div>
+                </footer>
+            </section>
         </section>
     </div>
 </div>
-<script>
-(function() {
-    const replyLinks = document.querySelectorAll('.reply-link');
-    const parentInput = document.getElementById('{{ msg_form.parent_id.id_for_label }}');
-    const messageBox = document.getElementById('{{ msg_form.message.id_for_label }}');
-    const replyIndicator = document.getElementById('reply-indicator');
-    const attachmentInput = document.getElementById('{{ msg_form.attachment.id_for_label }}');
-    const attachmentFeedback = document.getElementById('attachment-feedback');
 
-    replyLinks.forEach((link) => {
-        link.addEventListener('click', function (event) {
-            event.preventDefault();
-            if (!parentInput) {
-                return;
-            }
-            parentInput.value = this.dataset.parent || '';
-            if (messageBox) {
-                messageBox.focus();
-            }
-            if (replyIndicator) {
-                replyIndicator.classList.remove('d-none');
-                const nameTarget = replyIndicator.querySelector('.reply-to');
-                if (nameTarget) {
-                    nameTarget.textContent = this.dataset.author || '';
-                }
-            }
-        });
-    });
-
-    const cancelReply = document.getElementById('cancel-reply');
-    if (cancelReply) {
-        cancelReply.addEventListener('click', function (event) {
-            event.preventDefault();
-            if (parentInput) {
-                parentInput.value = '';
-            }
-            if (replyIndicator) {
-                replyIndicator.classList.add('d-none');
-                const nameTarget = replyIndicator.querySelector('.reply-to');
-                if (nameTarget) {
-                    nameTarget.textContent = '';
-                }
-            }
-        });
-    }
-
-    if (attachmentInput && attachmentFeedback) {
-        const defaultMessage = attachmentFeedback.textContent;
-        attachmentInput.addEventListener('change', function () {
-            if (this.files && this.files.length) {
-                const fileName = this.files[0].name;
-                attachmentFeedback.textContent = `Attached: ${fileName}`;
-                attachmentFeedback.classList.add('text-success');
-            } else {
-                attachmentFeedback.textContent = defaultMessage;
-                attachmentFeedback.classList.remove('text-success');
-            }
-        });
-    }
-})();
-</script>
 {% endblock %}

@@ -30,6 +30,7 @@
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/messages.css' %}">
     
     {% block extra_head %}{% endblock %}
 </head>
@@ -365,6 +366,8 @@
             }
         });
     </script>
+
+    <script src="{% static 'js/messages.js' %}" defer></script>
     
         <!-- Auto-dismiss flash messages -->
     <script>

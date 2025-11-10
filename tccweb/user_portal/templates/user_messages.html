@@ -27,82 +27,71 @@
         </header>
 
         <section class="page-section">
-            <div class="page-card">
-                <div class="page-card-body border-bottom">
-                    <form method="get" class="row g-3 align-items-center">
-                        <div class="col-md">
-                            <label for="search-report" class="form-label">Search by report number</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-transparent"><i class="fas fa-search"></i></span>
-                                <input
-                                    id="search-report"
-                                    type="text"
-                                    name="q"
-                                    class="form-control"
-                                    placeholder="Try report 102 or counselor name"
-                                    value="{{ q }}"
-                                >
-                            </div>
-                        </div>
-                        <div class="col-auto d-flex gap-2">
-                            <button class="btn btn-primary" type="submit">Search</button>
-                            {% if q %}
-                                <a href="{% url 'user_messages' %}" class="btn btn-outline-secondary">Reset</a>
-                            {% endif %}
-                        </div>
+            <<div class="messaging-board__card">
+                <div class="messaging-board__header">
+                    <h2 class="h5 mb-2">Find a conversation</h2>
+                    <form method="get" class="messaging-board__search" role="search">
+                        <label for="search-report" class="visually-hidden">Search by report number or counselor</label>
+                        <input
+                            id="search-report"
+                            type="text"
+                            name="q"
+                            placeholder="Try report 102 or counselor name"
+                            value="{{ q }}"
+                            aria-label="Search by report number or counselor"
+                        >
+                        <button class="btn btn-primary" type="submit" aria-label="Search conversations">
+                            <i class="fas fa-search" aria-hidden="true"></i>
+                        </button>
+                        {% if q %}
+                            <a href="{% url 'user_messages' %}" class="btn btn-outline-secondary" aria-label="Reset search">Reset</a>
+                        {% endif %}
                     </form>
                 </div>
 
-                <div class="list-group list-group-flush">
+                <div class="messaging-board__list" role="list">
                     {% for group in thread_groups %}
                         {% with report=group.report last_msg=group.last_message sender_name=group.last_sender_name %}
-                        <a class="list-group-item list-group-item-action py-4 px-4" href="{% url 'report_messages' report.id %}">
-                            <div class="d-flex flex-wrap align-items-center justify-content-between mb-2">
+                        <a class="messaging-thread" href="{% url 'report_messages' report.id %}" role="listitem">
+                            <div class="messaging-thread__top">
                                 <div class="d-flex align-items-center gap-2">
-                                    <h2 class="h5 mb-0">Report #{{ report.id }}</h2>
-                                    <span class="badge {% if report.status == 'resolved' %}badge-soft-success{% elif report.status == 'under_review' %}badge-soft-danger{% else %}badge-soft-primary{% endif %}">
-                                        {{ report.get_status_display }}
+                                    <span class="messaging-thread__avatar" aria-hidden="true">
+                                        {{ sender_name|default:"?"|slice:":1"|upper }}
                                     </span>
+                                    <div>
+                                        <h2 class="h6 mb-0">Report #{{ report.id }}</h2>
+                                        <span class="small text-muted">{{ report.get_incident_type_display }}</span>
+                                    </div>
                                 </div>
-                                <div class="d-flex align-items-center gap-3 small text-muted">
-                                    <span class="d-flex align-items-center gap-1">
-                                        <i class="fas fa-comments"></i>
-                                        {{ group.threads|length }} conversation{% if group.threads|length != 1 %}s{% endif %}
-                                    </span>
-                                    <span>
-                                        {% if last_msg %}
-                                            {{ last_msg.timestamp|date:"M j, Y g:i a" }}
-                                        {% else %}
-                                            No activity yet
-                                        {% endif %}
-                                    </span>
+                                <div class="messaging-thread__meta">
+                                    <span>{% if last_msg %}{{ last_msg.timestamp|date:"M j, Y g:i a" }}{% else %}No activity yet{% endif %}</span>
+                                    <span>{{ group.threads|length }} conversation{% if group.threads|length != 1 %}s{% endif %}</span>
                                 </div>
                             </div>
-                            <p class="text-muted small mb-3">{{ report.get_incident_type_display }}</p>
-                            <div class="d-flex gap-3 align-items-start">
-                                <div class="tile-icon flex-shrink-0" aria-hidden="true">
-                                    {{ sender_name|default:"?"|slice:":1"|upper }}
-                                </div>
-                                <div class="flex-grow-1">
-                                    <p class="mb-1 text-body-secondary">
-                                        {% if last_msg %}
-                                            <strong>{{ sender_name }}</strong> &ndash; {{ last_msg|decrypt:request.user|default:"(No message content)"|truncatechars:160 }}
-                                        {% else %}
-                                            <em>No messages yet.</em>
-                                        {% endif %}
-                                    </p>
+                            <p class="messaging-thread__preview">
+                                {% if last_msg %}
+                                    <strong>{{ sender_name }}</strong> &ndash; {{ last_msg|decrypt:request.user|default:"(No message content)"|truncatechars:160 }}
+                                {% else %}
+                                    <em>No messages yet.</em>
+                                {% endif %}
+                            </p>
+                            <div class="messaging-thread__footer">
+                                <span class="badge {% if report.status == 'resolved' %}bg-success-subtle text-success{% elif report.status == 'under_review' %}bg-warning text-dark{% else %}bg-info-subtle text-info{% endif %}">
+                                    {{ report.get_status_display }}
+                                </span>
+                                <span class="small text-muted">
                                     {% if report.awaiting_response %}
-                                        <span class="badge badge-soft-primary">Counselor preparing a response</span>
+                                        <i class="fas fa-hourglass-half" aria-hidden="true"></i> Counselor preparing a response
                                     {% else %}
-                                        <span class="badge badge-soft-danger">Your follow-up may be needed</span>
+                                        <i class="fas fa-reply" aria-hidden="true"></i> Your follow-up may be needed
                                     {% endif %}
-                                </div>
+                                </span>
                             </div>
                         </a>
                         {% endwith %}
                     {% empty %}
-                        <div class="list-group-item py-5 text-center text-muted">
-                            <i class="fas fa-comments fa-3x d-block mb-3" aria-hidden="true"></i>
+                        <div class="messaging-thread messaging-board__empty" role="listitem">
+                            <i class="fas fa-comments fa-2x mb-3" aria-hidden="true"></i>
                             <p class="mb-0">No conversations yet. Submit a report to start chatting with a counselor.</p>
                         </div>
                     {% endfor %}
