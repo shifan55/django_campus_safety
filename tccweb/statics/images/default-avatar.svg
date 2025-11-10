@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Default avatar icon</title>
+  <desc id="desc">A minimal outline of a person used as a default profile image.</desc>
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4b6cb7" />
+      <stop offset="100%" stop-color="#182848" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="60" fill="url(#gradient)" opacity="0.95" />
+  <circle cx="64" cy="52" r="26" fill="#ffffff" opacity="0.85" />
+  <path d="M32 108c0-18 14-32 32-32s32 14 32 32" fill="#ffffff" opacity="0.85" />
+</svg>

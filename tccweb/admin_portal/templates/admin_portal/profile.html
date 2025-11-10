@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% static 'images/default-avatar.svg' as default_avatar %}
 
 {% block title %}Administrator Profile - Safe Campus{% endblock %}
 
@@ -15,7 +16,7 @@
 <section class="profile-page container-xxl" aria-labelledby="profile-title">
   <header class="profile-header" role="banner">
     <div class="profile-header-main">
-      <img class="profile-avatar" src="{{ profile.avatar_url|default:'/static/img/default-avatar.png' }}" alt="{{ profile.full_name|default:user.get_full_name|default:user.username }} avatar" width="96" height="96" loading="lazy">
+      <img class="profile-avatar" src="{{ profile.avatar_url|default:default_avatar }}" alt="{{ profile.full_name|default:user.get_full_name|default:user.username }} avatar" width="96" height="96" loading="lazy">
       <div class="profile-meta">
         <h1 id="profile-title" class="profile-title">{{ profile.full_name|default:user.get_full_name|default:user.username }}</h1>
         <p class="profile-role text-muted mb-1">{{ profile.role|default:'Administrator' }}</p>

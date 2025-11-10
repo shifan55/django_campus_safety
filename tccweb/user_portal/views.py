@@ -8,9 +8,12 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_GET
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.templatetags.static import static
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from tccweb.core.models import Report, EducationalResource, SupportContact
+from tccweb.accounts.forms import ProfileForm
+from tccweb.accounts.models import Profile
 from tccweb.core.forms import LoginForm, RegistrationForm, AnonymousReportForm, ReportForm, MessageForm
 from tccweb.counselor_portal.emotion import analyze_emotion
 from tccweb.counselor_portal.models import ChatMessage, RiskLevel
@@ -425,7 +428,21 @@ def profile_view(request):
     if request.user.is_staff:
         return redirect('counselor_profile')
 
-    profile = getattr(request.user, "profile", None)
+    profile, _created = Profile.objects.get_or_create(user=request.user)
+    if request.method == "POST":
+        form = ProfileForm(
+            request.POST,
+            request.FILES,
+            instance=profile,
+            user=request.user,
+        )
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Your profile was updated.")
+            return redirect("profile")
+        messages.error(request, "Please correct the errors below.")
+    else:
+        form = ProfileForm(instance=profile, user=request.user)
     linked_reports = list(
         Report.objects.filter(reporter=request.user)
         .order_by('-updated_at', '-created_at')[:8]
@@ -454,6 +471,8 @@ def profile_view(request):
         "password_change_url": _safe_reverse('account_change_password'),
         "delete_account_url": _safe_reverse('account_delete'),
         "user_role": getattr(request.user, "role", None),
+        "form": form,
+        "default_avatar": static("images/default-avatar.svg"),
     }
 
     return render(request, 'user_portal/profile.html', context)

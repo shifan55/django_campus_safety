@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 import csv
 import json
 import logging
-from types import SimpleNamespace
 
 from django.conf import settings
 from django.contrib import messages
@@ -33,13 +32,16 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
+from django.templatetags.static import static
 
 
 from tccweb.core.models import Report, ReportStatus  # provides status choices for filtering
 from .forms import CaseNoteForm
 from tccweb.core.forms import MessageForm
-from .models import CaseNote, ChatMessage, AdminAlert, RiskLevel, EmotionLabel
+from .models import CaseNote, ChatMessage, AdminAlert, RiskLevel, EmotionLabel, CounselorProfile
 from .services import generate_suggested_replies
+from tccweb.accounts.forms import ProfileForm
+from tccweb.accounts.models import Profile
 
 
 logger = logging.getLogger(__name__)
@@ -1041,29 +1043,25 @@ def analytics_dashboard(request):
 @auth_login_required
 @auth_user_passes_test(_is_counselor)
 def profile(request):
-    profile = getattr(request.user, "profile", None)
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+    if not profile.full_name and request.user.get_full_name():
+        profile.full_name = request.user.get_full_name()
+    profile.set_role("Counselor")
 
-    if profile is None:
-        profile = SimpleNamespace(
-            avatar_url="",
-            full_name="",
-            email=getattr(request.user, "email", ""),
-            role="Counselor",
-            phone="",
-            bio="",
-            location="",
-            timezone="",
-            specialization_tags=[],
-            specializations="",
-            tags="",
-            office_hours="",
-            open_cases=0,
-            avg_response_time="",
-            upcoming_sessions=0,
-            schedule_url="",
-            reports_url="",
-            messages_url="",
+    if request.method == "POST":
+        form = ProfileForm(
+            request.POST,
+            request.FILES,
+            instance=profile,
+            user=request.user,
         )
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Your profile was updated.")
+            return redirect("counselor_profile")
+        messages.error(request, "Please correct the errors below.")
+    else:
+        form = ProfileForm(instance=profile, user=request.user)
 
     open_cases = (
         Report.objects.filter(assigned_to=request.user)
@@ -1115,6 +1113,13 @@ def profile(request):
     profile_schedule_url = getattr(profile, "schedule_url", "")
     profile_reports_url = getattr(profile, "reports_url", "")
     profile_messages_url = getattr(profile, "messages_url", "")
+    
+    counselor_profile = CounselorProfile.objects.filter(user=request.user).first()
+    specialization_tags = []
+    if counselor_profile:
+        specialization_display = counselor_profile.get_specialization_display()
+        specialization_tags = [specialization_display]
+        setattr(profile, "specializations", specialization_display)
 
     schedule_url = _safe_reverse("counselor_dashboard")
     if schedule_url == "#":
@@ -1127,6 +1132,20 @@ def profile(request):
     messages_url = _safe_reverse("counselor_messages")
     if messages_url == "#":
         messages_url = profile_messages_url or "#"
+    
+    # Ensure template fallbacks always have concrete values without raising lookups.
+    fallback_attributes = {
+        "schedule_url": schedule_url,
+        "reports_url": reports_url,
+        "messages_url": messages_url,
+        "open_cases": open_cases,
+        "upcoming_sessions": recent_notes,
+        "avg_response_time": avg_response_time or "",
+        "specialization_tags": specialization_tags,
+    }
+    for attr_name, attr_value in fallback_attributes.items():
+        if not getattr(profile, attr_name, None):
+            setattr(profile, attr_name, attr_value)
 
     context = {
         "profile": profile,
@@ -1139,6 +1158,9 @@ def profile(request):
         "schedule_url": schedule_url,
         "reports_url": reports_url,
         "messages_url": messages_url,
+        "specialization_tags": specialization_tags,
+        "form": form,
+        "default_avatar": static("images/default-avatar.svg"),
     }
 
     return render(request, "counselor_portal/profile.html", context)

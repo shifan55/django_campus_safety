@@ -4,6 +4,13 @@
     {% if can_edit %}
       <form id="edit-profile-form" class="profile-form" method="post" action="" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger" role="alert">
+          {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
         <fieldset>
           <legend id="profile-details-heading" class="profile-section-title">Profile details</legend>
           <div class="profile-form-intro">
@@ -12,30 +19,72 @@
           {% include "partials/avatar_upload.html" %}
           <div class="form-grid" role="group" aria-labelledby="profile-details-heading">
             <div class="form-field">
-              <label class="form-label" for="id_full_name">Full name</label>
-              <input class="form-control" type="text" name="full_name" id="id_full_name" value="{{ profile.full_name|default:user.get_full_name|default:user.username }}" autocomplete="name">
+              <label class="form-label" for="{{ form.full_name.id_for_label }}">Full name</label>
+              {{ form.full_name }}
+              {% if form.full_name.errors %}
+              <div class="invalid-feedback d-block">
+                {% for error in form.full_name.errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+              {% endif %}
             </div>
             <div class="form-field">
-              <label class="form-label" for="id_email">Email</label>
-              <input class="form-control" type="email" name="email" id="id_email" value="{{ profile.email|default:user.email }}" autocomplete="email" required>
+              <label class="form-label" for="{{ form.email.id_for_label }}">Email</label>
+              {{ form.email }}
+              {% if form.email.errors %}
+              <div class="invalid-feedback d-block">
+                {% for error in form.email.errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+              {% endif %}
             </div>
             <div class="form-field">
-              <label class="form-label" for="id_phone">Phone</label>
-              <input class="form-control" type="tel" name="phone" id="id_phone" value="{{ profile.phone|default:'' }}" autocomplete="tel">
+              <label class="form-label" for="{{ form.phone.id_for_label }}">Phone</label>
+              {{ form.phone }}
+              {% if form.phone.errors %}
+              <div class="invalid-feedback d-block">
+                {% for error in form.phone.errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+              {% endif %}
             </div>
             <div class="form-field">
-              <label class="form-label" for="id_location">Location</label>
-              <input class="form-control" type="text" name="location" id="id_location" value="{{ profile.location|default:'' }}" autocomplete="address-level2">
+              <label class="form-label" for="{{ form.location.id_for_label }}">Location</label>
+              {{ form.location }}
+              {% if form.location.errors %}
+              <div class="invalid-feedback d-block">
+                {% for error in form.location.errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+              {% endif %}
             </div>
             <div class="form-field">
-              <label class="form-label" for="id_timezone">Timezone</label>
-              <input class="form-control" type="text" name="timezone" id="id_timezone" value="{{ profile.timezone|default:'' }}" placeholder="e.g., America/New_York">
+              <label class="form-label" for="{{ form.timezone.id_for_label }}">Timezone</label>
+              {{ form.timezone }}
+              {% if form.timezone.errors %}
+              <div class="invalid-feedback d-block">
+                {% for error in form.timezone.errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+              {% endif %}
             </div>
           </div>
           <div class="form-field">
-            <label class="form-label" for="id_bio">Bio</label>
-            <textarea class="form-control" name="bio" id="id_bio" rows="4" maxlength="800" aria-describedby="bio-hint">{{ profile.bio|default:'' }}</textarea>
+            <label class="form-label" for="{{ form.bio.id_for_label }}">Bio</label>
+            {{ form.bio }}
             <div id="bio-hint" class="form-text">Share any information that helps our team support you. Avoid including sensitive data.</div>
+            {% if form.bio.errors %}
+            <div class="invalid-feedback d-block">
+              {% for error in form.bio.errors %}
+                <div>{{ error }}</div>
+              {% endfor %}
+            </div>
+            {% endif %}
           </div>
         </fieldset>
         <div class="form-actions">

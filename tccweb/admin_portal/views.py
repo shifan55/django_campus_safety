@@ -9,7 +9,7 @@ from django.core.cache import caches
 from django.core.paginator import Paginator
 from django.utils import timezone
 from django.urls import NoReverseMatch, reverse
-from types import SimpleNamespace
+from django.templatetags.static import static
 import logging
 
 # Use the project's default cache backend for storing dashboard statistics
@@ -25,6 +25,8 @@ from tccweb.core.models import (
     ReportStatus,
 )
 from tccweb.core.forms import EducationalResourceForm, QuizForm, QuizQuestionFormSet
+from tccweb.accounts.forms import ProfileForm
+from tccweb.accounts.models import Profile
 from .forms import CounselorCreationForm
 
 logger = logging.getLogger(__name__)
@@ -340,18 +342,25 @@ def admin_user_management(request):
 @user_passes_test(lambda u: u.is_superuser)
 def admin_profile(request):
     user = request.user
-    profile = getattr(user, "profile", None)
-    if profile is None:
-        profile = SimpleNamespace(
-            full_name="",
-            email=user.email or "",
-            phone="",
-            location="",
-            timezone="",
-            bio="",
-            avatar_url="",
-            role="Administrator",
+    profile, _ = Profile.objects.get_or_create(user=user)
+    if not profile.full_name and user.get_full_name():
+        profile.full_name = user.get_full_name()
+    profile.set_role("Administrator")
+
+    if request.method == "POST":
+        form = ProfileForm(
+            request.POST,
+            request.FILES,
+            instance=profile,
+            user=user,
         )
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Your profile was updated.")
+            return redirect("admin_profile")
+        messages.error(request, "Please correct the errors below.")
+    else:
+        form = ProfileForm(instance=profile, user=user)
 
     active_users = User.objects.filter(is_active=True).count()
     open_alerts = Report.objects.exclude(status=ReportStatus.RESOLVED).count()
@@ -373,6 +382,8 @@ def admin_profile(request):
         "active_users": active_users,
         "open_alerts": open_alerts,
         "last_backup_at": last_backup_at,
+        "form": form,
+        "default_avatar": static("images/default-avatar.svg"),
     }
 
     return render(request, "admin_portal/profile.html", context)

@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
     "tccweb.core",
+    "tccweb.accounts",
     "tccweb.admin_portal",
     "tccweb.user_portal",
     "tccweb.counselor_portal",
