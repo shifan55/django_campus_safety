@@ -1,7 +1,18 @@
 from collections import Counter
+from datetime import datetime, timedelta
+import csv
+import json
+import logging
+from types import SimpleNamespace
 
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import (
+    login_required as auth_login_required,
+    user_passes_test as auth_user_passes_test,
+)
+from django.core.paginator import Paginator
 from django.core.mail import send_mail
 from django.db.models import (
     Avg,
@@ -16,19 +27,12 @@ from django.db.models import (
     Value,
     When,
 )
-from django.db.models.functions import TruncWeek, TruncMonth, Coalesce
+from django.db.models.functions import Coalesce, TruncMonth, TruncWeek
 from django.db.utils import OperationalError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.conf import settings
-from django.core.paginator import Paginator
-from django.contrib import messages
+from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
-from django.urls import reverse
-from datetime import timedelta, datetime
-import csv
-import json
-import logging
 
 
 from tccweb.core.models import Report, ReportStatus  # provides status choices for filtering
@@ -41,12 +45,18 @@ from .services import generate_suggested_replies
 logger = logging.getLogger(__name__)
 
 
+def _safe_reverse(name: str, *args, **kwargs) -> str:
+    try:
+        return reverse(name, args=args, kwargs=kwargs)
+    except NoReverseMatch:
+        return "#"
+
 def _is_counselor(user):
     return user.is_staff or getattr(getattr(user, "profile", None), "is_staff", False)
 
 
-@login_required
-@user_passes_test(_is_counselor)
+@auth_login_required
+@auth_user_passes_test(_is_counselor)
 def dashboard(request):
     # Get both assigned reports and unassigned reports for the "New" queue
     reports_qs = (
@@ -384,8 +394,8 @@ def dashboard(request):
     }
     return render(request, "counselor_dashboard.html", context)
 
-@login_required
-@user_passes_test(_is_counselor)
+@auth_login_required
+@auth_user_passes_test(_is_counselor)
 def my_cases(request):
     """List the cases claimed by the logged-in counselor."""
 
@@ -459,8 +469,8 @@ def my_cases(request):
 
     return render(request, "counselor_my_cases.html", context)
 
-@login_required
-@user_passes_test(_is_counselor)
+@auth_login_required
+@auth_user_passes_test(_is_counselor)
 def case_detail(request, report_id):
     report = get_object_or_404(
         Report,
@@ -643,8 +653,8 @@ def case_detail(request, report_id):
     return render(request, "counselor_case_detail.html", context)
 
 
-@login_required
-@user_passes_test(_is_counselor)
+@auth_login_required
+@auth_user_passes_test(_is_counselor)
 def messages_view(request):
     """List message threads for the counselor, grouped by report."""
     q = request.GET.get("q", "").strip()
@@ -721,8 +731,8 @@ def messages_view(request):
     return render(request, "counselor_messages.html", context)
 
 
-@login_required
-@user_passes_test(_is_counselor)
+@auth_login_required
+@auth_user_passes_test(_is_counselor)
 def claim_case(request, report_id):
     """Allow a counselor to claim an unassigned case."""
     report = get_object_or_404(Report, id=report_id, assigned_to__isnull=True)
@@ -740,8 +750,8 @@ def claim_case(request, report_id):
     return redirect("counselor_dashboard")
 
 
-@login_required
-@user_passes_test(_is_counselor)
+@auth_login_required
+@auth_user_passes_test(_is_counselor)
 def analytics_dashboard(request):
     """Analytics dashboard showing counselor performance metrics with Plotly charts."""
     # Get time range from query parameter (7, 30, or all)
@@ -1028,3 +1038,107 @@ def analytics_dashboard(request):
     
     return render(request, 'counselor_analytics.html', context)
 
+@auth_login_required
+@auth_user_passes_test(_is_counselor)
+def profile(request):
+    profile = getattr(request.user, "profile", None)
+
+    if profile is None:
+        profile = SimpleNamespace(
+            avatar_url="",
+            full_name="",
+            email=getattr(request.user, "email", ""),
+            role="Counselor",
+            phone="",
+            bio="",
+            location="",
+            timezone="",
+            specialization_tags=[],
+            specializations="",
+            tags="",
+            office_hours="",
+            open_cases=0,
+            avg_response_time="",
+            upcoming_sessions=0,
+            schedule_url="",
+            reports_url="",
+            messages_url="",
+        )
+
+    open_cases = (
+        Report.objects.filter(assigned_to=request.user)
+        .exclude(status=ReportStatus.RESOLVED)
+        .count()
+    )
+
+    recent_notes = CaseNote.objects.filter(
+        counselor=request.user,
+        created_at__gte=timezone.now() - timedelta(days=7),
+    ).count()
+
+    response_deltas = []
+    counselor_messages = (
+        ChatMessage.objects.filter(sender=request.user)
+        .order_by('-timestamp')[:20]
+    )
+
+    for message in counselor_messages:
+        previous = (
+            ChatMessage.objects.filter(
+                report=message.report,
+                timestamp__lt=message.timestamp,
+            )
+            .exclude(sender=request.user)
+            .order_by('-timestamp')
+            .first()
+        )
+        if previous:
+            response_deltas.append(message.timestamp - previous.timestamp)
+
+    avg_response_time = None
+    if response_deltas:
+        total_delta = sum(response_deltas, timedelta())
+        average_delta = total_delta / len(response_deltas)
+        total_seconds = int(average_delta.total_seconds())
+        days, remainder = divmod(total_seconds, 86400)
+        hours, remainder = divmod(remainder, 3600)
+        minutes, _ = divmod(remainder, 60)
+        parts = []
+        if days:
+            parts.append(f"{days}d")
+        if hours:
+            parts.append(f"{hours}h")
+        if minutes and not days:
+            parts.append(f"{minutes}m")
+        avg_response_time = " ".join(parts) or "<1m"
+
+    profile_schedule_url = getattr(profile, "schedule_url", "")
+    profile_reports_url = getattr(profile, "reports_url", "")
+    profile_messages_url = getattr(profile, "messages_url", "")
+
+    schedule_url = _safe_reverse("counselor_dashboard")
+    if schedule_url == "#":
+        schedule_url = profile_schedule_url or "#"
+
+    reports_url = _safe_reverse("counselor_my_cases")
+    if reports_url == "#":
+        reports_url = profile_reports_url or "#"
+
+    messages_url = _safe_reverse("counselor_messages")
+    if messages_url == "#":
+        messages_url = profile_messages_url or "#"
+
+    context = {
+        "profile": profile,
+        "user": request.user,
+        "can_edit": True,
+        "is_counselor": True,
+        "open_cases": open_cases,
+        "upcoming_sessions": recent_notes,
+        "avg_response_time": avg_response_time,
+        "schedule_url": schedule_url,
+        "reports_url": reports_url,
+        "messages_url": messages_url,
+    }
+
+    return render(request, "counselor_portal/profile.html", context)

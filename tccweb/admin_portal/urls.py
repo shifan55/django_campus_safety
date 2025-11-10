@@ -9,4 +9,5 @@ urlpatterns = [
     path('awareness/', views.admin_awareness, name='admin_awareness'),
     path('resource/<int:pk>/delete/', views.delete_resource, name='delete_resource'),
     path('users/', views.admin_user_management, name='admin_user_management'),
+    path('profile/', views.admin_profile, name='admin_profile'),
     ]

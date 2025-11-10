@@ -8,6 +8,8 @@ from django.contrib.auth.decorators import (
 from django.core.cache import caches
 from django.core.paginator import Paginator
 from django.utils import timezone
+from django.urls import NoReverseMatch, reverse
+from types import SimpleNamespace
 import logging
 
 # Use the project's default cache backend for storing dashboard statistics
@@ -31,6 +33,12 @@ try:
     from tccweb.core.models import Quiz  # or wherever your Quiz model is
 except ImportError:
     Quiz = None
+
+def _safe_reverse(name: str, *args, **kwargs) -> str:
+    try:
+        return reverse(name, args=args, kwargs=kwargs)
+    except NoReverseMatch:
+        return "#"
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
@@ -327,3 +335,44 @@ def admin_user_management(request):
         'admin_user_management.html',
         {'counselors': counselors, 'students': students, 'form': form},
     )
+    
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def admin_profile(request):
+    user = request.user
+    profile = getattr(user, "profile", None)
+    if profile is None:
+        profile = SimpleNamespace(
+            full_name="",
+            email=user.email or "",
+            phone="",
+            location="",
+            timezone="",
+            bio="",
+            avatar_url="",
+            role="Administrator",
+        )
+
+    active_users = User.objects.filter(is_active=True).count()
+    open_alerts = Report.objects.exclude(status=ReportStatus.RESOLVED).count()
+    last_backup_at = timezone.localtime(timezone.now()).strftime("%b %d, %Y %I:%M %p")
+
+    context = {
+        "profile": profile,
+        "user": user,
+        "can_edit": True,
+        "is_admin": True,
+        "admin_dashboard_url": _safe_reverse("admin_dashboard"),
+        "impersonate_url": "#",
+        "security_logs_url": _safe_reverse("admin_reports"),
+        "data_export_url": _safe_reverse("admin_reports"),
+        "user_management_url": _safe_reverse("admin_user_management"),
+        "reports_overview_url": _safe_reverse("admin_reports"),
+        "system_settings_url": _safe_reverse("admin_dashboard"),
+        "refresh_caches_url": "#",
+        "active_users": active_users,
+        "open_alerts": open_alerts,
+        "last_backup_at": last_backup_at,
+    }
+
+    return render(request, "admin_portal/profile.html", context)

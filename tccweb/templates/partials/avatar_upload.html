@@ -1,0 +1,14 @@
+<div class="avatar-upload" aria-live="polite">
+  <figure class="avatar-figure">
+    <img class="profile-avatar" src="{{ profile.avatar_url|default:'/static/img/default-avatar.png' }}" alt="{{ profile.full_name|default:user.get_full_name|default:user.username }} avatar" width="96" height="96" loading="lazy">
+    <figcaption class="visually-hidden">Current profile avatar</figcaption>
+  </figure>
+  {% if can_edit %}
+  <div class="avatar-actions">
+    <label for="id_avatar" class="btn btn-outline-primary w-100">Upload new avatar
+      <input class="visually-hidden" type="file" name="avatar" id="id_avatar" accept="image/png,image/jpeg,image/gif">
+    </label>
+    <p class="form-text mb-0">PNG, JPG, or GIF up to 5&nbsp;MB. <!-- Server-side validation should enforce file type and size. --></p>
+  </div>
+  {% endif %}
+</div>

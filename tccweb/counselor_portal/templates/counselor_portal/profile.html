@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Counselor Profile - Safe Campus{% endblock %}
+
+{% block content %}
+<section class="profile-page container-xxl" aria-labelledby="profile-title">
+  <header class="profile-header" role="banner">
+    <div class="profile-header-main">
+      <img class="profile-avatar" src="{{ profile.avatar_url|default:'/static/img/default-avatar.png' }}" alt="{{ profile.full_name|default:user.get_full_name|default:user.username }} avatar" width="96" height="96" loading="lazy">
+      <div class="profile-meta">
+        <h1 id="profile-title" class="profile-title">{{ profile.full_name|default:user.get_full_name|default:user.username }}</h1>
+        <p class="profile-role text-muted mb-0">{{ profile.role|default:'Counselor' }}</p>
+        <p class="profile-contact mb-0">{{ profile.email|default:user.email }}</p>
+      </div>
+    </div>
+    <div class="profile-header-actions">
+      {% if can_edit %}
+      <a class="btn btn-primary" href="#edit-profile" id="edit-profile-button">Update availability</a>
+      {% endif %}
+      <a class="btn btn-outline-secondary" href="{{ schedule_url|default:profile.schedule_url|default:'#' }}">View schedule</a>
+    </div>
+  </header>
+
+  <div class="profile-main" role="region" aria-label="Counselor profile content">
+    <div class="profile-primary">
+      {% include "partials/profile_form.html" %}
+
+      <section class="profile-section" aria-labelledby="counselor-specialization-heading">
+        <div class="profile-card">
+          <h2 id="counselor-specialization-heading" class="profile-section-title">Specializations &amp; focus areas</h2>
+          {% with tag_list=specialization_tags|default:profile.specialization_tags %}
+            {% if tag_list %}
+            <ul class="profile-chip-list">
+              {% for tag in tag_list %}
+              <li class="profile-chip">{{ tag }}</li>
+              {% endfor %}
+            </ul>
+            {% elif profile.specializations %}
+            <p class="mb-0">{{ profile.specializations }}</p>
+            {% elif profile.tags %}
+            <p class="mb-0">{{ profile.tags }}</p>
+            {% else %}
+            <p class="text-muted mb-0">Add your focus areas so students know how you can help.</p>
+            {% endif %}
+          {% endwith %}
+        </div>
+      </section>
+
+      <section class="profile-section" aria-labelledby="counselor-hours-heading">
+        <div class="profile-card">
+          <h2 id="counselor-hours-heading" class="profile-section-title">Office hours &amp; contact</h2>
+          <div class="profile-summary-grid">
+            <dl>
+              <dt>Office hours</dt>
+              <dd>{{ profile.office_hours|default:'Share your office hours to help students plan sessions.' }}</dd>
+            </dl>
+            <dl>
+              <dt>Phone</dt>
+              <dd>{% if profile.phone %}<a href="tel:{{ profile.phone }}">{{ profile.phone }}</a>{% else %}<span class="text-muted">Not provided</span>{% endif %}</dd>
+            </dl>
+            <dl>
+              <dt>Location</dt>
+              <dd>{{ profile.location|default:'Add your counseling location or meeting link.' }}</dd>
+            </dl>
+          </div>
+          <div class="profile-summary-bio">
+            <h3 class="h6">Bio</h3>
+            <p>{{ profile.bio|default:'Introduce yourself so students understand your background and approach.' }}</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="profile-side" aria-labelledby="counselor-insights-heading">
+      <div class="profile-card">
+        <h2 id="counselor-insights-heading" class="profile-section-title">Active caseload</h2>
+        <ul class="profile-stats">
+          <li>
+            <span class="profile-stat-label">Open cases</span>
+            <span class="profile-stat-value">{{ open_cases|default:profile.open_cases|default:0 }}</span>
+          </li>
+          <li>
+            <span class="profile-stat-label">Average response time</span>
+            <span class="profile-stat-value">{{ avg_response_time|default:profile.avg_response_time|default:'&lt;24 hrs' }}</span>
+          </li>
+          <li>
+            <span class="profile-stat-label">Upcoming sessions</span>
+            <span class="profile-stat-value">{{ upcoming_sessions|default:profile.upcoming_sessions|default:0 }}</span>
+          </li>
+        </ul>
+        <div class="d-grid gap-3">
+          <a class="btn btn-outline-primary" href="{{ schedule_url|default:profile.schedule_url|default:'#' }}">Manage calendar</a>
+          <a class="btn btn-outline-secondary" href="{{ reports_url|default:profile.reports_url|default:'#' }}">Review assigned cases</a>
+        </div>
+      </div>
+
+      <div class="profile-card">
+        <h2 class="profile-section-title">Helpful links</h2>
+        <ul class="profile-list">
+          <li class="profile-list-item">
+            <div>
+              <p class="mb-0 fw-semibold">Resource library</p>
+              <p class="mb-0 text-muted small">Share educational materials with students.</p>
+            </div>
+            <a class="btn btn-link" href="{% url 'awareness' %}">Open</a>
+          </li>
+          <li class="profile-list-item">
+            <div>
+              <p class="mb-0 fw-semibold">Message center</p>
+              <p class="mb-0 text-muted small">Catch up on student messages.</p>
+            </div>
+            <a class="btn btn-link" href="{{ messages_url|default:profile.messages_url|default:'#' }}">View</a>
+          </li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</section>
+{% endblock %}

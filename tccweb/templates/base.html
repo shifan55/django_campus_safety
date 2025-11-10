@@ -31,6 +31,7 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="{% static 'css/messages.css' %}">
+    <link rel="stylesheet" href="{% static 'css/profile.css' %}">
     
     {% block extra_head %}{% endblock %}
 </head>
@@ -103,11 +104,11 @@
                     {% if user.is_authenticated %}
                     <!-- Admin Login -->
                         {% if user.is_superuser %}
-                        <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'profile' %}"><i class="fas fa-user-circle me-1"></i>Profile</a></li>
+                        <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'admin_profile' %}active{% endif %}" href="{% url 'admin_profile' %}"><i class="fas fa-user-circle me-1"></i>Profile</a></li>
                         <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt me-1"></i>Logout</a></li>
                         <!-- Counselor Login -->
                         {% elif user.is_staff %}
-                        <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'profile' %}"><i class="fas fa-user-circle me-1"></i>Profile</a></li>
+                        <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'counselor_profile' %}active{% endif %}" href="{% url 'counselor_profile' %}"><i class="fas fa-user-circle me-1"></i>Profile</a></li>
                         <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt me-1"></i>Logout</a></li>
                         {% else %}
                         <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'profile' %}"><i class="fas fa-user-circle me-1"></i>Profile</a></li>
@@ -368,6 +369,7 @@
     </script>
 
     <script src="{% static 'js/messages.js' %}" defer></script>
+    <script src="{% static 'js/profile.js' %}" defer></script>
     
         <!-- Auto-dismiss flash messages -->
     <script>

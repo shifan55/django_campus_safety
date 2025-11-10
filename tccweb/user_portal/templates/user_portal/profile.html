@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Your Profile - Safe Campus{% endblock %}
+
+{% block content %}
+<section class="profile-page container-xxl" aria-labelledby="profile-title">
+  <header class="profile-header" role="banner">
+    <div class="profile-header-main">
+      <img class="profile-avatar" src="{{ profile.avatar_url|default:'/static/img/default-avatar.png' }}" alt="{{ profile.full_name|default:user.get_full_name|default:user.username }} avatar" width="96" height="96" loading="lazy">
+      <div class="profile-meta">
+        <h1 id="profile-title" class="profile-title">{{ profile.full_name|default:user.get_full_name|default:user.username }}</h1>
+        <p class="profile-role text-muted mb-0">{{ profile.role|default:user_role|default:'Community Member' }}</p>
+        <p class="profile-contact mb-0">{{ profile.email|default:user.email }}</p>
+      </div>
+    </div>
+    <div class="profile-header-actions">
+      {% if can_edit %}
+      <a class="btn btn-primary" href="#edit-profile" id="edit-profile-button">Edit profile</a>
+      {% endif %}
+      <a class="btn btn-outline-secondary" href="{{ password_change_url|default:'#' }}">Change password</a>
+    </div>
+  </header>
+
+  <div class="profile-main" role="region" aria-label="Profile content">
+    <div class="profile-primary">
+      {% include "partials/profile_form.html" %}
+
+      <section class="profile-section" aria-labelledby="privacy-settings-heading">
+        <div class="profile-card">
+          <h2 id="privacy-settings-heading" class="profile-section-title">Privacy &amp; safety preferences</h2>
+          <p class="text-muted">Manage how you receive updates and how your reports are shared.</p>
+          <form class="profile-form-toggles" method="post" action="" data-confirm="Update privacy settings?">
+            {% csrf_token %}
+            <div class="toggle-row">
+              <div>
+                <h3>Email notifications</h3>
+                <p class="text-muted mb-0">Receive email alerts when there is movement on your reports.</p>
+              </div>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="notifications" id="id_notifications" {% if profile.notifications|default_if_none:True|default:True %}checked{% endif %}>
+                <label class="form-check-label" for="id_notifications">Enabled</label>
+              </div>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <h3>Anonymous reporting</h3>
+                <p class="text-muted mb-0">Choose whether to submit new reports anonymously by default.</p>
+              </div>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="anonymous_default" id="id_anonymous_default" {% if profile.anonymous_default|default_if_none:False|default:False %}checked{% endif %}>
+                <label class="form-check-label" for="id_anonymous_default">Enabled</label>
+              </div>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <h3>Support reminders</h3>
+                <p class="text-muted mb-0">Show quick links to support services on the dashboard.</p>
+              </div>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="support_resources" id="id_support_resources" {% if profile.support_resources|default_if_none:True|default:True %}checked{% endif %}>
+                <label class="form-check-label" for="id_support_resources">Enabled</label>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-outline-primary">Save preferences</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="profile-section" aria-labelledby="linked-reports-heading">
+        <div class="profile-card">
+          <h2 id="linked-reports-heading" class="profile-section-title">Your reports</h2>
+          {% with reports=linked_reports|default_if_none:profile_reports %}
+            {% if reports %}
+            <ul class="profile-list">
+              {% for report in reports %}
+              <li class="profile-list-item">
+                <div>
+                  <p class="mb-0 fw-semibold">{{ report.title|default:'Report #'|add:report.id|default:'Campus report' }}</p>
+                  <p class="text-muted small mb-0">Updated {{ report.updated_at|default:report.created_at|default:'recently' }}</p>
+                </div>
+                <span class="badge bg-info-subtle text-info-emphasis">{{ report.status|default:'In review' }}</span>
+              </li>
+              {% empty %}
+              <li class="profile-list-item text-muted">No reports found.</li>
+              {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted mb-0">You have not submitted any reports yet.</p>
+            {% endif %}
+          {% endwith %}
+          <div class="mt-3 d-flex gap-2 flex-wrap">
+            <a class="btn btn-primary" href="{% url 'submit_report' %}">Submit a report</a>
+            <a class="btn btn-outline-secondary" href="{% url 'track_report' %}">Track a report</a>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="profile-side" aria-labelledby="user-actions-heading">
+      <div class="profile-card">
+        <h2 id="user-actions-heading" class="profile-section-title">Account actions</h2>
+        <div class="d-grid gap-3">
+          <a class="btn btn-outline-primary" href="{% url 'dashboard' %}">Go to dashboard</a>
+          <a class="btn btn-outline-secondary" href="{% url 'awareness' %}">Explore resources</a>
+        </div>
+        <div class="mt-4">
+          <form method="post" action="{{ delete_account_url|default:'' }}" data-profile-delete>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete-account">
+            <button type="submit" class="btn btn-outline-danger w-100">Delete account</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="profile-card">
+        <h2 class="profile-section-title">Support resources</h2>
+        <ul class="profile-list">
+          <li class="profile-list-item">
+            <div>
+              <p class="mb-0 fw-semibold">Emergency hotline</p>
+              <p class="mb-0 text-muted small">24/7 crisis support</p>
+            </div>
+            <a class="btn btn-link" href="tel:1990">Call 1990</a>
+          </li>
+          <li class="profile-list-item">
+            <div>
+              <p class="mb-0 fw-semibold">Campus counseling</p>
+              <p class="mb-0 text-muted small">support@university.edu</p>
+            </div>
+            <a class="btn btn-link" href="mailto:support@university.edu">Email</a>
+          </li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</section>
+{% endblock %}

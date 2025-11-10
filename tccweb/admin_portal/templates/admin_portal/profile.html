@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Administrator Profile - Safe Campus{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/profile.css' %}">
+{% endblock extra_head %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/profile.js' %}" defer></script>
+{% endblock extra_scripts %}
+
+{% block content %}
+<section class="profile-page container-xxl" aria-labelledby="profile-title">
+  <header class="profile-header" role="banner">
+    <div class="profile-header-main">
+      <img class="profile-avatar" src="{{ profile.avatar_url|default:'/static/img/default-avatar.png' }}" alt="{{ profile.full_name|default:user.get_full_name|default:user.username }} avatar" width="96" height="96" loading="lazy">
+      <div class="profile-meta">
+        <h1 id="profile-title" class="profile-title">{{ profile.full_name|default:user.get_full_name|default:user.username }}</h1>
+        <p class="profile-role text-muted mb-1">{{ profile.role|default:'Administrator' }}</p>
+        <ul class="profile-badges" aria-label="Administrator privileges">
+          <li class="badge bg-warning text-dark">System admin</li>
+          {% if is_admin %}<li class="badge bg-success">Full access</li>{% endif %}
+        </ul>
+      </div>
+    </div>
+    <div class="profile-header-actions">
+      {% if can_edit %}
+      <a class="btn btn-primary" href="#edit-profile" id="edit-profile-button">Edit profile</a>
+      {% endif %}
+      <a class="btn btn-outline-secondary" href="{{ admin_dashboard_url|default:'#' }}">Admin dashboard</a>
+    </div>
+  </header>
+
+  <div class="profile-main" role="region" aria-label="Administrator profile content">
+    <div class="profile-primary">
+      {% include "partials/profile_form.html" %}
+
+      <section class="profile-section" aria-labelledby="admin-audit-heading">
+        <div class="profile-card">
+          <h2 id="admin-audit-heading" class="profile-section-title">Audit &amp; compliance</h2>
+          <p class="text-muted">Quick access to the tools you need to oversee platform activity.</p>
+          <ul class="profile-list">
+            <li class="profile-list-item">
+              <div>
+                <p class="mb-0 fw-semibold">Impersonate user</p>
+                <p class="mb-0 text-muted small">Temporarily view the portal as another user for support purposes.</p>
+              </div>
+              <a class="btn btn-link" href="{{ impersonate_url|default:'#' }}">Launch</a>
+            </li>
+            <li class="profile-list-item">
+              <div>
+                <p class="mb-0 fw-semibold">Security logs</p>
+                <p class="mb-0 text-muted small">Review authentication attempts and permission changes.</p>
+              </div>
+              <a class="btn btn-link" href="{{ security_logs_url|default:'#' }}">View logs</a>
+            </li>
+            <li class="profile-list-item">
+              <div>
+                <p class="mb-0 fw-semibold">Data exports</p>
+                <p class="mb-0 text-muted small">Generate compliance-ready reports for investigations.</p>
+              </div>
+              <a class="btn btn-link" href="{{ data_export_url|default:'#' }}">Manage</a>
+            </li>
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <aside class="profile-side" aria-labelledby="admin-quick-links-heading">
+      <div class="profile-card">
+        <h2 id="admin-quick-links-heading" class="profile-section-title">Quick links</h2>
+        <div class="d-grid gap-3">
+          <a class="btn btn-outline-primary" href="{{ user_management_url|default:'#' }}">User management</a>
+          <a class="btn btn-outline-primary" href="{{ reports_overview_url|default:'#' }}">Reports overview</a>
+          <a class="btn btn-outline-secondary" href="{{ system_settings_url|default:'#' }}">System settings</a>
+        </div>
+      </div>
+
+      <div class="profile-card">
+        <h2 class="profile-section-title">Platform health</h2>
+        <ul class="profile-stats">
+          <li>
+            <span class="profile-stat-label">Active users</span>
+            <span class="profile-stat-value">{{ active_users|default:'—' }}</span>
+          </li>
+          <li>
+            <span class="profile-stat-label">Open alerts</span>
+            <span class="profile-stat-value">{{ open_alerts|default:0 }}</span>
+          </li>
+          <li>
+            <span class="profile-stat-label">Last backup</span>
+            <span class="profile-stat-value">{{ last_backup_at|default:'Today' }}</span>
+          </li>
+        </ul>
+        <form method="post" action="{{ refresh_caches_url|default:'' }}" class="mt-3" data-profile-action>
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-secondary w-100">Refresh caches</button>
+        </form>
+      </div>
+    </aside>
+  </div>
+</section>
+{% endblock content %}

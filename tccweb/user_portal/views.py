@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_GET
 from django.core.paginator import Paginator
@@ -18,6 +18,12 @@ from django.conf import settings
 import logging
 
 logger = logging.getLogger(__name__)
+
+def _safe_reverse(name: str, *args, **kwargs) -> str:
+    try:
+        return reverse(name, args=args, kwargs=kwargs)
+    except NoReverseMatch:
+        return "#"
 
 def _notify_counselor_new_message(report, sender, insight=None):
     """Send a websocket notification to the assigned counselor."""
@@ -413,10 +419,44 @@ def report_success(request, tracking_code):
 
 
 @login_required
-@user_passes_test(lambda u: not u.is_staff)
 def profile_view(request):
-    return render(request, 'profile.html', {'user': request.user})
+    if request.user.is_superuser:
+        return redirect('admin_profile')
+    if request.user.is_staff:
+        return redirect('counselor_profile')
 
+    profile = getattr(request.user, "profile", None)
+    linked_reports = list(
+        Report.objects.filter(reporter=request.user)
+        .order_by('-updated_at', '-created_at')[:8]
+    )
+    linked_reports = linked_reports or None
+
+    profile_reports = []
+    if profile is not None:
+        related_reports = getattr(profile, "reports", None)
+        if related_reports is not None:
+            try:
+                if hasattr(related_reports, "all"):
+                    profile_reports = list(related_reports.all()[:8])
+                else:
+                    profile_reports = list(related_reports)[:8]
+            except Exception:  # pragma: no cover - defensive fallback
+                logger.exception("Failed to load reports attached to profile")
+                profile_reports = []
+
+    context = {
+        "profile": profile,
+        "user": request.user,
+        "can_edit": True,
+        "linked_reports": linked_reports,
+        "profile_reports": profile_reports,
+        "password_change_url": _safe_reverse('account_change_password'),
+        "delete_account_url": _safe_reverse('account_delete'),
+        "user_role": getattr(request.user, "role", None),
+    }
+
+    return render(request, 'user_portal/profile.html', context)
 @csrf_exempt
 @require_POST
 def set_theme(request):
