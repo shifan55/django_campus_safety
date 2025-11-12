@@ -4,6 +4,19 @@
 
 {% block title %}Admin Dashboard - Safe Campus{% endblock %}
 
+{% block extra_head %}
+{{ block.super }}
+{% if GOOGLE_MAPS_API_KEY %}
+<script defer src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places"></script>
+{% else %}
+<script>
+    window.addEventListener('DOMContentLoaded', function () {
+        console.warn('Google Maps API key is not configured. Map features will be unavailable.');
+    });
+</script>
+{% endif %}
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <div class="row">

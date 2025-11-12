@@ -27,6 +27,8 @@ if not FILE_ENCRYPTION_KEY:
 
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_CLIENT_KEY = os.environ.get("GOOGLE_CLIENT_KEY", "")
+GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "")
 SITE_DOMAIN = os.environ.get("SITE_DOMAIN", "example.com")
 SITE_NAME = os.environ.get("SITE_NAME", SITE_DOMAIN)
 
@@ -84,8 +86,8 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "django.template.context_processors.static",
+                "tccweb.core.context_processors.google_keys",
                 "tccweb.core.context_processors.enable_2fa_banner",
-                "tccweb.user_portal.context_processors.google_maps_key",
                 "tccweb.user_portal.context_processors.unread_messages",
             ],
             "builtins": [
@@ -180,4 +182,16 @@ EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "no-reply@safecampus.app")
 
-
+# Google integrations ---------------------------------------------------------
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "APP": {
+            "client_id": GOOGLE_CLIENT_ID,
+            "secret": GOOGLE_CLIENT_SECRET,
+            "key": GOOGLE_CLIENT_KEY,
+        },
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"access_type": "offline"},
+        "OAUTH_PKCE_ENABLED": True,
+    }
+}
