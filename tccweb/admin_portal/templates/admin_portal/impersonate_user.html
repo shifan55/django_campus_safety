@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Impersonate User - Safe Campus{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/profile.css' %}">
+{% endblock extra_head %}
+
+{% block content %}
+<section class="container-xxl py-5" aria-labelledby="impersonate-title">
+  <div class="row justify-content-center">
+    <div class="col-xl-8 col-lg-9">
+      <div class="mb-4">
+        <a class="btn btn-link ps-0" href="{% url 'admin_profile' %}"><i class="fas fa-arrow-left me-2"></i>Back to profile</a>
+      </div>
+      <header class="mb-4">
+        <h1 id="impersonate-title" class="mb-1">Impersonate a user</h1>
+        <p class="text-muted mb-0">Temporarily access the platform as another account to investigate support requests. Actions you take while impersonating are attributed to that account.</p>
+      </header>
+
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+          <form method="get" class="row g-3 align-items-end" role="search" aria-label="Search users to impersonate">
+            <div class="col-sm-8">
+              <label class="form-label" for="impersonate-search">Find a user</label>
+              <input
+                type="search"
+                id="impersonate-search"
+                name="q"
+                value="{{ search_query }}"
+                class="form-control"
+                placeholder="Search by name, username, or email"
+              >
+            </div>
+            <div class="col-sm-4">
+              <button type="submit" class="btn btn-outline-primary w-100">Search</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <form method="post" class="needs-validation" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="q" value="{{ search_query }}">
+            <input type="hidden" name="next" value="{{ next_url }}">
+            <h2 class="h4 mb-3">Choose an account</h2>
+            <p class="text-muted">Only active accounts appear in this list. If you cannot find a user, refine your search above.</p>
+            <div class="mb-3">
+              {{ form.user.label_tag }}
+              {{ form.user }}
+              {% if form.user.errors %}
+                <div class="invalid-feedback d-block">
+                  {{ form.user.errors|striptags }}
+                </div>
+              {% endif %}
+            </div>
+            <button type="submit" class="btn btn-primary" {% if not has_candidates %}disabled{% endif %}>Start impersonating</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card shadow-sm border-0 mt-4">
+        <div class="card-body">
+          <h2 class="h5">Recent matches</h2>
+          {% if preview_users %}
+          <p class="text-muted">Showing up to {{ preview_limit }} accounts that match your search.</p>
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead>
+                <tr>
+                  <th scope="col">Name</th>
+                  <th scope="col">Username</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Role</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for candidate in preview_users %}
+                <tr>
+                  <td>{{ candidate.get_full_name|default:candidate.username }}</td>
+                  <td><code>{{ candidate.username }}</code></td>
+                  <td>{{ candidate.email|default:'—' }}</td>
+                  <td>
+                    {% if candidate.is_superuser %}
+                      <span class="badge bg-danger-subtle text-danger">Administrator</span>
+                    {% elif candidate.is_staff %}
+                      <span class="badge bg-info-subtle text-info">Counselor</span>
+                    {% else %}
+                      <span class="badge bg-secondary-subtle text-secondary">Reporter</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <p class="text-muted mb-0">No active users matched your search. Try a different name or email.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock content %}

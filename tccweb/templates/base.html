@@ -123,6 +123,26 @@
         </div>
     </nav>
 
+    {% if request.session.impersonator_id %}
+    <div class="border-bottom border-warning-subtle bg-warning-subtle text-warning-emphasis py-3" role="status" aria-live="polite">
+        <div class="container-xxl d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+                <strong>Impersonation active:</strong>
+                You are currently acting as
+                <span class="fw-semibold">{{ user.get_full_name|default:user.username }}</span>.
+                <span class="text-muted small ms-1">Signed in originally as {{ request.session.impersonator_name }}</span>
+            </div>
+            <form method="post" action="{% url 'admin_stop_impersonation' %}" class="d-flex align-items-center gap-2">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-sm btn-warning">
+                    <i class="fas fa-user-shield me-1"></i>Return to admin
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Flash Messages -->
 {# Django flash/messages #}
 {% if messages %}

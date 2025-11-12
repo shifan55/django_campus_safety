@@ -35,7 +35,11 @@ from django.utils import timezone
 from django.templatetags.static import static
 
 
-from tccweb.core.models import Report, ReportStatus  # provides status choices for filtering
+from tccweb.core.models import (
+    Report,
+    ReportStatus,
+    SystemLog,
+)  # provides status choices for filtering
 from .forms import CaseNoteForm
 from tccweb.core.forms import MessageForm
 from .models import CaseNote, ChatMessage, AdminAlert, RiskLevel, EmotionLabel, CounselorProfile
@@ -479,16 +483,40 @@ def case_detail(request, report_id):
         Q(id=report_id)
         & (Q(assigned_to=request.user) | Q(assigned_to__isnull=True)),
     )
+    
+    if request.method == "GET":
+        # Record that the counselor accessed the report detail view.
+        AuditLogMixin.log_view(
+            user=request.user,
+            obj=report,
+            metadata={
+                "action": SystemLog.ActionType.VIEWED,
+                "report_id": report.pk,
+                "path": request.path,
+            },
+            description=f"{request.user.get_full_name() or request.user.username} viewed Report #{report.pk}",
+        )
+        
     is_owner = report.assigned_to_id == request.user.id
     note_form = CaseNoteForm(request.POST or None)
     msg_form = MessageForm(request.POST or None, request.FILES or None)
 
     if request.method == "POST":
         if "add_note" in request.POST and is_owner and note_form.is_valid():
-            CaseNote.objects.create(
+            note = CaseNote.objects.create(
                 report=report,
                 counselor=request.user,
                 note=note_form.cleaned_data["note"],
+            )
+            # Capture edits made by counselors via case notes.
+            AuditLogMixin.log_edit(
+                user=request.user,
+                obj=report,
+                metadata={
+                    "action": "add_note",
+                    "note_id": note.pk,
+                },
+                description=f"{request.user.get_full_name() or request.user.username} added a note to Report #{report.pk}",
             )
             return redirect("counselor_case_detail", report_id=report.id)
         
@@ -497,6 +525,16 @@ def case_detail(request, report_id):
             report.resolved_at = timezone.now()
             report.awaiting_response = False
             report.save(update_fields=["status", "awaiting_response"])
+            # Document the closure event for the report.
+            AuditLogMixin.log_close(
+                user=request.user,
+                obj=report,
+                metadata={
+                    "action": "resolve_case",
+                    "report_id": report.pk,
+                },
+                description=f"{request.user.get_full_name() or request.user.username} closed Report #{report.pk}",
+            )
             admins = get_user_model().objects.filter(is_superuser=True)
             admin_emails = admins.values_list("email", flat=True)
             if admin_emails:
@@ -539,7 +577,7 @@ def case_detail(request, report_id):
         ):
             parent_id = msg_form.cleaned_data.get("parent_id")
             parent = ChatMessage.objects.filter(id=parent_id, report=report).first() if parent_id else None
-            ChatMessage.create(
+            message = ChatMessage.create(
                 report=report,
                 sender=request.user,
                 recipient=report.reporter,
@@ -548,6 +586,16 @@ def case_detail(request, report_id):
                 attachment=msg_form.cleaned_data.get("attachment"),
             )
             Report.objects.filter(pk=report.pk).update(awaiting_response=False)
+            # Sending a message modifies the report workflow, so log it as an edit.
+            AuditLogMixin.log_edit(
+                user=request.user,
+                obj=report,
+                metadata={
+                    "action": "send_message",
+                    "message_id": message.pk,
+                },
+                description=f"{request.user.get_full_name() or request.user.username} messaged the reporter on Report #{report.pk}",
+            )
             return redirect("counselor_case_detail", report_id=report.id)
 
     notes = CaseNote.objects.filter(report=report).order_by("-created_at")
@@ -745,6 +793,16 @@ def claim_case(request, report_id):
         report.assigned_at = timezone.now()
         report.resolved_at = None
         report.save()
+        
+        AuditLogMixin.log_edit(
+            user=request.user,
+            obj=report,
+            metadata={
+                "action": "claim_case",
+                "report_id": report.pk,
+            },
+            description=f"{request.user.get_full_name() or request.user.username} claimed Report #{report.pk}",
+        )
         
         messages.success(request, f"Successfully claimed Report #{report.id}")
         return redirect("counselor_case_detail", report_id=report.id)

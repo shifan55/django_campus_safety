@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Data Exports - Safe Campus{% endblock %}
+
+{% block content %}
+<section class="container-xxl py-5" aria-labelledby="data-exports-title">
+  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+    <div>
+      <h1 id="data-exports-title" class="mb-1">Data exports</h1>
+      <p class="text-muted mb-0">Generate compliance-ready evidence bundles for investigative and legal reviews.</p>
+    </div>
+    <div class="text-md-end small text-muted">
+      <div>Total reports: {{ report_stats.total_reports }}</div>
+      <div>Open cases: {{ report_stats.open_cases }}</div>
+      <div>Reports (last 30 days): {{ report_stats.recent_reports }}</div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <form method="post" class="card shadow-sm" novalidate>
+        <div class="card-body">
+          <h2 class="h5 mb-3">Configure export parameters</h2>
+          <p class="text-muted small mb-4">Exports are delivered as a ZIP archive that contains machine-readable CSV or JSON files along with metadata that documents the selected filters.</p>
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger" role="alert">
+            {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.start_date.id_for_label }}">{{ form.start_date.label }}</label>
+              {{ form.start_date }}
+              {% if form.start_date.help_text %}<div class="form-text">{{ form.start_date.help_text }}</div>{% endif %}
+              {% for error in form.start_date.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.end_date.id_for_label }}">{{ form.end_date.label }}</label>
+              {{ form.end_date }}
+              {% if form.end_date.help_text %}<div class="form-text">{{ form.end_date.help_text }}</div>{% endif %}
+              {% for error in form.end_date.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <label class="form-label" for="{{ form.statuses.id_for_label }}">{{ form.statuses.label }}</label>
+            {{ form.statuses }}
+            {% if form.statuses.help_text %}<div class="form-text">{{ form.statuses.help_text }}</div>{% endif %}
+            {% for error in form.statuses.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          </div>
+
+          <div class="row row-cols-1 row-cols-md-2 row-cols-lg-2 g-3 mt-3">
+            <div class="col">
+              <div class="form-check">
+                {{ form.include_case_notes }}
+                <label class="form-check-label" for="{{ form.include_case_notes.id_for_label }}">{{ form.include_case_notes.label }}</label>
+                {% if form.include_case_notes.help_text %}<div class="form-text">{{ form.include_case_notes.help_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col">
+              <div class="form-check">
+                {{ form.include_messages }}
+                <label class="form-check-label" for="{{ form.include_messages.id_for_label }}">{{ form.include_messages.label }}</label>
+                {% if form.include_messages.help_text %}<div class="form-text">{{ form.include_messages.help_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col">
+              <div class="form-check">
+                {{ form.include_system_logs }}
+                <label class="form-check-label" for="{{ form.include_system_logs.id_for_label }}">{{ form.include_system_logs.label }}</label>
+                {% if form.include_system_logs.help_text %}<div class="form-text">{{ form.include_system_logs.help_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col">
+              <div class="form-check">
+                {{ form.include_security_logs }}
+                <label class="form-check-label" for="{{ form.include_security_logs.id_for_label }}">{{ form.include_security_logs.label }}</label>
+                {% if form.include_security_logs.help_text %}<div class="form-text">{{ form.include_security_logs.help_text }}</div>{% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <span class="form-label d-block">{{ form.export_format.label }}</span>
+            <div class="d-flex flex-column flex-sm-row gap-3">
+              {% for option in form.export_format %}
+              <div class="form-check">
+                {{ option.tag }}
+                <label class="form-check-label" for="{{ option.id_for_label }}">{{ option.choice_label }}</label>
+              </div>
+              {% endfor %}
+            </div>
+            {% for error in form.export_format.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          </div>
+        </div>
+        <div class="card-footer d-flex flex-column flex-sm-row gap-2 justify-content-between align-items-sm-center">
+          <div class="text-muted small">Exports may take a few seconds. The download will begin automatically once the archive is prepared.</div>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-file-export me-1"></i>Generate export</button>
+        </div>
+      </form>
+    </div>
+
+    <aside class="col-lg-4" aria-labelledby="data-export-summary">
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <h2 id="data-export-summary" class="h5 mb-3">Available data snapshot</h2>
+          <dl class="row mb-0 small">
+            <dt class="col-7 text-muted">Total reports</dt>
+            <dd class="col-5 text-end">{{ report_stats.total_reports }}</dd>
+            <dt class="col-7 text-muted">Open cases</dt>
+            <dd class="col-5 text-end">{{ report_stats.open_cases }}</dd>
+            <dt class="col-7 text-muted">Reports in last 30 days</dt>
+            <dd class="col-5 text-end">{{ report_stats.recent_reports }}</dd>
+            <dt class="col-7 text-muted">Counselor notes</dt>
+            <dd class="col-5 text-end">{{ report_stats.case_notes }}</dd>
+            <dt class="col-7 text-muted">Secure messages</dt>
+            <dd class="col-5 text-end">{{ report_stats.messages }}</dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h2 class="h6 mb-3 text-uppercase text-muted">Status breakdown</h2>
+          <ul class="list-group list-group-flush small">
+            {% for entry in status_breakdown %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>{{ entry.label }}</span>
+              <span class="badge bg-secondary rounded-pill">{{ entry.count }}</span>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted">No reports available yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </aside>
+  </div>
+</section>
+{% endblock content %}

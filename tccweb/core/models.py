@@ -2,10 +2,13 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.core.files.storage import FileSystemStorage
 from django.core.validators import FileExtensionValidator
 from django.core.files.base import ContentFile
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 import os
 import uuid
 try:
@@ -300,3 +303,139 @@ class SupportContact(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=["created_at"])]
+
+
+class SystemLog(models.Model):
+    """Immutable audit trail used for tracking counselor actions."""
+
+    class ActionType(models.TextChoices):
+        """Supported actions that are tracked in the audit trail."""
+
+        VIEWED = "VIEWED", "Viewed"
+        EDITED = "EDITED", "Edited"
+        CLOSED = "CLOSED", "Closed"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="system_logs",
+        help_text="Actor who performed the action.",
+    )
+    timestamp = models.DateTimeField(
+        default=timezone.now,
+        help_text="When the action was performed.",
+    )
+    action_type = models.CharField(
+        max_length=32,
+        choices=ActionType.choices,
+        help_text="High level category describing the action.",
+    )
+    object_type = models.CharField(
+        max_length=128,
+        help_text="Human readable label for the object type (e.g. Report).",
+    )
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        help_text="Generic reference to the model for the affected object.",
+    )
+    object_id = models.PositiveIntegerField(
+        help_text="Primary key for the affected object.",
+    )
+    content_object = GenericForeignKey("content_type", "object_id")
+    description = models.TextField(
+        blank=True,
+        help_text="Optional human readable description of what happened.",
+    )
+    metadata = models.JSONField(
+        blank=True,
+        null=True,
+        help_text="Structured metadata for integrations or analytics.",
+    )
+
+    class Meta:
+        ordering = ["-timestamp"]
+        indexes = [
+            models.Index(
+                fields=["user", "timestamp"],
+                name="systemlog_user_timestamp_idx",
+            ),
+        ]
+        verbose_name = "System log entry"
+        verbose_name_plural = "System log entries"
+
+    def __str__(self) -> str:
+        return f"{self.get_action_type_display()} {self.object_type} #{self.object_id}"
+    
+class SecurityLog(models.Model):
+    """Capture authentication and permission related security events."""
+
+    class EventType(models.TextChoices):
+        """Enumerate the security-sensitive activities we monitor."""
+
+        LOGIN_SUCCESS = "LOGIN_SUCCESS", "Login success"
+        LOGIN_FAILURE = "LOGIN_FAILURE", "Login failure"
+        LOGOUT = "LOGOUT", "Logout"
+        PERMISSION_GRANTED = "PERMISSION_GRANTED", "Permission granted"
+        PERMISSION_REVOKED = "PERMISSION_REVOKED", "Permission revoked"
+
+    timestamp = models.DateTimeField(
+        default=timezone.now,
+        help_text="When the security event occurred.",
+    )
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="security_events",
+        blank=True,
+        null=True,
+        help_text="Authenticated user who triggered the event (if known).",
+    )
+    target_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="security_events_target",
+        blank=True,
+        null=True,
+        help_text="Account affected by the change (can differ from actor).",
+    )
+    event_type = models.CharField(
+        max_length=32,
+        choices=EventType.choices,
+        help_text="Type of security event (login, permission change, etc.).",
+    )
+    ip_address = models.GenericIPAddressField(
+        blank=True,
+        null=True,
+        help_text="Best-effort IP address captured with the event.",
+    )
+    user_agent = models.TextField(
+        blank=True,
+        help_text="Recorded User-Agent string for additional context.",
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Human readable explanation of what occurred.",
+    )
+    metadata = models.JSONField(
+        blank=True,
+        null=True,
+        help_text="Optional structured payload for downstream analysis.",
+    )
+
+    class Meta:
+        ordering = ["-timestamp"]
+        indexes = [
+            models.Index(fields=["timestamp"], name="securitylog_ts_idx"),
+            models.Index(
+                fields=["event_type", "timestamp"],
+                name="securitylog_event_ts_idx",
+            ),
+        ]
+        verbose_name = "Security log entry"
+        verbose_name_plural = "Security log entries"
+
+    def __str__(self) -> str:
+        actor = self.actor.get_username() if self.actor else "system"
+        target = self.target_user.get_username() if self.target_user else "unknown"
+        return f"{self.get_event_type_display()} {target} by {actor}"

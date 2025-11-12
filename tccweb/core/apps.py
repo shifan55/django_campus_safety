@@ -1,4 +1,5 @@
 import logging
+
 from django.apps import AppConfig
 from django.conf import settings
 from django.db.utils import OperationalError, ProgrammingError
@@ -41,3 +42,9 @@ class CoreConfig(AppConfig):
                     app.sites.add(settings.SITE_ID)
         except (OperationalError, ProgrammingError, ImportError) as exc:
             logger.warning("Could not ensure SocialApp configuration: %s", exc)
+    
+        # Register signal handlers that capture authentication activity.
+        try:
+            from . import security_logging  # noqa: F401
+        except Exception as exc:  # pragma: no cover - defensive guard
+            logger.warning("Failed to initialise security logging: %s", exc)

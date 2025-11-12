@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Security Logs - Safe Campus{% endblock %}
+
+{% block content %}
+<section class="container-xxl py-5" aria-labelledby="security-logs-title">
+  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+    <div>
+      <h1 id="security-logs-title" class="mb-1">Security logs</h1>
+      <p class="text-muted mb-0">Review authentication attempts, impersonation activity, and permission changes.</p>
+    </div>
+    <div class="text-md-end small text-muted">
+      <span class="d-block">Total records: {{ total_logs }}</span>
+      <span>Showing {{ logs.paginator.count }} result{{ logs.paginator.count|pluralize }}{% if has_filters %}, filtered{% endif %}</span>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-12 col-lg-8">
+      <form method="get" class="card card-body shadow-sm" aria-label="Filter security logs">
+        <div class="row g-3 align-items-end">
+          <div class="col-sm-6 col-lg-4">
+            <label for="event" class="form-label">Event type</label>
+            <select class="form-select" id="event" name="event">
+              <option value="">All events</option>
+              {% for value, label in event_choices %}
+              <option value="{{ value }}" {% if filters.event == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-sm-6 col-lg-4">
+            <label for="search" class="form-label">Search</label>
+            <input type="search" class="form-control" id="search" name="q" placeholder="Username, email, description" value="{{ filters.q }}">
+          </div>
+          <div class="col-sm-6 col-lg-2">
+            <label for="start" class="form-label">Start date</label>
+            <input type="date" class="form-control" id="start" name="start" value="{{ filters.start }}">
+          </div>
+          <div class="col-sm-6 col-lg-2">
+            <label for="end" class="form-label">End date</label>
+            <input type="date" class="form-control" id="end" name="end" value="{{ filters.end }}">
+          </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-filter me-1"></i>Apply filters</button>
+          {% if has_filters %}
+          <a href="{% url 'admin_security_logs' %}" class="btn btn-outline-secondary">Clear</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+    <div class="col-12 col-lg-4">
+      <div class="card shadow-sm h-100" aria-live="polite">
+        <div class="card-body">
+          <h2 class="h5 mb-3">Last 7 days</h2>
+          <ul class="list-unstyled mb-0">
+            {% for label, count in recent_rows %}
+            <li class="d-flex justify-content-between py-1 border-bottom border-light-subtle">
+              <span class="text-muted">{{ label }}</span>
+              <span class="fw-semibold">{{ count }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th scope="col">Timestamp</th>
+            <th scope="col">Event</th>
+            <th scope="col">Actor</th>
+            <th scope="col">Target</th>
+            <th scope="col">IP address</th>
+            <th scope="col">Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if logs.object_list %}
+            {% for entry in logs %}
+            <tr>
+              <td class="text-nowrap">{{ entry.timestamp|date:"Y-m-d H:i" }}</td>
+              <td><span class="badge bg-secondary text-uppercase">{{ entry.get_event_type_display }}</span></td>
+              <td>{% if entry.actor %}{{ entry.actor.get_username }}{% else %}—{% endif %}</td>
+              <td>{% if entry.target_user %}{{ entry.target_user.get_username }}{% else %}—{% endif %}</td>
+              <td>{{ entry.ip_address|default:"—" }}</td>
+              <td class="small">
+                <div>{{ entry.description|default:"No description recorded." }}</div>
+                {% if entry.user_agent %}
+                <div class="text-muted mt-1">UA: {{ entry.user_agent }}</div>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center py-5">
+              <div class="text-muted">No security events match your filters.</div>
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer d-flex justify-content-between align-items-center">
+      <div class="text-muted small">Page {{ logs.number }} of {{ logs.paginator.num_pages }}</div>
+      <nav aria-label="Security log pagination">
+        <ul class="pagination mb-0">
+          {% if logs.has_previous %}
+          <li class="page-item"><a class="page-link" href="?{% if filters.event %}event={{ filters.event }}&amp;{% endif %}{% if filters.q %}q={{ filters.q }}&amp;{% endif %}{% if filters.start %}start={{ filters.start }}&amp;{% endif %}{% if filters.end %}end={{ filters.end }}&amp;{% endif %}page={{ logs.previous_page_number }}">Previous</a></li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">Previous</span></li>
+          {% endif %}
+          <li class="page-item disabled"><span class="page-link">{{ logs.number }}</span></li>
+          {% if logs.has_next %}
+          <li class="page-item"><a class="page-link" href="?{% if filters.event %}event={{ filters.event }}&amp;{% endif %}{% if filters.q %}q={{ filters.q }}&amp;{% endif %}{% if filters.start %}start={{ filters.start }}&amp;{% endif %}{% if filters.end %}end={{ filters.end }}&amp;{% endif %}page={{ logs.next_page_number }}">Next</a></li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">Next</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  </div>
+</section>
+{% endblock content %}

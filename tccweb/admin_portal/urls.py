@@ -10,4 +10,8 @@ urlpatterns = [
     path('resource/<int:pk>/delete/', views.delete_resource, name='delete_resource'),
     path('users/', views.admin_user_management, name='admin_user_management'),
     path('profile/', views.admin_profile, name='admin_profile'),
-    ]
+    path('security-logs/', views.admin_security_logs, name='admin_security_logs'),
+    path('data-exports/', views.admin_data_exports, name='admin_data_exports'),
+    path('impersonate/', views.admin_impersonate_user, name='admin_impersonate_user'),
+    path('impersonate/stop/', views.admin_stop_impersonation, name='admin_stop_impersonation'),
+]
