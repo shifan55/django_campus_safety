@@ -37,6 +37,7 @@ from tccweb.core.models import (
     SecurityLog,
 )
 from tccweb.core.forms import EducationalResourceForm, QuizForm, QuizQuestionFormSet
+from tccweb.core.utils import build_two_factor_context
 from tccweb.accounts.forms import ProfileForm
 from tccweb.accounts.models import Profile
 from tccweb.counselor_portal.models import CaseNote, ChatMessage
@@ -981,6 +982,7 @@ def admin_profile(request):
         "form": form,
         "default_avatar": static("images/default-avatar.svg"),
     }
+    context.update(build_two_factor_context(user))
 
     return render(request, "admin_portal/profile.html", context)
 

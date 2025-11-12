@@ -63,6 +63,23 @@
                                     {% endif %}
                                 </div>
 
+                                <!--- OTP Checker -->
+                                <div class="mb-3">
+                                    {{ form.otp_token.label_tag }}
+                                    {% if form.otp_token.errors %}
+                                        {% render_field form.otp_token class+=" is-invalid" %}
+                                        {% for error in form.otp_token.errors %}
+                                            <div class="invalid-feedback d-block">{{ error }}</div>
+                                        {% endfor %}
+                                    {% else %}
+                                        {{ form.otp_token }}
+                                    {% endif %}
+                                    {% if form.otp_token.help_text %}
+                                        <div class="form-text">{{ form.otp_token.help_text }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Remember Me -->
                                 <div class="mb-3 form-check">
                                     {{ form.remember_me }}
                                     {{ form.remember_me.label }}

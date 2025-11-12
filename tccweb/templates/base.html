@@ -122,7 +122,7 @@
             </div>
         </div>
     </nav>
-
+<!-- Impersonate User -->
     {% if request.session.impersonator_id %}
     <div class="border-bottom border-warning-subtle bg-warning-subtle text-warning-emphasis py-3" role="status" aria-live="polite">
         <div class="container-xxl d-flex flex-wrap align-items-center justify-content-between gap-3">
@@ -142,6 +142,36 @@
         </div>
     </div>
     {% endif %}
+
+    <!-- 2FA Authentication Enable -->
+    {% block pre_content_banner %}
+    {% if enable_2fa_banner %}
+    {#
+        Global reminder for users who have not yet enabled 2FA.  Adjust the
+        message, link, or styling here to change how the banner is presented.
+    #}
+    <div class="border-bottom border-warning-subtle bg-warning-subtle text-warning-emphasis py-3" role="status" aria-live="polite">
+        <div class="container-xxl d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+            <div>
+                <strong>🔐 Enable 2FA to protect student confidentiality.</strong>
+                <div class="small text-muted">Two-factor authentication keeps sensitive case details and reports secure.</div>
+            </div>
+            <div>
+                {% if enable_2fa_setup_url %}
+                <a class="btn btn-sm btn-warning text-warning-emphasis fw-semibold" href="{{ enable_2fa_setup_url }}">
+                    Enable 2FA now
+                </a>
+                {% else %}
+                <span class="badge text-bg-warning text-warning-emphasis fw-semibold">
+                    Contact support to finish enabling 2FA
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endblock %}
+
 
     <!-- Flash Messages -->
 {# Django flash/messages #}

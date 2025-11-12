@@ -1,0 +1,41 @@
+{% comment %}
+Reusable card for managing two-factor authentication from any profile page.
+The include expects ``two_factor_enabled`` and ``two_factor_manage_url`` in the
+context, alongside the optional ``two_factor_can_manage`` and ``two_factor_next``
+values for more granular control.
+{% endcomment %}
+{% with heading_id=two_factor_heading_id|default:'two-factor-settings-heading' %}
+<section class="profile-section" aria-labelledby="{{ heading_id }}">
+  <div class="profile-card two-factor-settings-card">
+    <h2 id="{{ heading_id }}" class="profile-section-title">{{ two_factor_heading|default:'Two-factor authentication' }}</h2>
+    <p class="text-muted">{{ two_factor_description|default:'Add a second verification step to keep sensitive campus safety data protected.' }}</p>
+    {% if two_factor_enabled %}
+    <div class="alert alert-success d-flex flex-column flex-md-row align-items-md-center gap-2" role="status">
+      <span class="fw-semibold">Two-factor authentication is active</span>
+      {% with device_count=two_factor_device_count|default:0 %}
+      <span class="small mb-0">{{ device_count }} authenticator{% if device_count != 1 %}s{% endif %} secured your account.</span>
+      {% endwith %}
+    </div>
+    {% if two_factor_can_manage and two_factor_manage_url %}
+    <a href="{{ two_factor_manage_url }}" class="btn btn-outline-secondary">
+      Manage authenticators
+    </a>
+    {% else %}
+    <p class="text-muted small mb-0">Need to make a change? Contact the campus safety technology office.</p>
+    {% endif %}
+    {% else %}
+    <div class="alert alert-warning d-flex flex-column flex-md-row align-items-md-center gap-2" role="status">
+      <span class="fw-semibold">Two-factor authentication is not enabled</span>
+      <span class="small mb-0">Add an authenticator app to keep sensitive reports secure.</span>
+    </div>
+    {% if two_factor_can_manage and two_factor_manage_url %}
+    <a href="{{ two_factor_manage_url }}" class="btn btn-primary">
+      Set up 2FA now
+    </a>
+    {% else %}
+    <p class="text-muted small mb-0">Two-factor setup isn't available yet. Please reach out to IT support for assistance.</p>
+    {% endif %}
+    {% endif %}
+  </div>
+</section>
+{% endwith %}

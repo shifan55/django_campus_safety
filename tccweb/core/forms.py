@@ -44,6 +44,24 @@ class LoginForm(forms.Form):
             }
         )
     )
+    
+    # OTP 
+    otp_token = forms.CharField(
+        required=False,
+        label="Authenticator code",
+        max_length=8,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "6-digit code",
+                "inputmode": "numeric",
+                "autocomplete": "one-time-code",
+            }
+        ),
+        help_text="Required when two-factor authentication is enabled for your account.",
+    )
+    
+    # Remember Me 
     remember_me = forms.BooleanField(
         required=False,
         widget=forms.CheckboxInput(

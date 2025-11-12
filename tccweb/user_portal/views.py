@@ -9,12 +9,18 @@ from django.views.decorators.http import require_POST, require_GET
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.templatetags.static import static
+from django_otp import login as otp_login
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from tccweb.core.models import Report, EducationalResource, SupportContact
 from tccweb.accounts.forms import ProfileForm
 from tccweb.accounts.models import Profile
 from tccweb.core.forms import LoginForm, RegistrationForm, AnonymousReportForm, ReportForm, MessageForm
+from tccweb.core.utils import (
+    build_two_factor_context,
+    user_has_confirmed_2fa,
+    verify_user_otp_token,
+)
 from tccweb.counselor_portal.emotion import analyze_emotion
 from tccweb.counselor_portal.models import ChatMessage, RiskLevel
 from django.conf import settings
@@ -165,14 +171,42 @@ def login_view(request):
                 username=form.cleaned_data['username'],
                 password=form.cleaned_data['password'],
             )
-            if user:
-                login(request, user)
-                if not form.cleaned_data.get("remember_me"):
-                    request.session.set_expiry(0)
-                if user.is_staff:
-                    return redirect('admin_dashboard')
-                return redirect('index')
-            messages.error(request, 'Invalid credentials.')
+            if user is not None:
+                if not user.is_active:
+                    form.add_error(None, 'This account is inactive.')
+                else:
+                    requires_otp = user_has_confirmed_2fa(user)
+                    if requires_otp:
+                        token = form.cleaned_data.get('otp_token', '').strip()
+                        if not token:
+                            form.add_error(
+                                'otp_token',
+                                'Enter the six-digit code from your authenticator app.',
+                            )
+                        else:
+                            verified_device = verify_user_otp_token(user, token)
+                            if verified_device is None:
+                                form.add_error(
+                                    'otp_token',
+                                    'The code was invalid or expired. Please try again.',
+                                )
+                            else:
+                                login(request, user)
+                                otp_login(request, verified_device)
+                                if not form.cleaned_data.get('remember_me'):
+                                    request.session.set_expiry(0)
+                                if user.is_staff:
+                                    return redirect('admin_dashboard')
+                                return redirect('index')
+                    else:
+                        login(request, user)
+                        if not form.cleaned_data.get('remember_me'):
+                            request.session.set_expiry(0)
+                        if user.is_staff:
+                            return redirect('admin_dashboard')
+                        return redirect('index')
+            else:
+                form.add_error(None, 'Invalid username or password.')
     else:
         form = LoginForm()
     return render(request, 'login.html', {'form': form})
@@ -474,6 +508,8 @@ def profile_view(request):
         "form": form,
         "default_avatar": static("images/default-avatar.svg"),
     }
+    
+    context.update(build_two_factor_context(request.user))
 
     return render(request, 'user_portal/profile.html', context)
 @csrf_exempt

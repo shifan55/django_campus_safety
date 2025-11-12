@@ -38,6 +38,8 @@
     <div class="profile-primary">
       {% include "partials/profile_form.html" %}
 
+      {% include "core/includes/two_factor_card.html" with two_factor_heading="Harden administrator security" two_factor_description="Keep administrative controls safe by enabling two-factor authentication." two_factor_next=request.get_full_path %}
+
       <section class="profile-section" aria-labelledby="admin-audit-heading">
         <div class="profile-card">
           <h2 id="admin-audit-heading" class="profile-section-title">Audit &amp; compliance</h2>

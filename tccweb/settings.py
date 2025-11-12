@@ -40,6 +40,9 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     "django.contrib.sites",
+    "django_otp",
+    "django_otp.plugins.otp_static",
+    "django_otp.plugins.otp_totp",
     'channels',
     "widget_tweaks",
     "allauth",
@@ -61,6 +64,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django_otp.middleware.OTPMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
@@ -80,6 +84,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "django.template.context_processors.static",
+                "tccweb.core.context_processors.enable_2fa_banner",
                 "tccweb.user_portal.context_processors.google_maps_key",
                 "tccweb.user_portal.context_processors.unread_messages",
             ],
@@ -155,6 +160,9 @@ AUTHENTICATION_BACKENDS = [
 LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
+
+# Two-factor authentication ---------------------------------------------------
+OTP_TOTP_ISSUER = SITE_NAME
 
 # django-allauth -------------------------------------------------------------
 ACCOUNT_LOGIN_METHODS = {"username", "email"}

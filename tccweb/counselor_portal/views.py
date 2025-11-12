@@ -42,6 +42,7 @@ from tccweb.core.models import (
 )  # provides status choices for filtering
 from .forms import CaseNoteForm
 from tccweb.core.forms import MessageForm
+from tccweb.core.utils import build_two_factor_context
 from .models import CaseNote, ChatMessage, AdminAlert, RiskLevel, EmotionLabel, CounselorProfile
 from .services import generate_suggested_replies
 from tccweb.accounts.forms import ProfileForm
@@ -1220,5 +1221,7 @@ def profile(request):
         "form": form,
         "default_avatar": static("images/default-avatar.svg"),
     }
+
+    context.update(build_two_factor_context(request.user))
 
     return render(request, "counselor_portal/profile.html", context)

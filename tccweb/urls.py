@@ -14,10 +14,12 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.contrib import admin
-from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib import admin
+from django.urls import include, path
+
+from tccweb.core.views import EnableTwoFactorView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -25,6 +27,11 @@ urlpatterns = [
     path('portal/', include('tccweb.admin_portal.urls')),
     path('accounts/', include('allauth.urls')),
     path('counselor/', include('tccweb.counselor_portal.urls')),
+    path(
+        'security/enable-2fa/',
+        EnableTwoFactorView.as_view(),
+        name='enable-two-factor',
+    ),
 ]
 
 if settings.DEBUG:

@@ -27,6 +27,14 @@ class Profile(models.Model):
         related_name="profile",
         on_delete=models.CASCADE,
     )
+    # 2FA
+    two_factor_enabled = models.BooleanField(
+        default=False,
+        help_text=(
+            "True when the account has completed the project-specific two-factor "
+            "authentication setup process."
+        ),
+    )
     full_name = models.CharField(max_length=255, blank=True)
     phone = models.CharField(max_length=40, blank=True)
     bio = models.TextField(blank=True)
