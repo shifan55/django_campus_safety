@@ -4,6 +4,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
 from django.urls import NoReverseMatch, reverse
+from django.utils.http import urlencode
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_GET
 from django.core.paginator import Paginator
@@ -12,6 +13,9 @@ from django.templatetags.static import static
 from django_otp import login as otp_login
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
+from allauth.socialaccount.models import SocialApp
 from tccweb.core.models import Report, EducationalResource, SupportContact
 from tccweb.accounts.forms import ProfileForm
 from tccweb.accounts.models import Profile
@@ -23,7 +27,6 @@ from tccweb.core.utils import (
 )
 from tccweb.counselor_portal.emotion import analyze_emotion
 from tccweb.counselor_portal.models import ChatMessage, RiskLevel
-from django.conf import settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -162,6 +165,45 @@ def resource_detail(request, resource_id):
         data["file"] = resource.file.url
     return JsonResponse(data)
 
+def _post_login_destination(user) -> str:
+    """Return the most appropriate landing page after authentication."""
+
+    if user.is_superuser:
+        return "admin_dashboard"
+    if user.is_staff or hasattr(user, "counselor_profile"):
+        return "counselor_dashboard"
+    return "index"
+
+
+def _google_login_metadata():
+    """Safely determine whether Google SSO should be shown and where it points."""
+
+    provider_id = "google"
+    try:
+        apps_qs = SocialApp.objects.filter(provider=provider_id)
+        site_id = getattr(settings, "SITE_ID", None)
+        if site_id:
+            apps_qs = apps_qs.filter(sites__id=site_id)
+        social_app = apps_qs.order_by("id").first()
+    except ImproperlyConfigured:
+        logger.warning("SITE_ID is not configured; hiding Google SSO button")
+        social_app = None
+    except Exception:
+        logger.exception("Unexpected error while resolving Google SocialApp")
+        social_app = None
+
+    if not social_app:
+        return {"google_login_enabled": False, "google_login_url": None}
+
+    login_url = _safe_reverse(f"{provider_id}_login")
+    if login_url == "#":
+        return {"google_login_enabled": False, "google_login_url": None}
+
+    query = urlencode({"process": "login"})
+    login_with_process = f"{login_url}?{query}" if query else login_url
+
+    return {"google_login_enabled": True, "google_login_url": login_with_process}
+
 def login_view(request):
     if request.method == 'POST':
         form = LoginForm(request.POST)
@@ -195,21 +237,19 @@ def login_view(request):
                                 otp_login(request, verified_device)
                                 if not form.cleaned_data.get('remember_me'):
                                     request.session.set_expiry(0)
-                                if user.is_staff:
-                                    return redirect('admin_dashboard')
-                                return redirect('index')
+                                return redirect(_post_login_destination(user))
                     else:
                         login(request, user)
                         if not form.cleaned_data.get('remember_me'):
                             request.session.set_expiry(0)
-                        if user.is_staff:
-                            return redirect('admin_dashboard')
-                        return redirect('index')
+                        return redirect(_post_login_destination(user))
             else:
                 form.add_error(None, 'Invalid username or password.')
     else:
         form = LoginForm()
-    return render(request, 'login.html', {'form': form})
+    context = {"form": form}
+    context.update(_google_login_metadata())
+    return render(request, 'login.html', context)
 
 
 def logout_view(request):

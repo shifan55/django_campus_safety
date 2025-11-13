@@ -91,14 +91,16 @@
                                 </button>
                             </form>
 
-                            <div class="text-center my-4">
-                                <span class="text-muted">or continue with</span>
-                            </div>
+                            {% if google_login_enabled %}
+                                <div class="text-center my-4">
+                                    <span class="text-muted">or continue with</span>
+                                </div>
 
-                            <a href="{% provider_login_url 'google' process='login' %}" class="btn btn-outline-secondary btn-icon w-100 mb-4">
-                                <i class="fab fa-google"></i>
-                                <span>Google single sign-on</span>
-                            </a>
+                            <a href="{{ google_login_url }}" class="btn btn-outline-secondary btn-icon w-100 mb-4">
+                                    <i class="fab fa-google"></i>
+                                    <span>Google single sign-on</span>
+                                </a>
+                            {% endif %}
 
                             <div class="page-card border-0 bg-body-secondary bg-opacity-50 mt-4">
                                 <div class="page-card-body py-4">

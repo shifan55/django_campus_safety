@@ -59,6 +59,8 @@ INSTALLED_APPS = [
 ]
 SITE_ID = 1  
 
+SOCIALACCOUNT_ADAPTER = "tccweb.core.adapters.CampusSocialAccountAdapter"
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
