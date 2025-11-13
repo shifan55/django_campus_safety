@@ -68,6 +68,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "tccweb.core.middleware.AutoLogoutMiddleware",
     "django_otp.middleware.OTPMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -90,6 +91,7 @@ TEMPLATES = [
                 "django.template.context_processors.static",
                 "tccweb.core.context_processors.google_keys",
                 "tccweb.core.context_processors.enable_2fa_banner",
+                "tccweb.core.context_processors.auto_logout_settings",
                 "tccweb.user_portal.context_processors.unread_messages",
             ],
             "builtins": [
@@ -160,6 +162,11 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
+
+# Session management ---------------------------------------------------------
+AUTO_LOGOUT_TIMEOUT = 60 * 5  # 5 minutes
+SESSION_COOKIE_AGE = AUTO_LOGOUT_TIMEOUT
+SESSION_SAVE_EVERY_REQUEST = True
 
 LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/"

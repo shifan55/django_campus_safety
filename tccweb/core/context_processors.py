@@ -39,3 +39,16 @@ def enable_2fa_banner(request):
         "enable_2fa_banner": should_show_banner,
         "enable_2fa_setup_url": setup_url,
     }
+    
+def auto_logout_settings(request):
+    """Expose inactivity timeout information to templates."""
+
+    timeout = getattr(settings, "AUTO_LOGOUT_TIMEOUT", 0)
+    try:
+        timeout_seconds = int(timeout)
+    except (TypeError, ValueError):
+        timeout_seconds = 0
+
+    return {
+        "auto_logout_timeout_seconds": max(timeout_seconds, 0),
+    }

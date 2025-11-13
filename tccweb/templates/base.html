@@ -593,6 +593,46 @@
     </script>
     {% endif %}
     
+    <!-- Auttomatically Logout -->
+    {% if user.is_authenticated and auto_logout_timeout_seconds %}
+    <script>
+        (function () {
+            const timeoutSeconds = {{ auto_logout_timeout_seconds|default:0 }};
+            if (!timeoutSeconds || timeoutSeconds <= 0) {
+                return;
+            }
+
+            const redirectUrl = "{% url 'index' %}";
+            let timerId;
+
+            const triggerAutoLogout = () => {
+                window.location.replace(redirectUrl);
+            };
+
+            const resetInactivityTimer = () => {
+                window.clearTimeout(timerId);
+                timerId = window.setTimeout(triggerAutoLogout, timeoutSeconds * 1000);
+            };
+
+            const activityEvents = ['click', 'mousemove', 'keydown', 'scroll', 'touchstart'];
+            activityEvents.forEach((eventName) => {
+                const usePassive = eventName === 'scroll' || eventName === 'touchstart';
+                const options = usePassive ? { passive: true } : false;
+                document.addEventListener(eventName, resetInactivityTimer, options);
+            });
+
+            window.addEventListener('focus', resetInactivityTimer);
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    resetInactivityTimer();
+                }
+            });
+
+            resetInactivityTimer();
+        })();
+    </script>
+    {% endif %}
+
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>
