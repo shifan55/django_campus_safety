@@ -1,0 +1,119 @@
+/*
+ * Dashboard layout helpers
+ * ------------------------
+ * Keeps the sidebar responsive and collapsible using Bootstrap's offcanvas
+ * component. On lg+ breakpoints we switch to a sticky column layout, while
+ * mobile uses the offcanvas overlay triggered by the toggle button inserted
+ * in base.html. Floating action buttons are available on handheld sizes for
+ * quick access to frequent actions.
+ */
+
+:root {
+    --dashboard-sidebar-width: 280px;
+    --dashboard-shell-gap: 1.5rem;
+}
+
+.dashboard-layout {
+    padding-inline: clamp(1rem, 4vw, 2.5rem);
+}
+
+.dashboard-shell {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dashboard-shell-gap);
+}
+
+.dashboard-main {
+    min-width: 0;
+}
+
+/* Hide the scaffolding entirely when no sidebar links are supplied */
+.dashboard-layout[data-has-sidebar="false"] .dashboard-sidebar,
+.dashboard-layout[data-has-sidebar="false"] #dashboardSidebarToggleContainer {
+    display: none !important;
+}
+
+@media (min-width: 992px) {
+    .dashboard-shell {
+        display: grid;
+        grid-template-columns: var(--dashboard-sidebar-width) minmax(0, 1fr);
+        align-items: start;
+    }
+
+    .dashboard-layout[data-has-sidebar="false"] .dashboard-shell {
+        display: block;
+    }
+
+    .dashboard-sidebar.offcanvas-lg {
+        position: sticky;
+        top: calc(1rem + var(--dashboard-navbar-offset, 64px));
+        height: calc(100vh - var(--dashboard-navbar-offset, 64px) - 2rem);
+        visibility: visible;
+        transform: none;
+        border-radius: 1rem;
+        border: 1px solid rgba(var(--bs-body-color-rgb), 0.08);
+        box-shadow: var(--bs-box-shadow-sm);
+        padding: 1.5rem 1.25rem;
+    }
+}
+
+.dashboard-sidebar .nav {
+    gap: 0.5rem;
+}
+
+.dashboard-sidebar .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 0.75rem;
+    font-weight: 500;
+    color: var(--bs-body-color);
+    padding: 0.6rem 0.85rem;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.dashboard-sidebar .nav-link .fa,
+.dashboard-sidebar .nav-link .fas {
+    opacity: 0.8;
+}
+
+.dashboard-sidebar .nav-link:hover,
+.dashboard-sidebar .nav-link:focus {
+    background-color: rgba(var(--bs-primary-rgb), 0.08);
+    color: var(--bs-primary);
+    text-decoration: none;
+}
+
+.dashboard-sidebar .nav-link.active {
+    background-color: var(--bs-primary);
+    color: #fff;
+    box-shadow: var(--bs-box-shadow-sm);
+}
+
+/* Floating Action Buttons ------------------------------------------------ */
+.dashboard-fab-group {
+    z-index: 1080;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.dashboard-fab-group .btn {
+    border-radius: 999px;
+    padding-inline: 1.25rem;
+    box-shadow: var(--bs-box-shadow-lg);
+}
+
+@media (min-width: 992px) {
+    .dashboard-fab-group {
+        display: none !important;
+    }
+}
+
+/* Utility helper for cards stacked on mobile */
+@media (max-width: 767.98px) {
+    .dashboard-stack-sm > * {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
