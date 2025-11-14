@@ -110,6 +110,15 @@ class AdminCreationForm(UserCreationForm):
         return user
 
 
+class SuperAdminCreationForm(AdminCreationForm):
+    """Provision a super administrator account with elevated management access."""
+
+    def save(self, commit=True):
+        """Create a fully privileged superuser identical to Django's createsuperuser."""
+
+        return super().save(commit=commit)
+
+
 class SubAdminCreationForm(AdminCreationForm):
     """Backward compatible alias for legacy imports expecting a sub-admin form."""
 

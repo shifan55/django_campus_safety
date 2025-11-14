@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import login
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.contrib.auth.decorators import (
     login_required,
     user_passes_test,
@@ -41,11 +41,20 @@ from tccweb.core.utils import build_two_factor_context
 from tccweb.accounts.forms import ProfileForm
 from tccweb.accounts.models import Profile
 from tccweb.counselor_portal.models import CaseNote, ChatMessage
-from .forms import (
-    AdminCreationForm,
-    CounselorCreationForm,
-    DataExportForm,
-    ImpersonationForm,
+# Import the forms module so we can gracefully degrade when optional helpers
+# are missing in downstream deployments that may still rely on older builds.
+from . import forms as admin_portal_forms
+
+# Re-export the specific form classes the view expects.  Falling back to the
+# administrator form for the super administrator helper prevents runtime
+# failures when an outdated environment has not yet picked up the new class
+# definition.
+CounselorCreationForm = admin_portal_forms.CounselorCreationForm
+AdminCreationForm = admin_portal_forms.AdminCreationForm
+DataExportForm = admin_portal_forms.DataExportForm
+ImpersonationForm = admin_portal_forms.ImpersonationForm
+SuperAdminCreationForm = getattr(
+    admin_portal_forms, "SuperAdminCreationForm", AdminCreationForm
 )
 
 
@@ -55,6 +64,18 @@ try:
     from tccweb.core.models import Quiz  # or wherever your Quiz model is
 except ImportError:
     Quiz = None
+    
+# Super User
+SUPER_ADMIN_USERNAME = "shifanabs55"
+SUPER_ADMIN_GROUP_NAME = "Super Administrators"
+
+
+def _get_super_admin_group() -> Group:
+    """Return (and lazily create) the group that marks super administrators."""
+
+    group, _ = Group.objects.get_or_create(name=SUPER_ADMIN_GROUP_NAME)
+    return group
+
 
 def _safe_reverse(name: str, *args, **kwargs) -> str:
     try:
@@ -869,6 +890,20 @@ def delete_resource(request, pk):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_management(request):
+    super_admin_group = _get_super_admin_group()
+    user_is_designated_super_admin = request.user.get_username() == SUPER_ADMIN_USERNAME
+
+    if user_is_designated_super_admin and request.user.is_superuser:
+        request.user.groups.add(super_admin_group)
+
+    belongs_to_super_admin_group = request.user.groups.filter(
+        pk=super_admin_group.pk
+    ).exists()
+
+    can_manage_admins = request.user.is_superuser and (
+        belongs_to_super_admin_group or user_is_designated_super_admin
+    )
+
     counselors = (
         User.objects.filter(is_staff=True, is_superuser=False)
         .order_by('username')
@@ -883,6 +918,13 @@ def admin_user_management(request):
     )
     counselor_form = CounselorCreationForm()
     admin_form = AdminCreationForm()
+    super_admin_form = SuperAdminCreationForm()
+
+    super_admin_ids = list(
+        super_admin_group.user_set.values_list("id", flat=True)
+    )
+    if user_is_designated_super_admin and request.user.pk not in super_admin_ids:
+        super_admin_ids.append(request.user.pk)
     
     if request.method == 'POST':
         form_type = (request.POST.get('form_type') or '').strip()
@@ -908,6 +950,13 @@ def admin_user_management(request):
                 messages.success(request, 'Counselor account created.')
                 return redirect('admin_user_management')
         elif form_type == 'create_admin':
+            if not can_manage_admins:
+                messages.error(
+                    request,
+                    'Only a super administrator can manage administrator accounts.',
+                )
+                return redirect('admin_user_management')
+
             admin_form = AdminCreationForm(request.POST)
             if admin_form.is_valid():
                 try:
@@ -941,6 +990,48 @@ def admin_user_management(request):
                     return redirect('admin_user_management')
             else:
                 messages.error(request, 'Please correct the errors below to create an administrator account.')
+        elif form_type == 'create_super_admin':
+            if not can_manage_admins:
+                messages.error(
+                    request,
+                    'Only a super administrator can create additional super administrator accounts.',
+                )
+                return redirect('admin_user_management')
+
+            super_admin_form = SuperAdminCreationForm(request.POST)
+            if super_admin_form.is_valid():
+                try:
+                    new_super_admin = super_admin_form.save()
+                except IntegrityError:
+                    super_admin_form.add_error(
+                        None,
+                        'Unable to create the super administrator because the username or email already exists.',
+                    )
+                    messages.error(
+                        request,
+                        'A user with those credentials already exists. Choose a different username or email.',
+                    )
+                else:
+                    super_admin_group.user_set.add(new_super_admin)
+                    SecurityLog.objects.create(
+                        actor=request.user,
+                        target_user=new_super_admin,
+                        event_type=SecurityLog.EventType.PERMISSION_GRANTED,
+                        ip_address=_client_ip(request),
+                        user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                        description=(
+                            f"{request.user.get_username()} created super administrator "
+                            f"account {new_super_admin.get_username()}."
+                        ),
+                        metadata={
+                            "action": "create_super_admin",
+                            "target_user_id": new_super_admin.pk,
+                        },
+                    )
+                    messages.success(request, 'Super administrator account created.')
+                    return redirect('admin_user_management')
+            else:
+                messages.error(request, 'Please correct the errors below to create a super administrator account.')
         
         else:
             uid = request.POST.get('user_id')
@@ -968,6 +1059,13 @@ def admin_user_management(request):
                 "target_username": target.get_username(),
             }
 
+            if target.is_superuser and action in {'disable', 'enable', 'delete'} and not can_manage_admins:
+                messages.error(
+                    request,
+                    'Only a super administrator can manage administrator accounts.',
+                )
+                return redirect('admin_user_management')
+
             if action == 'approve' and not target.is_staff and not target.is_superuser:
                 target.is_staff = True
                 target.save(update_fields=["is_staff"])
@@ -976,15 +1074,6 @@ def admin_user_management(request):
                     f"{request.user.get_username()} granted counselor access to "
                     f"{target.get_username()}."
                 )
-            elif action == 'revoke' and target.is_staff and not target.is_superuser:
-                target.is_staff = False
-                target.save(update_fields=["is_staff"])
-                event_type = SecurityLog.EventType.PERMISSION_REVOKED
-                description = (
-                    f"{request.user.get_username()} revoked counselor access from "
-                    f"{target.get_username()}."
-                )
-                
             elif action == 'disable' and target.is_superuser and target.is_active:
                 target.is_active = False
                 target.save(update_fields=["is_active"])
@@ -1043,6 +1132,10 @@ def admin_user_management(request):
             'admins': admins,
             'counselor_form': counselor_form,
             'admin_form': admin_form,
+            'super_admin_form': super_admin_form,
+            'can_manage_admins': can_manage_admins,
+            'super_admin_ids': super_admin_ids,
+            'super_admin_group_name': SUPER_ADMIN_GROUP_NAME,
         },
     )
     
