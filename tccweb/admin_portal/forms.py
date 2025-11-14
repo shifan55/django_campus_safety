@@ -1,10 +1,25 @@
 from django import forms
+from django.apps import apps
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from django.apps import apps
+from django.db import transaction
 
 from datetime import date, timedelta
 
+
+def _apply_bootstrap_classes(form, field_classes):
+    """Attach consistent Bootstrap-friendly attributes to form widgets."""
+
+    for name, extra_attrs in field_classes.items():
+        field = form.fields.get(name)
+        if not field:
+            continue
+        css_class = field.widget.attrs.get("class", "")
+        classes = list(dict.fromkeys(f"{css_class} form-control".split()))
+        field.widget.attrs.update({
+            "class": " ".join(classes),
+            **extra_attrs,
+        })
 
 class CounselorCreationForm(UserCreationForm):
     email = forms.EmailField(required=True)
@@ -12,6 +27,18 @@ class CounselorCreationForm(UserCreationForm):
     class Meta:
         model = User
         fields = ("username", "email", "password1", "password2")
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _apply_bootstrap_classes(
+            self,
+            {
+                "username": {"autocomplete": "username"},
+                "email": {"autocomplete": "email"},
+                "password1": {"autocomplete": "new-password"},
+                "password2": {"autocomplete": "new-password"},
+            },
+        )
 
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -21,6 +48,72 @@ class CounselorCreationForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
+
+class AdminCreationForm(UserCreationForm):
+    """User creation form that provisions a privileged administrator account."""
+
+    email = forms.EmailField(required=True)
+
+    class Meta:
+        model = User
+        fields = ("username", "email", "password1", "password2")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _apply_bootstrap_classes(
+            self,
+            {
+                "username": {"autocomplete": "username"},
+                "email": {"autocomplete": "email"},
+                "password1": {"autocomplete": "new-password"},
+                "password2": {"autocomplete": "new-password"},
+            },
+        )
+
+    def clean_email(self):
+        email = self.cleaned_data.get("email", "").strip()
+        if not email:
+            return email
+
+        qs = User.objects.filter(email__iexact=email)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError(
+                "A user with this email already exists. Please choose another."
+            )
+        return email
+
+    def save(self, commit=True):
+        """Persist a new superuser account that mirrors administrator access."""
+
+        if not commit:
+            # Provide a fully configured instance for callers who want to perform
+            # additional mutations before saving.
+            user = super().save(commit=False)
+            user.email = self.cleaned_data["email"]
+            user.is_staff = True
+            user.is_superuser = True
+            user.is_active = True
+            return user
+
+        cleaned = self.cleaned_data
+        with transaction.atomic():
+            user = User.objects.create_superuser(
+                username=cleaned["username"],
+                email=cleaned["email"],
+                password=cleaned["password1"],
+            )
+        self.instance = user
+
+        return user
+
+
+class SubAdminCreationForm(AdminCreationForm):
+    """Backward compatible alias for legacy imports expecting a sub-admin form."""
+
+    pass
 
 
 class ImpersonationForm(forms.Form):

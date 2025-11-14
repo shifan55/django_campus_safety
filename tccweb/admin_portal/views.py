@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import (
 )
 from django.core.cache import caches
 from django.core.paginator import Paginator
-from django.db import OperationalError, ProgrammingError
+from django.db import IntegrityError, OperationalError, ProgrammingError
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.urls import NoReverseMatch, reverse
@@ -41,7 +41,13 @@ from tccweb.core.utils import build_two_factor_context
 from tccweb.accounts.forms import ProfileForm
 from tccweb.accounts.models import Profile
 from tccweb.counselor_portal.models import CaseNote, ChatMessage
-from .forms import CounselorCreationForm, ImpersonationForm, DataExportForm
+from .forms import (
+    AdminCreationForm,
+    CounselorCreationForm,
+    DataExportForm,
+    ImpersonationForm,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -810,7 +816,7 @@ def admin_awareness(request):
         question_formset = None
 
     if request.method == 'POST':
-        form_type = request.POST.get('form_type')
+        form_type = (request.POST.get('form_type') or '').strip()
 
         if form_type == 'resource':
             form = EducationalResourceForm(request.POST, request.FILES)
@@ -863,15 +869,27 @@ def delete_resource(request, pk):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_management(request):
-    counselors = User.objects.filter(is_staff=True, is_superuser=False).order_by('username')
-    students = User.objects.filter(is_staff=False).order_by('username')
-    form = CounselorCreationForm()
+    counselors = (
+        User.objects.filter(is_staff=True, is_superuser=False)
+        .order_by('username')
+    )
+    students = (
+        User.objects.filter(is_staff=False, is_superuser=False)
+        .order_by('username')
+    )
+    admins = (
+        User.objects.filter(is_superuser=True)
+        .order_by('username')
+    )
+    counselor_form = CounselorCreationForm()
+    admin_form = AdminCreationForm()
     
     if request.method == 'POST':
-        if request.POST.get('form_type') == 'create':
-            form = CounselorCreationForm(request.POST)
-            if form.is_valid():
-                new_counselor = form.save()
+        form_type = (request.POST.get('form_type') or '').strip()
+        if form_type == 'create_counselor':
+            counselor_form = CounselorCreationForm(request.POST)
+            if counselor_form.is_valid():
+                new_counselor = counselor_form.save()
                 SecurityLog.objects.create(
                     actor=request.user,
                     target_user=new_counselor,
@@ -889,29 +907,121 @@ def admin_user_management(request):
                 )
                 messages.success(request, 'Counselor account created.')
                 return redirect('admin_user_management')
+        elif form_type == 'create_admin':
+            admin_form = AdminCreationForm(request.POST)
+            if admin_form.is_valid():
+                try:
+                    new_admin = admin_form.save()
+                except IntegrityError:
+                    admin_form.add_error(
+                        None,
+                        'Unable to create the administrator account because the username or email already exists.',
+                    )
+                    messages.error(
+                        request,
+                        'An administrator with those credentials already exists. Choose a different username or email.',
+                    )
+                else:
+                    SecurityLog.objects.create(
+                        actor=request.user,
+                        target_user=new_admin,
+                        event_type=SecurityLog.EventType.PERMISSION_GRANTED,
+                        ip_address=_client_ip(request),
+                        user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                        description=(
+                            f"{request.user.get_username()} created administrator "
+                            f"account {new_admin.get_username()}."
+                        ),
+                        metadata={
+                            "action": "create_admin",
+                            "target_user_id": new_admin.pk,
+                        },
+                    )
+                    messages.success(request, 'Administrator account created.')
+                    return redirect('admin_user_management')
+            else:
+                messages.error(request, 'Please correct the errors below to create an administrator account.')
+        
         else:
             uid = request.POST.get('user_id')
             action = request.POST.get('action')
-            target = get_object_or_404(User, id=uid)
+            
+            if not uid:
+                messages.error(request, 'No user was selected for the requested action.')
+                return redirect('admin_user_management')
+
+            try:
+                target = User.objects.get(pk=uid)
+            except (User.DoesNotExist, ValueError, TypeError):
+                messages.error(request, 'The selected user could not be found.')
+                return redirect('admin_user_management')
+
+            if target.pk == request.user.pk and action in {'disable', 'delete'}:
+                messages.error(request, 'You cannot disable or delete your own account.')
+                return redirect('admin_user_management')
+
             event_type = None
             description = None
-            if action == 'approve' and not target.is_staff:
+            metadata = {
+                "action": action,
+                "target_user_id": target.pk,
+                "target_username": target.get_username(),
+            }
+
+            if action == 'approve' and not target.is_staff and not target.is_superuser:
                 target.is_staff = True
+                target.save(update_fields=["is_staff"])
                 event_type = SecurityLog.EventType.PERMISSION_GRANTED
                 description = (
                     f"{request.user.get_username()} granted counselor access to "
                     f"{target.get_username()}."
                 )
-            elif action == 'revoke' and target.is_staff:
+            elif action == 'revoke' and target.is_staff and not target.is_superuser:
                 target.is_staff = False
+                target.save(update_fields=["is_staff"])
                 event_type = SecurityLog.EventType.PERMISSION_REVOKED
                 description = (
                     f"{request.user.get_username()} revoked counselor access from "
                     f"{target.get_username()}."
                 )
+                
+            elif action == 'disable' and target.is_superuser and target.is_active:
+                target.is_active = False
+                target.save(update_fields=["is_active"])
+                event_type = SecurityLog.EventType.PERMISSION_REVOKED
+                description = (
+                    f"{request.user.get_username()} disabled administrator account "
+                    f"{target.get_username()}."
+                )
+            elif action == 'enable' and target.is_superuser and not target.is_active:
+                target.is_active = True
+                target.save(update_fields=["is_active"])
+                event_type = SecurityLog.EventType.PERMISSION_GRANTED
+                description = (
+                    f"{request.user.get_username()} re-enabled administrator account "
+                    f"{target.get_username()}."
+                )
+            elif action == 'delete' and target.is_superuser:
+                SecurityLog.objects.create(
+                    actor=request.user,
+                    target_user=target,
+                    event_type=SecurityLog.EventType.PERMISSION_REVOKED,
+                    ip_address=_client_ip(request),
+                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                    description=(
+                        f"{request.user.get_username()} deleted administrator account "
+                        f"{target.get_username()}."
+                    ),
+                    metadata=metadata,
+                )
+                target.delete()
+                messages.success(request, 'Administrator account deleted.')
+                return redirect('admin_user_management')
+            else:
+                messages.error(request, 'No changes were applied to the selected user.')
+                return redirect('admin_user_management')
 
             if event_type:
-                target.save(update_fields=["is_staff"])
                 SecurityLog.objects.create(
                     actor=request.user,
                     target_user=target,
@@ -919,19 +1029,21 @@ def admin_user_management(request):
                     ip_address=_client_ip(request),
                     user_agent=request.META.get("HTTP_USER_AGENT", ""),
                     description=description,
-                    metadata={
-                        "action": action,
-                        "target_user_id": target.pk,
-                    },
+                    metadata=metadata,
                 )
             else:
-                target.save(update_fields=["is_staff"])
-            messages.success(request, 'User updated.')
+                messages.success(request, 'User updated.')
             return redirect('admin_user_management')
     return render(
         request,
         'admin_user_management.html',
-        {'counselors': counselors, 'students': students, 'form': form},
+        {
+            'counselors': counselors,
+            'students': students,
+            'admins': admins,
+            'counselor_form': counselor_form,
+            'admin_form': admin_form,
+        },
     )
     
 @login_required

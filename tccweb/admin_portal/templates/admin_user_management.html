@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load widget_tweaks %}
+{% load form_extras %}
 {% block title %}User Management - Safe Campus{% endblock %}
 {% block content %}
 <div class="container py-4">
@@ -12,19 +12,28 @@
           <h5 class="card-title">Counselor Panel</h5>
           <form method="post" class="mb-4">
             {% csrf_token %}
-            <input type="hidden" name="form_type" value="create">
-            {{ form.non_field_errors }}
+            <input type="hidden" name="form_type" value="create_counselor">
+            {{ counselor_form.non_field_errors }}
             <div class="row">
-              {% for field in form %}
+              {% for field in counselor_form %}
               <div class="col-md-6 mb-3">
                 {{ field.label_tag }}
                 {% if field.errors %}
-                  {% render_field field class+="form-control is-invalid" %}
+                  {{ field|add_css:"is-invalid" }}
                   {% for error in field.errors %}
                     <div class="invalid-feedback d-block">{{ error }}</div>
                   {% endfor %}
                 {% else %}
-                  {{ field|add_class:"form-control" }}
+                {{ field }}
+                {% endif %}
+                {% if field.help_text %}
+                {% if field|defer_help_text %}
+                {% if field|should_show_deferred_help %}
+                <div class="form-text text-danger">{{ field.help_text|safe }}</div>
+                {% endif %}
+                {% else %}
+                <div class="form-text">{{ field.help_text|safe }}</div>
+                {% endif %}
                 {% endif %}
               </div>
               {% endfor %}
@@ -85,7 +94,119 @@
     <div class="col-md-6">
       <div class="card mb-4">
         <div class="card-body">
-          <h5 class="card-title">Admin Panel</h5>
+          <h5 class="card-title">Administrator Panel</h5>
+          <form method="post" class="mb-4">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="create_admin">
+            {{ admin_form.non_field_errors }}
+            <div class="row">
+              {% for field in admin_form %}
+              <div class="col-md-6 mb-3">
+                {{ field.label_tag }}
+                {% if field.errors %}
+                  {{ field|add_css:"is-invalid" }}
+                  {% for error in field.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                  {% endfor %}
+                {% else %}
+                  {{ field }}
+                {% endif %}
+                {% if field.help_text %}
+                {% if field|defer_help_text %}
+                {% if field|should_show_deferred_help %}
+                <div class="form-text text-danger">{{ field.help_text|safe }}</div>
+                {% endif %}
+                {% else %}
+                <div class="form-text">{{ field.help_text|safe }}</div>
+                {% endif %}
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary">Create Administrator</button>
+            </div>
+          </form>
+          <h6 class="mt-4">Existing Administrators</h6>
+          <div class="table-responsive">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+              <div class="table-legend" aria-hidden="true">
+                <span class="legend-item"><span class="status-dot status-success"></span><span>Active administrator</span></span>
+                <span class="legend-item"><span class="status-dot status-danger"></span><span>Disabled administrator</span></span>
+              </div>
+              <span class="small text-muted">Administrators have full administrative access.</span>
+            </div>
+            <table class="table table-modern table-sm align-middle">
+              <caption class="text-muted small">Administrative users with superuser privileges.</caption>
+              <thead>
+                <tr><th scope="col">Username</th><th scope="col">Email</th><th scope="col">Status</th><th scope="col" class="text-end">Action</th></tr>
+              </thead>
+              <tbody>
+                {% for u in admins %}
+                <tr>
+                  <th scope="row" data-label="Username">
+                    <div class="d-flex align-items-start gap-3">
+                      <span class="status-dot {% if u.is_active %}status-success{% else %}status-danger{% endif %}" aria-hidden="true"></span>
+                      <div>
+                        <div class="fw-semibold">{{ u.username }}</div>
+                        <small class="text-muted">Joined {{ u.date_joined|date:"M d, Y" }}</small>
+                      </div>
+                    </div>
+                    <span class="visually-hidden">Administrator account</span>
+                  </th>
+                  <td data-label="Email">{{ u.email|default:"—" }}</td>
+                  <td data-label="Status">
+                    {% if u.is_active %}
+                      <span class="badge bg-success-subtle text-success">Active</span>
+                    {% else %}
+                      <span class="badge bg-danger-subtle text-danger">Disabled</span>
+                    {% endif %}
+                  </td>
+                  <td data-label="Action" class="text-end">
+                    <div class="table-actions">
+                      {% if u.id != request.user.id %}
+                      <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="user_id" value="{{ u.id }}">
+                        {% if u.is_active %}
+                        <button class="btn btn-warning btn-sm btn-icon" name="action" value="disable">
+                          <i class="fas fa-user-lock"></i>
+                          <span>Disable</span>
+                        </button>
+                        {% else %}
+                        <button class="btn btn-success btn-sm btn-icon" name="action" value="enable">
+                          <i class="fas fa-user-check"></i>
+                          <span>Enable</span>
+                        </button>
+                        {% endif %}
+                      </form>
+                      <form method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this administrator account?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="user_id" value="{{ u.id }}">
+                        <button class="btn btn-danger btn-sm btn-icon" name="action" value="delete">
+                          <i class="fas fa-user-minus"></i>
+                          <span>Delete</span>
+                        </button>
+                      </form>
+                      {% else %}
+                      <span class="text-muted small">This is your account.</span>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center py-4 text-muted">No administrators.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title">User ➞ Counselor</h5>
           <div class="table-responsive">
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
               <div class="table-legend" aria-hidden="true">
