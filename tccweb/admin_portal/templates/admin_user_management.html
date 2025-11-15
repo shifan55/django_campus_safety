@@ -2,88 +2,291 @@
 {% load form_extras %}
 {% block title %}User Management - Safe Campus{% endblock %}
 {% block content %}
-<div class="container py-4">
+<div class="container py-4" style="max-width: 1100px;">
   <h1 class="mb-3">User Management</h1>
 
-  <div class="row">
-    <div class="col-md-6 col-lg-4">
-      {% if can_manage_admins %}
-      <div class="card mb-4">
-        <div class="card-body">
-          <h5 class="card-title">Super Administrator Panel</h5>
-          <p class="text-muted small mb-3">
-            Members of the {{ super_admin_group_name }} group can create, enable, disable, and delete administrator accounts.
-          </p>
-          <form method="post" class="mb-4">
-            {% csrf_token %}
-            <input type="hidden" name="form_type" value="create_super_admin">
-            {{ super_admin_form.non_field_errors }}
-            <div class="row">
-              {% for field in super_admin_form %}
-              <div class="col-md-6 mb-3">
-                {{ field.label_tag }}
-                {% if field.errors %}
-                  {{ field|add_css:"is-invalid" }}
-                  {% for error in field.errors %}
-                    <div class="invalid-feedback d-block">{{ error }}</div>
-                  {% endfor %}
-                {% else %}
-                  {{ field }}
-                {% endif %}
-                {% if field.help_text %}
-                {% if field|defer_help_text %}
-                {% if field|should_show_deferred_help %}
-                <div class="form-text text-danger">{{ field.help_text|safe }}</div>
-                {% endif %}
-                {% else %}
-                <div class="form-text">{{ field.help_text|safe }}</div>
-                {% endif %}
-                {% endif %}
-              </div>
-              {% endfor %}
-            </div>
-            <div class="d-grid">
-              <button type="submit" class="btn btn-primary">Create Super Administrator</button>
+  <div class="card">
+    <div class="card-body">
+      <ul class="nav nav-tabs flex-column flex-md-row" id="userManagementTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link{% if active_tab == 'admins' %} active{% endif %}" id="admins-tab" data-bs-toggle="tab" data-bs-target="#admins" type="button" role="tab" aria-controls="admins" aria-selected="{% if active_tab == 'admins' %}true{% else %}false{% endif %}">
+            Admin &amp; Super Admins
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link{% if active_tab == 'counselors' %} active{% endif %}" id="counselors-tab" data-bs-toggle="tab" data-bs-target="#counselors" type="button" role="tab" aria-controls="counselors" aria-selected="{% if active_tab == 'counselors' %}true{% else %}false{% endif %}">
+            Counselors
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link{% if active_tab == 'users' %} active{% endif %}" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab" aria-controls="users" aria-selected="{% if active_tab == 'users' %}true{% else %}false{% endif %}">
+            Normal Users
+          </button>
+        </li>
+      </ul>
+
+      <div class="tab-content pt-4" id="userManagementTabContent">
+        <div class="tab-pane fade{% if active_tab == 'admins' %} show active{% endif %}" id="admins" role="tabpanel" aria-labelledby="admins-tab">
+          <form method="get" class="mb-4" role="search">
+            <input type="hidden" name="tab" value="admins">
+            <div class="input-group">
+              <span class="input-group-text" id="adminSearchLabel">
+                <i class="fas fa-search" aria-hidden="true"></i>
+              </span>
+              <input
+                type="search"
+                class="form-control"
+                name="admin_q"
+                value="{{ admin_search_query }}"
+                placeholder="Search administrators by username, email, or name"
+                aria-label="Search administrators by username, email, or name"
+                aria-describedby="adminSearchLabel"
+              >
+              <button class="btn btn-outline-secondary" type="submit">Search</button>
+              {% if admin_search_query %}
+              <a class="btn btn-outline-secondary" href="{% url 'admin_user_management' %}?tab=admins">Clear</a>
+              {% endif %}
             </div>
           </form>
+
+          {% if admin_search_query %}
+          <p class="text-muted small mb-4">Showing administrators for “<span class="fw-semibold">{{ admin_search_query }}</span>”.</p>
+          {% endif %}
+
+          {% if can_manage_admins %}
+          <div class="mb-5">
+            <h5 class="card-title">Super Administrator Panel</h5>
+            <p class="text-muted small mb-3">
+              Members of the {{ super_admin_group_name }} group can create, enable, disable, and delete administrator accounts.
+            </p>
+            <form method="post" class="mb-4">
+              {% csrf_token %}
+              <input type="hidden" name="form_type" value="create_super_admin">
+              {{ super_admin_form.non_field_errors }}
+              <div class="row">
+                {% for field in super_admin_form %}
+                <div class="col-md-6 mb-3">
+                  {{ field.label_tag }}
+                  {% if field.errors %}
+                    {{ field|add_css:"is-invalid" }}
+                    {% for error in field.errors %}
+                      <div class="invalid-feedback d-block">{{ error }}</div>
+                    {% endfor %}
+                  {% else %}
+                    {{ field }}
+                  {% endif %}
+                  {% if field.help_text %}
+                  {% if field|defer_help_text %}
+                  {% if field|should_show_deferred_help %}
+                  <div class="form-text text-danger">{{ field.help_text|safe }}</div>
+                  {% endif %}
+                  {% else %}
+                  <div class="form-text">{{ field.help_text|safe }}</div>
+                  {% endif %}
+                  {% endif %}
+                </div>
+                {% endfor %}
+              </div>
+              <div class="d-grid">
+                <button type="submit" class="btn btn-primary">Create Super Administrator</button>
+              </div>
+            </form>
+          </div>
+          {% endif %}
+
+          <div class="mb-5">
+            <h5 class="card-title">Administrator Panel</h5>
+            {% if can_manage_admins %}
+            <form method="post" class="mb-4">
+              {% csrf_token %}
+              <input type="hidden" name="form_type" value="create_admin">
+              {{ admin_form.non_field_errors }}
+              <div class="row">
+                {% for field in admin_form %}
+                <div class="col-md-6 mb-3">
+                  {{ field.label_tag }}
+                  {% if field.errors %}
+                    {{ field|add_css:"is-invalid" }}
+                    {% for error in field.errors %}
+                      <div class="invalid-feedback d-block">{{ error }}</div>
+                    {% endfor %}
+                  {% else %}
+                    {{ field }}
+                  {% endif %}
+                  {% if field.help_text %}
+                  {% if field|defer_help_text %}
+                  {% if field|should_show_deferred_help %}
+                  <div class="form-text text-danger">{{ field.help_text|safe }}</div>
+                  {% endif %}
+                  {% else %}
+                  <div class="form-text">{{ field.help_text|safe }}</div>
+                  {% endif %}
+                  {% endif %}
+                </div>
+                {% endfor %}
+              </div>
+              <div class="d-grid">
+                <button type="submit" class="btn btn-primary">Create Administrator</button>
+              </div>
+            </form>
+            {% else %}
+            <div class="alert alert-info" role="status">
+              Only a super administrator can create or modify administrator accounts.
+            </div>
+            {% endif %}
+
+            <h6 class="mt-4">Existing Administrators</h6>
+            <div class="table-responsive">
+              <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+                <div class="table-legend" aria-hidden="true">
+                  <span class="legend-item"><span class="status-dot status-success"></span><span>Active administrator</span></span>
+                  <span class="legend-item"><span class="status-dot status-danger"></span><span>Disabled administrator</span></span>
+                </div>
+                <span class="small text-muted">Administrators have full administrative access.</span>
+              </div>
+              <table class="table table-modern table-sm align-middle">
+                <caption class="text-muted small">Administrative users with superuser privileges.</caption>
+                <thead>
+                  <tr><th scope="col">Username</th><th scope="col">Email</th><th scope="col">Status</th><th scope="col" class="text-end">Action</th></tr>
+                </thead>
+                <tbody>
+                  {% for u in admins %}
+                  <tr>
+                    <th scope="row" data-label="Username">
+                      <div class="d-flex align-items-start gap-3">
+                        <span class="status-dot {% if u.is_active %}status-success{% else %}status-danger{% endif %}" aria-hidden="true"></span>
+                        <div>
+                          <div class="fw-semibold">
+                            {{ u.username }}
+                            {% if u.id in super_admin_ids %}
+                            <span class="badge bg-primary-subtle text-primary ms-2">Super admin</span>
+                            {% endif %}
+                          </div>
+                          <small class="text-muted">Joined {{ u.date_joined|date:"M d, Y" }}</small>
+                        </div>
+                      </div>
+                      <span class="visually-hidden">Administrator account</span>
+                    </th>
+                    <td data-label="Email">{{ u.email|default:"—" }}</td>
+                    <td data-label="Status">
+                      {% if u.is_active %}
+                        <span class="badge bg-success-subtle text-success">Active</span>
+                      {% else %}
+                        <span class="badge bg-danger-subtle text-danger">Disabled</span>
+                      {% endif %}
+                    </td>
+                    <td data-label="Action" class="text-end">
+                      <div class="table-actions">
+                        {% if can_manage_admins %}
+                          {% if u.id != request.user.id %}
+                          <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="user_id" value="{{ u.id }}">
+                            {% if u.is_active %}
+                            <button class="btn btn-warning btn-sm btn-icon" name="action" value="disable">
+                              <i class="fas fa-user-lock"></i>
+                              <span>Disable</span>
+                            </button>
+                            {% else %}
+                            <button class="btn btn-success btn-sm btn-icon" name="action" value="enable">
+                              <i class="fas fa-user-check"></i>
+                              <span>Enable</span>
+                            </button>
+                            {% endif %}
+                          </form>
+                          <form method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this administrator account?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="user_id" value="{{ u.id }}">
+                            <button class="btn btn-danger btn-sm btn-icon" name="action" value="delete">
+                              <i class="fas fa-user-minus"></i>
+                              <span>Delete</span>
+                            </button>
+                          </form>
+                          {% else %}
+                          <span class="text-muted small">This is your account.</span>
+                          {% endif %}
+                        {% else %}
+                          {% if u.id == request.user.id %}
+                          <span class="text-muted small">This is your account.</span>
+                          {% else %}
+                          <span class="text-muted small">Managed by the super administrator.</span>
+                          {% endif %}
+                        {% endif %}
+                      </div>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr><td colspan="4" class="text-center py-4 text-muted">No administrators.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </div>
-      {% endif %}
-      <div class="card mb-4">
-        <div class="card-body">
-          <h5 class="card-title">Counselor Panel</h5>
-          <form method="post" class="mb-4">
-            {% csrf_token %}
-            <input type="hidden" name="form_type" value="create_counselor">
-            {{ counselor_form.non_field_errors }}
-            <div class="row">
-              {% for field in counselor_form %}
-              <div class="col-md-6 mb-3">
-                {{ field.label_tag }}
-                {% if field.errors %}
-                  {{ field|add_css:"is-invalid" }}
-                  {% for error in field.errors %}
-                    <div class="invalid-feedback d-block">{{ error }}</div>
-                  {% endfor %}
-                {% else %}
-                {{ field }}
-                {% endif %}
-                {% if field.help_text %}
-                {% if field|defer_help_text %}
-                {% if field|should_show_deferred_help %}
-                <div class="form-text text-danger">{{ field.help_text|safe }}</div>
-                {% endif %}
-                {% else %}
-                <div class="form-text">{{ field.help_text|safe }}</div>
-                {% endif %}
-                {% endif %}
-              </div>
-              {% endfor %}
-            </div>
-            <div class="d-grid">
-              <button type="submit" class="btn btn-primary">Create Counselor</button>
+
+        <div class="tab-pane fade{% if active_tab == 'counselors' %} show active{% endif %}" id="counselors" role="tabpanel" aria-labelledby="counselors-tab">
+          <form method="get" class="mb-4" role="search">
+            <input type="hidden" name="tab" value="counselors">
+            <div class="input-group">
+              <span class="input-group-text" id="counselorSearchLabel">
+                <i class="fas fa-search" aria-hidden="true"></i>
+              </span>
+              <input
+                type="search"
+                class="form-control"
+                name="counselor_q"
+                value="{{ counselor_search_query }}"
+                placeholder="Search counselors by username, email, or name"
+                aria-label="Search counselors by username, email, or name"
+                aria-describedby="counselorSearchLabel"
+              >
+              <button class="btn btn-outline-secondary" type="submit">Search</button>
+              {% if counselor_search_query %}
+              <a class="btn btn-outline-secondary" href="{% url 'admin_user_management' %}?tab=counselors">Clear</a>
+              {% endif %}
             </div>
           </form>
+
+          {% if counselor_search_query %}
+          <p class="text-muted small mb-4">Showing counselors for “<span class="fw-semibold">{{ counselor_search_query }}</span>”.</p>
+          {% endif %}
+
+          <div class="mb-5">
+            <h5 class="card-title">Counselor Panel</h5>
+            <form method="post" class="mb-4">
+              {% csrf_token %}
+              <input type="hidden" name="form_type" value="create_counselor">
+              {{ counselor_form.non_field_errors }}
+              <div class="row">
+                {% for field in counselor_form %}
+                <div class="col-md-6 mb-3">
+                  {{ field.label_tag }}
+                  {% if field.errors %}
+                    {{ field|add_css:"is-invalid" }}
+                    {% for error in field.errors %}
+                      <div class="invalid-feedback d-block">{{ error }}</div>
+                    {% endfor %}
+                  {% else %}
+                    {{ field }}
+                  {% endif %}
+                  {% if field.help_text %}
+                  {% if field|defer_help_text %}
+                  {% if field|should_show_deferred_help %}
+                  <div class="form-text text-danger">{{ field.help_text|safe }}</div>
+                  {% endif %}
+                  {% else %}
+                  <div class="form-text">{{ field.help_text|safe }}</div>
+                  {% endif %}
+                  {% endif %}
+                </div>
+                {% endfor %}
+              </div>
+              <div class="d-grid">
+                <button type="submit" class="btn btn-primary">Create Counselor</button>
+              </div>
+            </form>
+          </div>
+          
           <h6 class="mt-4">Existing Counselors</h6>
           <div class="table-responsive">
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
@@ -131,147 +334,40 @@
             </table>
           </div>
         </div>
-      </div>
-    </div>
-    <div class="col-md-6 col-lg-8">
-      <div class="card mb-4">
-        <div class="card-body">
-          <h5 class="card-title">Administrator Panel</h5>
-          {% if can_manage_admins %}
-          <form method="post" class="mb-4">
-            {% csrf_token %}
-            <input type="hidden" name="form_type" value="create_admin">
-            {{ admin_form.non_field_errors }}
-            <div class="row">
-              {% for field in admin_form %}
-              <div class="col-md-6 mb-3">
-                {{ field.label_tag }}
-                {% if field.errors %}
-                  {{ field|add_css:"is-invalid" }}
-                  {% for error in field.errors %}
-                    <div class="invalid-feedback d-block">{{ error }}</div>
-                  {% endfor %}
-                {% else %}
-                  {{ field }}
-                {% endif %}
-                {% if field.help_text %}
-                {% if field|defer_help_text %}
-                {% if field|should_show_deferred_help %}
-                <div class="form-text text-danger">{{ field.help_text|safe }}</div>
-                {% endif %}
-                {% else %}
-                <div class="form-text">{{ field.help_text|safe }}</div>
-                {% endif %}
-                {% endif %}
-              </div>
-              {% endfor %}
-            </div>
-            <div class="d-grid">
-              <button type="submit" class="btn btn-primary">Create Administrator</button>
+
+        <div class="tab-pane fade{% if active_tab == 'users' %} show active{% endif %}" id="users" role="tabpanel" aria-labelledby="users-tab">
+          <form method="get" class="mb-4" role="search">
+            <input type="hidden" name="tab" value="users">
+            <div class="input-group">
+              <span class="input-group-text" id="userSearchLabel">
+                <i class="fas fa-search" aria-hidden="true"></i>
+              </span>
+              <input
+                type="search"
+                class="form-control"
+                name="user_q"
+                value="{{ user_search_query }}"
+                placeholder="Search normal users by username, email, or name"
+                aria-label="Search normal users by username, email, or name"
+                aria-describedby="userSearchLabel"
+              >
+              <button class="btn btn-outline-secondary" type="submit">Search</button>
+              {% if user_search_query %}
+              <a class="btn btn-outline-secondary" href="{% url 'admin_user_management' %}?tab=users">Clear</a>
+              {% endif %}
             </div>
           </form>
-          {% else %}
-          <div class="alert alert-info" role="status">
-            Only a super administrator can create or modify administrator accounts.
-          </div>
+          {% if user_search_query %}
+          <p class="text-muted small mb-4">Showing normal users for “<span class="fw-semibold">{{ user_search_query }}</span>”.</p>
           {% endif %}
-          <h6 class="mt-4">Existing Administrators</h6>
-          <div class="table-responsive">
-            <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
-              <div class="table-legend" aria-hidden="true">
-                <span class="legend-item"><span class="status-dot status-success"></span><span>Active administrator</span></span>
-                <span class="legend-item"><span class="status-dot status-danger"></span><span>Disabled administrator</span></span>
-              </div>
-              <span class="small text-muted">Administrators have full administrative access.</span>
-            </div>
-            <table class="table table-modern table-sm align-middle">
-              <caption class="text-muted small">Administrative users with superuser privileges.</caption>
-              <thead>
-                <tr><th scope="col">Username</th><th scope="col">Email</th><th scope="col">Status</th><th scope="col" class="text-end">Action</th></tr>
-              </thead>
-              <tbody>
-                {% for u in admins %}
-                <tr>
-                  <th scope="row" data-label="Username">
-                    <div class="d-flex align-items-start gap-3">
-                      <span class="status-dot {% if u.is_active %}status-success{% else %}status-danger{% endif %}" aria-hidden="true"></span>
-                      <div>
-                        <div class="fw-semibold">
-                          {{ u.username }}
-                          {% if u.id in super_admin_ids %}
-                          <span class="badge bg-primary-subtle text-primary ms-2">Super admin</span>
-                          {% endif %}
-                        </div>
-                        <small class="text-muted">Joined {{ u.date_joined|date:"M d, Y" }}</small>
-                      </div>
-                    </div>
-                    <span class="visually-hidden">Administrator account</span>
-                  </th>
-                  <td data-label="Email">{{ u.email|default:"—" }}</td>
-                  <td data-label="Status">
-                    {% if u.is_active %}
-                      <span class="badge bg-success-subtle text-success">Active</span>
-                    {% else %}
-                      <span class="badge bg-danger-subtle text-danger">Disabled</span>
-                    {% endif %}
-                  </td>
-                  <td data-label="Action" class="text-end">
-                    <div class="table-actions">
-                      {% if can_manage_admins %}
-                        {% if u.id != request.user.id %}
-                        <form method="post" class="d-inline">
-                          {% csrf_token %}
-                          <input type="hidden" name="user_id" value="{{ u.id }}">
-                          {% if u.is_active %}
-                          <button class="btn btn-warning btn-sm btn-icon" name="action" value="disable">
-                            <i class="fas fa-user-lock"></i>
-                            <span>Disable</span>
-                          </button>
-                          {% else %}
-                          <button class="btn btn-success btn-sm btn-icon" name="action" value="enable">
-                            <i class="fas fa-user-check"></i>
-                            <span>Enable</span>
-                          </button>
-                          {% endif %}
-                        </form>
-                        <form method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this administrator account?');">
-                          {% csrf_token %}
-                          <input type="hidden" name="user_id" value="{{ u.id }}">
-                          <button class="btn btn-danger btn-sm btn-icon" name="action" value="delete">
-                            <i class="fas fa-user-minus"></i>
-                            <span>Delete</span>
-                          </button>
-                        </form>
-                        {% else %}
-                        <span class="text-muted small">This is your account.</span>
-                        {% endif %}
-                      {% else %}
-                        {% if u.id == request.user.id %}
-                        <span class="text-muted small">This is your account.</span>
-                        {% else %}
-                        <span class="text-muted small">Managed by the super administrator.</span>
-                        {% endif %}
-                      {% endif %}
-                    </div>
-                  </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="4" class="text-center py-4 text-muted">No administrators.</td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      <div class="card mb-4">
-        <div class="card-body">
-          <h5 class="card-title">User ➞ Counselor</h5>
+          <h5 class="card-title">User ➞ Counselor Requests</h5>
+          <p class="text-muted small">Approve or revoke pending requests within two business days.</p>
           <div class="table-responsive">
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
               <div class="table-legend" aria-hidden="true">
                 <span class="legend-item"><span class="status-dot status-warning"></span><span>Pending approval</span></span>
               </div>
-              <span class="small text-muted">Approve or revoke pending requests within two business days.</span>
+              <span class="small text-muted">Pending campus accounts awaiting admin approval.</span>
             </div>
             <table class="table table-modern table-sm align-middle">
               <caption class="text-muted small">Pending campus accounts awaiting admin approval.</caption>

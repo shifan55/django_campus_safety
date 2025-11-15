@@ -904,18 +904,43 @@ def admin_user_management(request):
         belongs_to_super_admin_group or user_is_designated_super_admin
     )
 
-    counselors = (
-        User.objects.filter(is_staff=True, is_superuser=False)
-        .order_by('username')
-    )
-    students = (
-        User.objects.filter(is_staff=False, is_superuser=False)
-        .order_by('username')
-    )
-    admins = (
-        User.objects.filter(is_superuser=True)
-        .order_by('username')
-    )
+    admin_search_query = (request.GET.get('admin_q') or '').strip()
+    counselor_search_query = (request.GET.get('counselor_q') or '').strip()
+    user_search_query = (request.GET.get('user_q') or '').strip()
+
+    requested_tab = (request.GET.get('tab') or '').strip()
+    allowed_tabs = {'admins', 'counselors', 'users'}
+    active_tab = requested_tab if requested_tab in allowed_tabs else 'admins'
+
+    counselors = User.objects.filter(is_staff=True, is_superuser=False)
+    students = User.objects.filter(is_staff=False, is_superuser=False)
+    admins = User.objects.filter(is_superuser=True)
+
+    def apply_search(queryset, query):
+        if not query:
+            return queryset
+        search_filter = (
+            Q(username__icontains=query)
+            | Q(email__icontains=query)
+            | Q(first_name__icontains=query)
+            | Q(last_name__icontains=query)
+        )
+        return queryset.filter(search_filter)
+
+    admins = apply_search(admins, admin_search_query)
+    counselors = apply_search(counselors, counselor_search_query)
+    students = apply_search(students, user_search_query)
+
+    if admin_search_query:
+        active_tab = 'admins'
+    elif counselor_search_query:
+        active_tab = 'counselors'
+    elif user_search_query:
+        active_tab = 'users'
+
+    counselors = counselors.order_by('username')
+    students = students.order_by('username')
+    admins = admins.order_by('username')
     counselor_form = CounselorCreationForm()
     admin_form = AdminCreationForm()
     super_admin_form = SuperAdminCreationForm()
@@ -1136,6 +1161,10 @@ def admin_user_management(request):
             'can_manage_admins': can_manage_admins,
             'super_admin_ids': super_admin_ids,
             'super_admin_group_name': SUPER_ADMIN_GROUP_NAME,
+            'admin_search_query': admin_search_query,
+            'counselor_search_query': counselor_search_query,
+            'user_search_query': user_search_query,
+            'active_tab': active_tab,
         },
     )
     
