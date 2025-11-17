@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load text_extras %}
+{% block title %}Collaboration Invitations{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="container-xxl">
+        <header class="page-header">
+            <div class="title-group">
+                <span class="title-icon">
+                    <i class="fas fa-handshake"></i>
+                </span>
+                <div>
+                    <h1 class="h2 mb-1">Collaboration invitations</h1>
+                    <p class="mb-0">Accept pending invites from fellow counselors to join their cases.</p>
+                </div>
+            </div>
+            <div class="page-actions">
+                <a href="{% url 'counselor_dashboard' %}" class="action-chip action-chip-info">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to dashboard</span>
+                </a>
+            </div>
+        </header>
+
+        <section class="page-section">
+            {% if invited_reports %}
+                <div class="row g-3">
+                    {% for report in invited_reports %}
+                        <div class="col-12">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-body d-flex flex-wrap justify-content-between align-items-start gap-3">
+                                    <div class="me-3">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <h2 class="h5 mb-0">Report #{{ report.id }}</h2>
+                                            <span class="badge bg-{{ report.status|status_badge }}">{{ report.get_status_display }}</span>
+                                        </div>
+                                        <p class="mb-2 text-muted">{{ report.get_incident_type_display }}</p>
+                                        <dl class="row mb-0 small">
+                                            <dt class="col-sm-4 text-uppercase text-muted">Assigned</dt>
+                                            <dd class="col-sm-8">
+                                                {% if report.assigned_to %}
+                                                    {{ report.assigned_to.get_full_name|default:report.assigned_to.username }}
+                                                {% else %}
+                                                    <span class="text-muted">Unassigned</span>
+                                                {% endif %}
+                                            </dd>
+                                            <dt class="col-sm-4 text-uppercase text-muted">Submitted</dt>
+                                            <dd class="col-sm-8">{{ report.created_at|date:"M j, Y g:i a" }}</dd>
+                                        </dl>
+                                    </div>
+                                    <div class="text-end d-flex flex-column gap-2 ms-auto">
+                                        <form method="post" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="report_id" value="{{ report.id }}">
+                                            <button class="btn btn-primary">
+                                                <i class="fas fa-check me-1"></i>Accept invitation
+                                            </button>
+                                        </form>
+                                        <a class="btn btn-outline-secondary" href="{% url 'counselor_case_detail' report.id %}">
+                                            <i class="fas fa-folder-open me-1"></i>View case
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-envelope-open-text fa-2x mb-3 text-muted" aria-hidden="true"></i>
+                        <h2 class="h4">You're all caught up</h2>
+                        <p class="mb-0 text-muted">No pending collaboration invites at the moment.</p>
+                    </div>
+                </div>
+            {% endif %}
+        </section>
+    </div>
+</div>
+{% endblock %}

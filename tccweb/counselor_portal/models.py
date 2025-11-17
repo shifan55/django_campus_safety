@@ -240,6 +240,31 @@ class ChatMessage(models.Model):
     def __str__(self) -> str:
         return f"Msg from {self.sender_id} to {self.recipient_id}"
 
+# Counselor Colab Messages
+class CollaborationMessage(models.Model):
+    """Plain-text collaboration thread between counselors on a case."""
+
+    report = models.ForeignKey(
+        Report, related_name="collaboration_messages", on_delete=models.CASCADE
+    )
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="collaboration_messages",
+        on_delete=models.CASCADE,
+    )
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        indexes = [
+            models.Index(fields=["report"], name="collab_msg_report_idx"),
+            models.Index(fields=["created_at"], name="collab_msg_created_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"Collab message on report {self.report_id} by {self.sender_id}"
+
 
 class AdminAlert(models.Model):
     """Alert sent to administrators when a case is resolved."""

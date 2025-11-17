@@ -40,11 +40,19 @@ from tccweb.core.models import (
     ReportStatus,
     SystemLog,
 )  # provides status choices for filtering
-from .forms import CaseNoteForm
+from .forms import CaseNoteForm, CounselorInvitationForm, CollaborationMessageForm
 from tccweb.core.forms import MessageForm
 from tccweb.core.utils import build_two_factor_context
 from tccweb.core.mixins import AuditLogMixin
-from .models import CaseNote, ChatMessage, AdminAlert, RiskLevel, EmotionLabel, CounselorProfile
+from .models import (
+    CaseNote,
+    ChatMessage,
+    AdminAlert,
+    CollaborationMessage,
+    RiskLevel,
+    EmotionLabel,
+    CounselorProfile,
+)
 from .services import generate_suggested_replies
 from tccweb.accounts.forms import ProfileForm
 from tccweb.accounts.models import Profile
@@ -69,9 +77,17 @@ def dashboard(request):
     # Get both assigned reports and unassigned reports for the "New" queue
     reports_qs = (
         Report.objects.filter(
-            Q(assigned_to=request.user) | Q(assigned_to__isnull=True)
+            Q(assigned_to=request.user)
+            | Q(assigned_to__isnull=True)
+            | Q(collaborating_counselor=request.user)
+            | Q(invited_counselor=request.user)
         )
-        .select_related("reporter", "assigned_to")
+        .select_related(
+            "reporter",
+            "assigned_to",
+            "collaborating_counselor",
+            "invited_counselor",
+        )
     )
     
     status = request.GET.get("status")
@@ -113,11 +129,13 @@ def dashboard(request):
     reports_qs = reports_qs.annotate(queue_state=queue_case)
 
     queue_priority = CaseExpression(
-        When(queue_state="new", then=Value(0)),
-        When(queue_state="assigned_to_me", then=Value(1)),
-        When(queue_state="waiting_on_student", then=Value(2)),
-        When(queue_state="closed", then=Value(3)),
-        default=Value(4),
+        When(queue_state="invited_to_collaborate", then=Value(0)),
+        When(queue_state="new", then=Value(1)),
+        When(queue_state="assigned_to_me", then=Value(2)),
+        When(queue_state="collaborating", then=Value(2)),
+        When(queue_state="waiting_on_student", then=Value(3)),
+        When(queue_state="closed", then=Value(4)),
+        default=Value(5),
         output_field=IntegerField(),
     )
 
@@ -129,6 +147,11 @@ def dashboard(request):
     metrics_qs = reports_qs
     queue_filter = request.GET.get("queue", "all")
     queue_metadata = {
+        "invited_to_collaborate": {
+            "label": "Invited",
+            "description": "Cases where another counselor invited you to collaborate",
+            "badge": "secondary",
+        },
         "new": {
             "label": "New",
             "description": "Unassigned reports/cases that no counselor has taken",
@@ -137,6 +160,11 @@ def dashboard(request):
         "assigned_to_me": {
             "label": "Assigned to Me",
             "description": "Reports currently being handled by you",
+            "badge": "info",
+        },
+        "collaborating": {
+            "label": "Collaborating",
+            "description": "Cases where you are assisting the primary counselor",
             "badge": "info",
         },
         "waiting_on_student": {
@@ -173,6 +201,8 @@ def dashboard(request):
 
     queue_case = CaseExpression(
         When(status=ReportStatus.RESOLVED, then=Value("closed")),
+        When(invited_counselor=request.user, then=Value("invited_to_collaborate")),
+        When(collaborating_counselor=request.user, then=Value("collaborating")),
         When(assigned_to__isnull=True, then=Value("new")),
         When(latest_message_sender=request.user.id, then=Value("waiting_on_student")),
         When(assigned_to=request.user, then=Value("assigned_to_me")),
@@ -182,11 +212,13 @@ def dashboard(request):
     reports_qs = reports_qs.annotate(queue_state=queue_case)
 
     queue_priority = CaseExpression(
-        When(queue_state="new", then=Value(0)),
-        When(queue_state="assigned_to_me", then=Value(1)),
-        When(queue_state="waiting_on_student", then=Value(2)),
-        When(queue_state="closed", then=Value(3)),
-        default=Value(4),
+        When(queue_state="invited_to_collaborate", then=Value(0)),
+        When(queue_state="new", then=Value(1)),
+        When(queue_state="assigned_to_me", then=Value(2)),
+        When(queue_state="collaborating", then=Value(2)),
+        When(queue_state="waiting_on_student", then=Value(3)),
+        When(queue_state="closed", then=Value(4)),
+        default=Value(5),
         output_field=IntegerField(),
     )
 
@@ -198,6 +230,11 @@ def dashboard(request):
     metrics_qs = reports_qs
     queue_filter = request.GET.get("queue", "all")
     queue_metadata = {
+        "invited_to_collaborate": {
+            "label": "Invited",
+            "description": "Cases where another counselor invited you to collaborate",
+            "badge": "secondary",
+        },
         "new": {
             "label": "New",
             "description": "Unassigned reports/cases that no counselor has taken",
@@ -206,6 +243,11 @@ def dashboard(request):
         "assigned_to_me": {
             "label": "Assigned to Me",
             "description": "Reports currently being handled by you",
+            "badge": "info",
+        },
+        "collaborating": {
+            "label": "Collaborating",
+            "description": "Cases where you are assisting the primary counselor",
             "badge": "info",
         },
         "waiting_on_student": {
@@ -408,8 +450,17 @@ def my_cases(request):
     """List the cases claimed by the logged-in counselor."""
 
     base_qs = (
-        Report.objects.filter(assigned_to=request.user)
-        .select_related("reporter")
+        Report.objects.filter(
+            Q(assigned_to=request.user)
+            | Q(collaborating_counselor=request.user)
+            | Q(invited_counselor=request.user)
+        )
+        .select_related(
+            "reporter",
+            "assigned_to",
+            "collaborating_counselor",
+            "invited_counselor",
+        )
     )
 
     status_filter = request.GET.get("status", "")
@@ -477,14 +528,46 @@ def my_cases(request):
 
     return render(request, "counselor_my_cases.html", context)
 
+
+@auth_login_required
+@auth_user_passes_test(_is_counselor)
+def invitations(request):
+    """List collaboration invitations and allow counselors to accept them."""
+
+    invited_reports = (
+        Report.objects.filter(invited_counselor=request.user)
+        .select_related("assigned_to", "reporter")
+        .order_by("-created_at")
+    )
+
+    if request.method == "POST":
+        report_id = request.POST.get("report_id")
+        try:
+            report = invited_reports.get(id=report_id)
+        except Report.DoesNotExist:
+            messages.error(request, "This invitation is no longer available.")
+        else:
+            report.collaborating_counselor = request.user
+            report.invited_counselor = None
+            report.save(update_fields=["collaborating_counselor", "invited_counselor"])
+            messages.success(request, "You are now collaborating on this case.")
+            return redirect("counselor_case_detail", report_id=report.id)
+
+    context = {"invited_reports": invited_reports}
+    return render(request, "counselor_invitations.html", context)
+
+
 @auth_login_required
 @auth_user_passes_test(_is_counselor)
 def case_detail(request, report_id):
-    report = get_object_or_404(
-        Report,
-        Q(id=report_id)
-        & (Q(assigned_to=request.user) | Q(assigned_to__isnull=True)),
+    allowed_report_q = Q(id=report_id) & (
+        Q(assigned_to=request.user)
+        | Q(assigned_to__isnull=True)
+        | Q(collaborating_counselor=request.user)
+        | Q(invited_counselor=request.user)
     )
+
+    report = get_object_or_404(Report, allowed_report_q)
     
     if request.method == "GET":
         # Record that the counselor accessed the report detail view.
@@ -500,8 +583,14 @@ def case_detail(request, report_id):
         )
         
     is_owner = report.assigned_to_id == request.user.id
+    is_collaborator = report.collaborating_counselor_id == request.user.id
+    is_invited_counselor = report.invited_counselor_id == request.user.id
     note_form = CaseNoteForm(request.POST or None)
     msg_form = MessageForm(request.POST or None, request.FILES or None)
+    invitation_form = CounselorInvitationForm(
+        request.POST or None, requester=request.user, report=report
+    )
+    collab_msg_form = CollaborationMessageForm(request.POST or None)
 
     if request.method == "POST":
         if "add_note" in request.POST and is_owner and note_form.is_valid():
@@ -579,6 +668,26 @@ def case_detail(request, report_id):
                     )
             return redirect("counselor_case_detail", report_id=report.id)
         
+        if "send_invitation" in request.POST and is_owner:
+            if invitation_form.is_valid():
+                invitee = invitation_form.cleaned_data["invitee"]
+                report.invited_counselor = invitee
+                report.save(update_fields=["invited_counselor"])
+                messages.success(
+                    request,
+                    f"Invitation sent to {invitee.get_full_name() or invitee.username}",
+                )
+                return redirect("counselor_case_detail", report_id=report.id)
+
+        if "accept_invitation" in request.POST:
+            if is_invited_counselor:
+                report.collaborating_counselor = request.user
+                report.invited_counselor = None
+                report.save(update_fields=["collaborating_counselor", "invited_counselor"])
+                messages.success(request, "You have joined this case as a collaborator.")
+                return redirect("counselor_case_detail", report_id=report.id)
+            messages.error(request, "This invitation is no longer valid.")
+        
         if (
             "send_msg" in request.POST
             and is_owner
@@ -607,6 +716,18 @@ def case_detail(request, report_id):
                 description=f"{request.user.get_full_name() or request.user.username} messaged the reporter on Report #{report.pk}",
             )
             return redirect("counselor_case_detail", report_id=report.id)
+        
+        if "send_collab_message" in request.POST and (
+            is_owner or is_collaborator
+        ):
+            if collab_msg_form.is_valid():
+                CollaborationMessage.objects.create(
+                    report=report,
+                    sender=request.user,
+                    content=collab_msg_form.cleaned_data["content"],
+                )
+                messages.success(request, "Message shared with your collaborator.")
+                return redirect("counselor_case_detail", report_id=report.id)
 
     try:
         # Evaluate the queryset immediately so missing columns raise inside the try block.
@@ -620,9 +741,13 @@ def case_detail(request, report_id):
             "Counseling notes could not be loaded because the notes table is missing a required column."
             " Please ask an administrator to apply the latest migrations.",
         )
-    ChatMessage.objects.filter(report=report, recipient=request.user, is_read=False).update(is_read=True)
+    ChatMessage.objects.filter(report=report, recipient=request.user, is_read=False).update(
+        is_read=True
+    )
     try:
-        ChatMessage.objects.filter(report=report, recipient=request.user, is_read=False).update(is_read=True)
+        ChatMessage.objects.filter(report=report, recipient=request.user, is_read=False).update(
+            is_read=True
+        )
         chat_messages = (
             ChatMessage.objects.filter(report=report, parent__isnull=True)
             .select_related("sender")
@@ -707,6 +832,8 @@ def case_detail(request, report_id):
         "elevated_count": elevated_alerts,
         "trend_direction": trend_direction,
     }
+    collaboration_messages = report.collaboration_messages.select_related("sender")
+    can_collaborate = is_owner or is_collaborator
 
     
     context = {
@@ -720,6 +847,12 @@ def case_detail(request, report_id):
         "emotion_overview": emotion_overview,
         "timeline_events": report.timeline_events(),
         "is_owner": is_owner,
+        "is_collaborator": is_collaborator,
+        "is_invited_counselor": is_invited_counselor,
+        "invitation_form": invitation_form,
+        "collaboration_messages": collaboration_messages,
+        "collab_msg_form": collab_msg_form,
+        "can_collaborate": can_collaborate,
     }
     return render(request, "counselor_case_detail.html", context)
 
@@ -840,7 +973,10 @@ def analytics_dashboard(request):
     
     # Base queryset with time filtering
     reports_qs = Report.objects.filter(
-        Q(assigned_to=request.user) | Q(assigned_to__isnull=True)
+        Q(assigned_to=request.user)
+        | Q(assigned_to__isnull=True)
+        | Q(collaborating_counselor=request.user)
+        | Q(invited_counselor=request.user)
     )
     
     if time_range != 'all':
@@ -861,6 +997,8 @@ def analytics_dashboard(request):
 
     queue_case = CaseExpression(
         When(status=ReportStatus.RESOLVED, then=Value("closed")),
+        When(invited_counselor=request.user, then=Value("invited_to_collaborate")),
+        When(collaborating_counselor=request.user, then=Value("collaborating")),
         When(assigned_to__isnull=True, then=Value("new")),
         When(latest_message_sender=request.user.id, then=Value("waiting_on_student")),
         When(assigned_to=request.user, then=Value("assigned_to_me")),
@@ -949,12 +1087,20 @@ def analytics_dashboard(request):
     
     # 5. Pipeline (status by queue)
     queue_metadata = {
+        'invited_to_collaborate': {
+            'label': 'Invited',
+            'badge': 'secondary',
+        },
         'new': {
             'label': 'New',
             'badge': 'primary',
         },
         'assigned_to_me': {
             'label': 'Assigned to Me',
+            'badge': 'info',
+        },
+        'collaborating': {
+            'label': 'Collaborating',
             'badge': 'info',
         },
         'waiting_on_student': {
@@ -968,7 +1114,14 @@ def analytics_dashboard(request):
     }
 
     status_label_map = dict(ReportStatus.choices)
-    queue_order = ['new', 'assigned_to_me', 'waiting_on_student', 'closed']
+    queue_order = [
+        'invited_to_collaborate',
+        'new',
+        'assigned_to_me',
+        'collaborating',
+        'waiting_on_student',
+        'closed',
+    ]
     status_order = [choice[0] for choice in ReportStatus.choices]
 
     pipeline_counts = (
@@ -1148,10 +1301,19 @@ def profile(request):
         .count()
     )
 
-    recent_notes = CaseNote.objects.filter(
-        counselor=request.user,
-        created_at__gte=timezone.now() - timedelta(days=7),
-    ).count()
+    try:
+        recent_notes = CaseNote.objects.filter(
+            counselor=request.user,
+            created_at__gte=timezone.now() - timedelta(days=7),
+        ).count()
+    except OperationalError:
+        recent_notes = 0
+        messages.error(
+            request,
+            "Counseling notes are unavailable because the notes table is missing"
+            " required columns. Please contact an administrator to run the"
+            " latest database migrations.",
+        )
 
     response_deltas = []
     counselor_messages = (

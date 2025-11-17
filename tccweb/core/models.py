@@ -93,6 +93,22 @@ class Report(models.Model):
         on_delete=models.SET_NULL,
     )
     
+    collaborating_counselor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        related_name="collaborating_reports",
+        on_delete=models.SET_NULL,
+    )
+
+    invited_counselor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        related_name="report_invitations",
+        on_delete=models.SET_NULL,
+    )
+    
     assigned_at = models.DateTimeField(blank=True, null=True)
     resolved_at = models.DateTimeField(blank=True, null=True)
 
@@ -193,6 +209,8 @@ class Report(models.Model):
             models.Index(fields=["assigned_to"]),
             models.Index(fields=["assigned_at"]),
             models.Index(fields=["resolved_at"]),
+            models.Index(fields=["collaborating_counselor"], name="report_collab_idx"),
+            models.Index(fields=["invited_counselor"], name="report_invited_idx"),
         ]
 
 class EducationalResource(models.Model):

@@ -69,6 +69,7 @@
                 {% elif user.is_staff %}
                 <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'counselor_dashboard' %}active{% endif %}" href="{% url 'counselor_dashboard' %}"><i class="fas fa-gauge me-1"></i>Dashboard</a></li>
                 <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'counselor_my_cases' %}active{% endif %}" href="{% url 'counselor_my_cases' %}"><i class="fas fa-briefcase me-1"></i>My Cases</a></li>
+                <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'counselor_invitations' %}active{% endif %}" href="{% url 'counselor_invitations' %}"><i class="fas fa-handshake me-1"></i>Invitations</a></li>
                 <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'counselor_messages' %}active{% endif %}" href="{% url 'counselor_messages' %}"><i class="fas fa-comments me-1"></i>Messages{% if unread_messages %} <span class="badge bg-danger ms-1">{{ unread_messages }}</span>{% endif %}</a></li>
                 <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'counselor_analytics' %}active{% endif %}" href="{% url 'counselor_analytics' %}"><i class="fas fa-chart-bar me-1"></i>Analytics</a></li>
                 <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'awareness' %}active{% endif %}" href="{% url 'awareness' %}"><i class="fas fa-lightbulb me-1"></i>Awareness</a></li>
