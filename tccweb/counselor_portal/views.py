@@ -15,7 +15,7 @@ from django.core.paginator import Paginator
 from django.core.mail import send_mail
 from django.db.models import (
     Avg,
-    Case,
+    Case as CaseExpression,
     CharField,
     Count,
     Exists,
@@ -43,6 +43,7 @@ from tccweb.core.models import (
 from .forms import CaseNoteForm
 from tccweb.core.forms import MessageForm
 from tccweb.core.utils import build_two_factor_context
+from tccweb.core.mixins import AuditLogMixin
 from .models import CaseNote, ChatMessage, AdminAlert, RiskLevel, EmotionLabel, CounselorProfile
 from .services import generate_suggested_replies
 from tccweb.accounts.forms import ProfileForm
@@ -101,7 +102,7 @@ def dashboard(request):
         last_activity=Coalesce("latest_message_ts", "updated_at", "created_at")
     )
 
-    queue_case = Case(
+    queue_case = CaseExpression(
         When(status=ReportStatus.RESOLVED, then=Value("closed")),
         When(assigned_to__isnull=True, then=Value("new")),
         When(latest_message_sender=request.user.id, then=Value("waiting_on_student")),
@@ -111,7 +112,7 @@ def dashboard(request):
     )
     reports_qs = reports_qs.annotate(queue_state=queue_case)
 
-    queue_priority = Case(
+    queue_priority = CaseExpression(
         When(queue_state="new", then=Value(0)),
         When(queue_state="assigned_to_me", then=Value(1)),
         When(queue_state="waiting_on_student", then=Value(2)),
@@ -170,7 +171,7 @@ def dashboard(request):
             ])
         return response
 
-    queue_case = Case(
+    queue_case = CaseExpression(
         When(status=ReportStatus.RESOLVED, then=Value("closed")),
         When(assigned_to__isnull=True, then=Value("new")),
         When(latest_message_sender=request.user.id, then=Value("waiting_on_student")),
@@ -180,7 +181,7 @@ def dashboard(request):
     )
     reports_qs = reports_qs.annotate(queue_state=queue_case)
 
-    queue_priority = Case(
+    queue_priority = CaseExpression(
         When(queue_state="new", then=Value(0)),
         When(queue_state="assigned_to_me", then=Value(1)),
         When(queue_state="waiting_on_student", then=Value(2)),
@@ -504,22 +505,30 @@ def case_detail(request, report_id):
 
     if request.method == "POST":
         if "add_note" in request.POST and is_owner and note_form.is_valid():
-            note = CaseNote.objects.create(
-                report=report,
-                counselor=request.user,
-                note=note_form.cleaned_data["note"],
-            )
-            # Capture edits made by counselors via case notes.
-            AuditLogMixin.log_edit(
-                user=request.user,
-                obj=report,
-                metadata={
-                    "action": "add_note",
-                    "note_id": note.pk,
-                },
-                description=f"{request.user.get_full_name() or request.user.username} added a note to Report #{report.pk}",
-            )
-            return redirect("counselor_case_detail", report_id=report.id)
+            try:
+                note = CaseNote.objects.create(
+                    report=report,
+                    counselor=request.user,
+                    note=note_form.cleaned_data["note"],
+                )
+            except OperationalError:
+                messages.error(
+                    request,
+                    "Unable to save your note because the notes table is missing required columns."
+                    " Please contact an administrator to run the latest database migrations.",
+                )
+            else:
+                # Capture edits made by counselors via case notes.
+                AuditLogMixin.log_edit(
+                    user=request.user,
+                    obj=report,
+                    metadata={
+                        "action": "add_note",
+                        "note_id": note.pk,
+                    },
+                    description=f"{request.user.get_full_name() or request.user.username} added a note to Report #{report.pk}",
+                )
+                return redirect("counselor_case_detail", report_id=report.id)
         
         if "resolve_case" in request.POST and is_owner:
             report.status = ReportStatus.RESOLVED
@@ -599,7 +608,18 @@ def case_detail(request, report_id):
             )
             return redirect("counselor_case_detail", report_id=report.id)
 
-    notes = CaseNote.objects.filter(report=report).order_by("-created_at")
+    try:
+        # Evaluate the queryset immediately so missing columns raise inside the try block.
+        notes = list(
+            CaseNote.objects.filter(report=report).order_by("-created_at")
+        )
+    except OperationalError:
+        notes = []
+        messages.error(
+            request,
+            "Counseling notes could not be loaded because the notes table is missing a required column."
+            " Please ask an administrator to apply the latest migrations.",
+        )
     ChatMessage.objects.filter(report=report, recipient=request.user, is_read=False).update(is_read=True)
     try:
         ChatMessage.objects.filter(report=report, recipient=request.user, is_read=False).update(is_read=True)
@@ -839,7 +859,7 @@ def analytics_dashboard(request):
         latest_message_sender=Subquery(latest_message.values("sender")[:1]),
     )
 
-    queue_case = Case(
+    queue_case = CaseExpression(
         When(status=ReportStatus.RESOLVED, then=Value("closed")),
         When(assigned_to__isnull=True, then=Value("new")),
         When(latest_message_sender=request.user.id, then=Value("waiting_on_student")),
