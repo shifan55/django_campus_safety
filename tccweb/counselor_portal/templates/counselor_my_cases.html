@@ -136,6 +136,15 @@
                     </td>
                     <td data-label="Actions" class="text-end">
                         <div class="table-actions">
+                            {% if not report.assigned_to %}
+                            <form method="post" action="{% url 'counselor_claim_case' report.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-primary btn-icon">
+                                    <i class="fas fa-hand-paper"></i>
+                                    <span>Claim</span>
+                                </button>
+                            </form>
+                            {% endif %}
                             <a href="{% url 'counselor_case_detail' report.id %}" class="btn btn-sm btn-primary btn-icon">
                                 <i class="fas fa-folder-open"></i>
                                 <span>Open</span>

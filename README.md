@@ -1,4 +1,3 @@
-
 # TCCWeb (Django)
 
 This is a Django port of the original Flask app. It mirrors the main routes and reuses your templates and static assets.
@@ -22,6 +21,8 @@ python manage.py runserver
 - `/report-anonymous` -> anonymous report
 - `/submit-report` -> authenticated report (requires login)
 - `/report-success/<id>` -> success page
+- `/report-success/<tracking_code>` -> success page
+- `/track-report` -> check report status using tracking code
 - `/awareness` -> resources/contacts
 
 Static files live under `tccweb/static`. Templates under `tccweb/templates`.
@@ -30,5 +31,8 @@ Static files live under `tccweb/static`. Templates under `tccweb/templates`.
 - Some Jinja-specific constructs (e.g., `url_for`) need to be converted to Django template tags.
 - Flash messages map to Django messages framework.
 - The database is SQLite by default; change `DATABASES` in `tccweb/settings.py` if needed.
+
+### Security
+- Resource content rendered on `/awareness` is sanitized in the browser using [DOMPurify](https://github.com/cure53/DOMPurify). If sanitization alters the provided HTML, the raw text is displayed instead to prevent untrusted markup from executing.
 # django_campus_safety
 # django_campus_safety
