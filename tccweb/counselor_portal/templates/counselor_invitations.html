@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load text_extras %}
-{% block title %}Collaboration Invitations{% endblock %}
+{% block title %}Collaboration{% endblock %}
 
 {% block content %}
 <div class="page-container">
@@ -11,8 +11,8 @@
                     <i class="fas fa-handshake"></i>
                 </span>
                 <div>
-                    <h1 class="h2 mb-1">Collaboration invitations</h1>
-                    <p class="mb-0">Accept pending invites from fellow counselors to join their cases.</p>
+                    <h1 class="h2 mb-1">Collaboration</h1>
+                    <p class="mb-0">Review your collaboration invites and jump into cases you're already partnering on.</p>
                 </div>
             </div>
             <div class="page-actions">
@@ -24,8 +24,12 @@
         </header>
 
         <section class="page-section">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <h2 class="h5 mb-0">Pending invitations</h2>
+                <span class="badge bg-secondary">{{ invited_reports|length }}</span>
+            </div>
             {% if invited_reports %}
-                <div class="row g-3">
+                <div class="row g-3 mb-4">
                     {% for report in invited_reports %}
                         <div class="col-12">
                             <div class="card shadow-sm h-100">
@@ -53,7 +57,7 @@
                                         <form method="post" class="d-inline">
                                             {% csrf_token %}
                                             <input type="hidden" name="report_id" value="{{ report.id }}">
-                                            <button class="btn btn-primary">
+                                            <button class="btn btn-primary" name="accept_invitation" value="1">
                                                 <i class="fas fa-check me-1"></i>Accept invitation
                                             </button>
                                         </form>
@@ -67,11 +71,63 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <div class="card shadow-sm">
+                <div class="card shadow-sm mb-4">
                     <div class="card-body text-center py-5">
                         <i class="fas fa-envelope-open-text fa-2x mb-3 text-muted" aria-hidden="true"></i>
                         <h2 class="h4">You're all caught up</h2>
                         <p class="mb-0 text-muted">No pending collaboration invites at the moment.</p>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <h2 class="h5 mb-0">Active collaborations</h2>
+                <span class="badge bg-secondary">{{ collaborating_reports|length }}</span>
+            </div>
+            {% if collaborating_reports %}
+                <div class="row g-3">
+                    {% for report in collaborating_reports %}
+                        <div class="col-12">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-body">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                                        <div class="me-3">
+                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                                <h2 class="h5 mb-0">Report #{{ report.id }}</h2>
+                                                <span class="badge bg-{{ report.status|status_badge }}">{{ report.get_status_display }}</span>
+                                            </div>
+                                            <p class="mb-2 text-muted">{{ report.get_incident_type_display }}</p>
+                                            <dl class="row mb-0 small">
+                                                <dt class="col-sm-4 text-uppercase text-muted">Lead counselor</dt>
+                                                <dd class="col-sm-8">
+                                                    {% if report.assigned_to %}
+                                                        {{ report.assigned_to.get_full_name|default:report.assigned_to.username }}
+                                                    {% else %}
+                                                        <span class="text-muted">Unassigned</span>
+                                                    {% endif %}
+                                                </dd>
+                                                <dt class="col-sm-4 text-uppercase text-muted">Joined</dt>
+                                                <dd class="col-sm-8">{{ report.created_at|date:"M j, Y g:i a" }}</dd>
+                                            </dl>
+                                        </div>
+                                        <div class="text-end ms-auto">
+                                            <a class="btn btn-outline-primary" href="{% url 'collaboration_case_detail' report.id %}">
+                                                <i class="fas fa-comments me-1"></i>Open collaboration hub
+                                            </a>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-users fa-2x mb-3 text-muted" aria-hidden="true"></i>
+                        <h2 class="h4 mb-1">No active collaborations yet</h2>
+                        <p class="mb-0 text-muted">Accepted invitations will appear here for quick access.</p>
                     </div>
                 </div>
             {% endif %}

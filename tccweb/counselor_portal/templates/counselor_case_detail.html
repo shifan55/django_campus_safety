@@ -30,6 +30,49 @@
             </div>
 
             <div class="card shadow-sm mt-4">
+                <div class="card-header fw-semibold">Collaboration</div>
+                <div class="card-body">
+                    {% if report.collaborating_counselor %}
+                        <p class="mb-2">
+                            <strong>Collaborator:</strong>
+                            {{ report.collaborating_counselor.get_full_name|default:report.collaborating_counselor.username }}
+                        </p>
+                    {% elif report.invited_counselor %}
+                        <p class="text-warning mb-2">
+                            Invitation pending for {{ report.invited_counselor.get_full_name|default:report.invited_counselor.username }}.
+                        </p>
+                    {% else %}
+                        <p class="text-muted mb-2">No collaborating counselor assigned.</p>
+                    {% endif %}
+
+                    {% if is_invited_counselor %}
+                        <form method="post" class="d-flex gap-2 align-items-center">
+                            {% csrf_token %}
+                            <input type="hidden" name="accept_invitation" value="1">
+                            <button class="btn btn-primary">Accept Invitation</button>
+                            <p class="mb-0 text-muted small">You'll be added as a co-counselor on acceptance.</p>
+                        </form>
+                    {% endif %}
+
+                    {% if is_owner %}
+                        <form method="post" class="mt-3">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                {{ invitation_form.invitee.label_tag }}
+                                {{ invitation_form.invitee }}
+                                {% for error in invitation_form.invitee.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <button class="btn btn-outline-primary" name="send_invitation" value="1">
+                                <i class="fas fa-user-plus me-1"></i>Send Collaboration Invite
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card shadow-sm mt-4">
                 <div class="card-header fw-semibold">Case Timeline</div>
                 <div class="card-body">
                     {% include 'partials/case_timeline.html' with events=timeline_events %}
@@ -212,7 +255,7 @@
                     </ul>
                 </div>
                 <footer class="chat__footer">
-                    {% if report.reporter and is_owner %}
+                    {% if report.reporter and can_message_reporter %}
                         <form method="post" enctype="multipart/form-data" class="chat__composer" data-chat-composer novalidate>
                             {% csrf_token %}
                             {% if msg_form.non_field_errors %}
@@ -327,6 +370,8 @@
                         <i class="fas fa-check-circle me-1"></i>Mark Resolved
                     </button>
                 </form>
+                {% elif report.status != 'resolved' %}
+                <p class="text-end text-muted mt-4 small">Only the assigned counselor can mark this case resolved.</p>
             {% endif %}
                                 
                             </div>
@@ -356,7 +401,7 @@
                         <p class="text-muted mb-0">Reporter is anonymous; messaging disabled.</p>
                         {% elif not report.assigned_to %}
                         <div class="d-flex flex-column flex-md-row gap-2 align-items-md-center justify-content-between">
-                            <p class="text-muted mb-0">Assign the report to yourself to reply to the student.</p>
+                            <p class="text-muted mb-0">Only counselors assigned to, collaborating on, or invited to this case can reply to the student.</p>
                             <form method="post" action="{% url 'counselor_claim_case' report.id %}" class="d-inline">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-sm btn-primary">Claim this case</button>
@@ -374,6 +419,8 @@
                         <i class="fas fa-check-circle me-1"></i>Mark Resolved
                     </button>
                 </form>
+                {% elif report.status != 'resolved' %}
+                <p class="text-end text-muted mt-4 small">Only the assigned counselor can mark this case resolved.</p>
             {% endif %}
         </div>
     </div>

@@ -532,7 +532,7 @@ def my_cases(request):
 @auth_login_required
 @auth_user_passes_test(_is_counselor)
 def invitations(request):
-    """List collaboration invitations and allow counselors to accept them."""
+    """List collaboration invitations and active collaborations."""
 
     invited_reports = (
         Report.objects.filter(invited_counselor=request.user)
@@ -540,21 +540,185 @@ def invitations(request):
         .order_by("-created_at")
     )
 
+    collaborating_reports = list(
+        Report.objects.filter(
+            Q(collaborating_counselor=request.user)
+            | Q(
+                assigned_to=request.user,
+                collaborating_counselor__isnull=False,
+            )
+        )
+        .select_related("assigned_to", "reporter")
+        .order_by("-created_at")
+        .distinct()
+    )
+
     if request.method == "POST":
         report_id = request.POST.get("report_id")
         try:
             report = invited_reports.get(id=report_id)
         except Report.DoesNotExist:
-            messages.error(request, "This invitation is no longer available.")
-        else:
+            report = None
+
+        if report and "accept_invitation" in request.POST:
             report.collaborating_counselor = request.user
             report.invited_counselor = None
             report.save(update_fields=["collaborating_counselor", "invited_counselor"])
             messages.success(request, "You are now collaborating on this case.")
             return redirect("counselor_case_detail", report_id=report.id)
+        elif "accept_invitation" in request.POST:
+            messages.error(request, "This invitation is no longer available.")
 
-    context = {"invited_reports": invited_reports}
+    context = {
+        "invited_reports": invited_reports,
+        "collaborating_reports": collaborating_reports,
+    }
     return render(request, "counselor_invitations.html", context)
+
+
+@auth_login_required
+@auth_user_passes_test(_is_counselor)
+def invitations(request):
+    """List collaboration invitations and active collaborations."""
+
+    invited_reports = (
+        Report.objects.filter(invited_counselor=request.user)
+        .select_related("assigned_to", "reporter")
+        .order_by("-created_at")
+    )
+
+    collaborating_reports = list(
+        Report.objects.filter(
+            Q(collaborating_counselor=request.user)
+            | Q(
+                assigned_to=request.user,
+                collaborating_counselor__isnull=False,
+            )
+        )
+        .select_related("assigned_to", "reporter")
+        .order_by("-created_at")
+        .distinct()
+    )
+
+    if request.method == "POST":
+        report_id = request.POST.get("report_id")
+        try:
+            report = invited_reports.get(id=report_id)
+        except Report.DoesNotExist:
+            report = None
+
+        if report and "accept_invitation" in request.POST:
+            report.collaborating_counselor = request.user
+            report.invited_counselor = None
+            report.save(update_fields=["collaborating_counselor", "invited_counselor"])
+            messages.success(request, "You are now collaborating on this case.")
+            return redirect("counselor_case_detail", report_id=report.id)
+        elif "accept_invitation" in request.POST:
+            messages.error(request, "This invitation is no longer available.")
+
+    context = {
+        "invited_reports": invited_reports,
+        "collaborating_reports": collaborating_reports,
+    }
+    return render(request, "counselor_invitations.html", context)
+
+
+@auth_login_required
+@auth_user_passes_test(_is_counselor)
+def collaboration_case_detail(request, report_id):
+    """Dedicated collaboration view for co-counselors to work a case."""
+    
+    report = get_object_or_404(
+        Report,
+        Q(id=report_id)
+        & (
+            Q(collaborating_counselor=request.user)
+            | Q(assigned_to=request.user)
+            | Q(invited_counselor=request.user)
+        ),
+    )
+
+    is_owner = report.assigned_to_id == request.user.id
+    is_collaborator = report.collaborating_counselor_id == request.user.id
+    is_invited = report.invited_counselor_id == request.user.id
+
+    note_form = CaseNoteForm(request.POST or None)
+    collab_msg_form = CollaborationMessageForm(request.POST or None)
+    msg_form = MessageForm(request.POST or None, request.FILES or None)
+
+    if request.method == "POST":
+        if "add_note" in request.POST and (is_owner or is_collaborator):
+            if note_form.is_valid():
+                CaseNote.objects.create(
+                    report=report,
+                    counselor=request.user,
+                    note=note_form.cleaned_data["note"],
+                )
+                messages.success(request, "Note added to case.")
+                return redirect("collaboration_case_detail", report_id=report.id)
+
+        if "send_collab_message" in request.POST and (is_owner or is_collaborator):
+            if collab_msg_form.is_valid():
+                CollaborationMessage.objects.create(
+                    report=report,
+                    sender=request.user,
+                    content=collab_msg_form.cleaned_data["content"],
+                )
+                messages.success(request, "Message sent to collaborating counselor.")
+                return redirect("collaboration_case_detail", report_id=report.id)
+
+        if "send_msg" in request.POST and is_owner and msg_form.is_valid() and report.reporter:
+            parent_id = msg_form.cleaned_data.get("parent_id")
+            parent = (
+                ChatMessage.objects.filter(id=parent_id, report=report).first()
+                if parent_id
+                else None
+            )
+
+            ChatMessage.create(
+                report=report,
+                sender=request.user,
+                recipient=report.reporter,
+                message=msg_form.cleaned_data["message"],
+                parent=parent,
+                attachment=msg_form.cleaned_data.get("attachment"),
+            )
+            Report.objects.filter(pk=report.pk).update(awaiting_response=False)
+            messages.success(request, "Message sent to the student.")
+            return redirect("collaboration_case_detail", report_id=report.id)
+
+    notes = CaseNote.objects.filter(report=report).order_by("-created_at")
+    collaboration_messages = report.collaboration_messages.select_related("sender")
+    chat_messages = (
+        ChatMessage.objects.filter(report=report, parent__isnull=True)
+        .select_related("sender")
+        .prefetch_related("replies__sender")
+        .order_by("timestamp")
+    )
+
+    ChatMessage.objects.filter(
+        report=report, recipient=request.user, is_read=False
+    ).update(is_read=True)
+
+    can_message_reporter = is_owner and report.reporter
+
+    context = {
+        "report": report,
+        "notes": notes,
+        "note_form": note_form,
+        "collaboration_messages": collaboration_messages,
+        "collab_msg_form": collab_msg_form,
+        "chat_messages": chat_messages,
+        "msg_form": msg_form,
+        "timeline_events": report.timeline_events(),
+        "is_owner": is_owner,
+        "is_collaborator": is_collaborator,
+        "is_invited": is_invited,
+        "can_message_reporter": can_message_reporter,
+    }
+
+    return render(request, "collaboration_case_detail.html", context)
+
 
 
 @auth_login_required
@@ -619,54 +783,82 @@ def case_detail(request, report_id):
                 )
                 return redirect("counselor_case_detail", report_id=report.id)
         
-        if "resolve_case" in request.POST and is_owner:
-            report.status = ReportStatus.RESOLVED
-            report.resolved_at = timezone.now()
-            report.awaiting_response = False
-            report.save(update_fields=["status", "awaiting_response"])
-            # Document the closure event for the report.
-            AuditLogMixin.log_close(
-                user=request.user,
-                obj=report,
-                metadata={
-                    "action": "resolve_case",
-                    "report_id": report.pk,
-                },
-                description=f"{request.user.get_full_name() or request.user.username} closed Report #{report.pk}",
-            )
-            admins = get_user_model().objects.filter(is_superuser=True)
-            admin_emails = admins.values_list("email", flat=True)
-            if admin_emails:
-                try:
-                    last_msg = (
-                        ChatMessage.objects.filter(
-                            report=report, sender=request.user
-                        )
-                        .order_by("-timestamp")
-                        .first()
-                    )
-                except OperationalError:
-                    last_msg = None
-                body = f"Counselor {request.user.username} marked report #{report.id} as resolved."
-                if last_msg:
-                    body += (
-                        "\n\nLast message to student:\n"
-                        f"{last_msg.get_body_for(request.user)}"
-                    )
-                send_mail(
-                    subject=f"Report #{report.id} resolved",
-                    message=body,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=list(admin_emails),
-                    fail_silently=True,
+        if "resolve_case" in request.POST:
+            if is_owner:
+                report.status = ReportStatus.RESOLVED
+                report.resolved_at = timezone.now()
+                report.awaiting_response = False
+                report.save(update_fields=["status", "awaiting_response"])
+                # Document the closure event for the report.
+                AuditLogMixin.log_close(
+                    user=request.user,
+                    obj=report,
+                    metadata={
+                        "action": "resolve_case",
+                        "report_id": report.pk,
+                    },
+                    description=f"{request.user.get_full_name() or request.user.username} closed Report #{report.pk}",
                 )
-                for admin in admins:
-                    AdminAlert.objects.create(
-                        admin=admin,
-                        report=report,
-                        message=last_msg.get_body_for(request.user) if last_msg else "",
+                admins = get_user_model().objects.filter(is_superuser=True)
+                admin_emails = admins.values_list("email", flat=True)
+                if admin_emails:
+                    try:
+                        last_msg = (
+                            ChatMessage.objects.filter(
+                                report=report, sender=request.user
+                            )
+                            .order_by("-timestamp")
+                            .first()
+                        )
+                    except OperationalError:
+                        last_msg = None
+                    body = f"Counselor {request.user.username} marked report #{report.id} as resolved."
+                    if last_msg:
+                        body += (
+                            "\n\nLast message to student:\n"
+                            f"{last_msg.get_body_for(request.user)}"
+                        )
+                    send_mail(
+                        subject=f"Report #{report.id} resolved",
+                        message=body,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=list(admin_emails),
+                        fail_silently=True,
                     )
-            return redirect("counselor_case_detail", report_id=report.id)
+                for admin in admins:
+                        AdminAlert.objects.create(
+                            admin=admin,
+                            report=report,
+                            message=last_msg.get_body_for(request.user) if last_msg else "",
+                        )
+                return redirect("counselor_case_detail", report_id=report.id)
+            messages.error(
+                request, "Only the assigned counselor can mark this case as resolved."
+            )
+
+        if "send_invitation" in request.POST and is_owner:
+            if invitation_form.is_valid():
+                invitee = invitation_form.cleaned_data["invitee"]
+                report.invited_counselor = invitee
+                report.save(update_fields=["invited_counselor"])
+                messages.success(
+                    request,
+                    f"Invitation sent to {invitee.get_full_name() or invitee.username}",
+                )
+                return redirect("counselor_case_detail", report_id=report.id)
+
+        if "accept_invitation" in request.POST:
+            if is_invited_counselor:
+                report.collaborating_counselor = request.user
+                report.invited_counselor = None
+                report.save(update_fields=["collaborating_counselor", "invited_counselor"])
+                messages.success(request, "You have joined this case as a collaborator.")
+                return redirect("counselor_case_detail", report_id=report.id)
+            messages.error(request, "This invitation is no longer valid.")
+
+        can_send_reporter_message = (
+            is_owner or is_collaborator or is_invited_counselor
+        )
         
         if "send_invitation" in request.POST and is_owner:
             if invitation_form.is_valid():
@@ -687,10 +879,14 @@ def case_detail(request, report_id):
                 messages.success(request, "You have joined this case as a collaborator.")
                 return redirect("counselor_case_detail", report_id=report.id)
             messages.error(request, "This invitation is no longer valid.")
+
+        can_send_reporter_message = (
+            is_owner or is_collaborator or is_invited_counselor
+        )
         
         if (
             "send_msg" in request.POST
-            and is_owner
+            and can_send_reporter_message
             and msg_form.is_valid()
             and report.reporter
         ):
@@ -835,6 +1031,9 @@ def case_detail(request, report_id):
     collaboration_messages = report.collaboration_messages.select_related("sender")
     can_collaborate = is_owner or is_collaborator
 
+
+    can_message_reporter = is_owner or is_collaborator or is_invited_counselor
+
     
     context = {
         "report": report,
@@ -848,6 +1047,7 @@ def case_detail(request, report_id):
         "timeline_events": report.timeline_events(),
         "is_owner": is_owner,
         "is_collaborator": is_collaborator,
+        "can_message_reporter": can_message_reporter,
         "is_invited_counselor": is_invited_counselor,
         "invitation_form": invitation_form,
         "collaboration_messages": collaboration_messages,

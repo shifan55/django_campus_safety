@@ -85,3 +85,9 @@ class CoreConfig(AppConfig):
             from . import security_logging  # noqa: F401
         except Exception as exc:  # pragma: no cover - defensive guard
             logger.warning("Failed to initialise security logging: %s", exc)
+
+        # Register system checks that flag Google OAuth misconfiguration.
+        try:
+            from . import checks  # noqa: F401
+        except Exception as exc:  # pragma: no cover - defensive guard
+            logger.warning("Failed to register system checks: %s", exc)

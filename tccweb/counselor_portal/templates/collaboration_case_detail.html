@@ -1,0 +1,437 @@
+{% extends 'base.html' %}
+{% load text_extras %}
+{% block extra_head %}{% endblock %}
+{% block title %}Collaboration Case #{{ report.id }}{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="container-xxl">
+        <header class="page-header">
+            <div class="title-group">
+                <span class="title-icon"><i class="fas fa-people-arrows"></i></span>
+                <div>
+                    <h1 class="h3 mb-1">Collaboration on Case #{{ report.id }}</h1>
+                    <p class="mb-0 text-muted">Work alongside the assigned counselor, review history, and keep a shared log of updates.</p>
+                </div>
+            </div>
+            <div class="page-actions">
+                <a href="{% url 'counselor_invitations' %}" class="action-chip action-chip-secondary">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to collaborations</span>
+                </a>
+                <a href="{% url 'counselor_case_detail' report.id %}" class="action-chip action-chip-info">
+                    <i class="fas fa-folder-open"></i>
+                    <span>Open full case</span>
+                </a>
+            </div>
+        </header>
+
+        <section class="page-section">
+            <div class="row g-3">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-{{ report.status|status_badge }} text-uppercase">{{ report.get_status_display }}</span>
+                                {% if is_owner %}
+                                    <span class="badge bg-primary ms-2">Lead counselor</span>
+                                {% elif is_collaborator %}
+                                    <span class="badge bg-info text-dark ms-2">Collaborator</span>
+                                {% elif is_invited %}
+                                    <span class="badge bg-warning text-dark ms-2">Invitation pending</span>
+                                {% endif %}
+                            </div>
+                            <div class="text-muted small">Submitted {{ report.created_at|date:"M j, Y g:i a" }}</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <p class="text-uppercase text-muted small mb-1">Case type</p>
+                                    <p class="fw-semibold mb-2">{{ report.get_incident_type_display }}</p>
+                                    <p class="text-uppercase text-muted small mb-1">Reporter</p>
+                                    {% if report.reporter %}
+                                        {% with reporter=report.reporter %}
+                                            <p class="mb-0">{% firstof reporter.get_full_name reporter.username 'Unknown reporter' %}</p>
+                                        {% endwith %}
+                                    {% else %}
+                                        <p class="mb-0 text-muted">Anonymous</p>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="text-uppercase text-muted small mb-1">Assigned counselor</p>
+                                    <p class="mb-2">
+                                        {% if report.assigned_to %}
+                                            {{ report.assigned_to.get_full_name|default:report.assigned_to.username }}
+                                        {% else %}
+                                            <span class="text-muted">Unassigned</span>
+                                        {% endif %}
+                                    </p>
+                                    <p class="text-uppercase text-muted small mb-1">Collaborating counselor</p>
+                                    <p class="mb-0">
+                                        {% if report.collaborating_counselor %}
+                                            {{ report.collaborating_counselor.get_full_name|default:report.collaborating_counselor.username }}
+                                        {% elif report.invited_counselor %}
+                                            Invitation sent to {{ report.invited_counselor.get_full_name|default:report.invited_counselor.username }}
+                                        {% else %}
+                                            <span class="text-muted">None</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="alert alert-info mb-0">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-comments me-2"></i>
+                                    <div>
+                                        <strong>Collaboration messaging</strong>
+                                        <p class="mb-0">Use the shared counselor chat below to coordinate without involving the student.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+                            <span>Collaboration messages</span>
+                            <span class="badge bg-light text-dark">Private between counselors</span>
+                        </div>
+                        <div class="card-body">
+                            <section class="chat" data-chat>
+                                <header class="chat__header">
+                                    <div class="chat__header-main">
+                                        <div class="chat__header-avatar" aria-hidden="true">
+                                            {% if report.assigned_to %}
+                                                {{ report.assigned_to.get_full_name|default:report.assigned_to.username|first|upper }}
+                                            {% else %}
+                                                <i class="fas fa-user-shield" aria-hidden="true"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="chat__header-text">
+                                            <h2 class="chat__header-title">Counselor collaboration</h2>
+                                            <div class="chat__header-status">
+                                                <span><i class="fas fa-user-friends" aria-hidden="true"></i> Counselor chat</span>
+                                                {% if collaboration_messages %}
+                                                    <span>{{ collaboration_messages|length }} update{% if collaboration_messages|length != 1 %}s{% endif %}</span>
+                                                {% else %}
+                                                    <span>No updates yet</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="chat__header-meta">
+                                        {% if report.assigned_to %}
+                                            <span>Assigned: {{ report.assigned_to.get_full_name|default:report.assigned_to.username }}</span>
+                                        {% endif %}
+                                        {% if report.collaborating_counselor %}
+                                            <span>Collaborator: {{ report.collaborating_counselor.get_full_name|default:report.collaborating_counselor.username }}</span>
+                                        {% elif report.invited_counselor %}
+                                            <span>Invitation sent to {{ report.invited_counselor.get_full_name|default:report.invited_counselor.username }}</span>
+                                        {% endif %}
+                                    </div>
+                                </header>
+
+                                <div class="chat__scroll" data-chat-scroll aria-live="polite">
+                                    <ul class="chat__list" data-chat-list role="log" aria-live="polite">
+                                        {% if collaboration_messages %}
+                                            {% for message in collaboration_messages %}
+                                                {% ifchanged message.created_at|date:'Y-m-d' %}
+                                                    <li class="chat__divider" role="presentation">
+                                                        <time datetime="{{ message.created_at|date:'Y-m-d' }}">{{ message.created_at|date:'l, F j' }}</time>
+                                                    </li>
+                                                {% endifchanged %}
+                                                <li class="chat__item{% if message.sender_id == request.user.id %} chat__item--sent{% else %} chat__item--recv{% endif %}" role="listitem">
+                                                    {% if message.sender_id != request.user.id %}
+                                                        <span class="chat__avatar" aria-hidden="true">{{ message.sender.get_full_name|default:message.sender.username|first|upper }}</span>
+                                                    {% endif %}
+                                                    <div class="chat__item-body" role="group" aria-label="Message from {{ message.sender.get_full_name|default:message.sender.username }}">
+                                                        <div class="chat__bubble{% if message.sender_id == request.user.id %} chat__bubble--sent{% else %} chat__bubble--recv{% endif %}">
+                                                            <div class="chat__text">{{ message.content|linebreaksbr }}</div>
+                                                        </div>
+                                                        <div class="chat__meta" id="chat-meta-collab-{{ message.id }}">
+                                                            <div class="chat__meta-group">
+                                                                {% if message.sender_id != request.user.id %}
+                                                                    <span class="chat__author">
+                                                                        {% if message.sender_id == report.assigned_to_id %}
+                                                                            Assigned counselor
+                                                                        {% elif message.sender_id == report.collaborating_counselor_id %}
+                                                                            Collaborating counselor
+                                                                        {% else %}
+                                                                            {{ message.sender.get_full_name|default:message.sender.username }}
+                                                                        {% endif %}
+                                                                    </span>
+                                                                {% endif %}
+                                                                <time class="chat__timestamp" datetime="{{ message.created_at|date:'c' }}">{{ message.created_at|date:"M j, Y g:i a" }}</time>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            {% endfor %}
+                                        {% else %}
+                                            <li class="chat__empty">
+                                                <i class="fas fa-comments" aria-hidden="true"></i>
+                                                <p>No collaboration updates yet. Share the first update below.</p>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+
+                                <footer class="chat__footer">
+                                    {% if is_owner or is_collaborator %}
+                                        <form method="post" class="chat__composer" novalidate>
+                                            {% csrf_token %}
+                                            <div class="chat__input">
+                                                <textarea
+                                                    id="{{ collab_msg_form.content.id_for_label }}"
+                                                    name="{{ collab_msg_form.content.name }}"
+                                                    class="chat__textarea"
+                                                    placeholder="Share an update with your collaborator"
+                                                    aria-label="Share an update with your collaborator"
+                                                    {% if collab_msg_form.content.field.required %}required{% endif %}
+                                                    {% if collab_msg_form.content.errors %}aria-invalid="true"{% endif %}
+                                                >{{ collab_msg_form.content.value|default_if_none:"" }}</textarea>
+                                                <div class="chat__actions">
+                                                    <button type="submit" class="chat__send" name="send_collab_message" value="1" aria-label="Send collaboration message">
+                                                        <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            {% if collab_msg_form.content.errors %}
+                                                <div class="chat__errors">
+                                                    {% for error in collab_msg_form.content.errors %}<span>{{ error }}</span>{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </form>
+                                    {% else %}
+                                        <p class="text-muted mb-0">Accept the invitation to join the collaboration and chat with the assigned counselor.</p>
+                                    {% endif %}
+                                </footer>
+                            </section>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+                            <span>Reporter conversation</span>
+                            <span class="badge bg-light text-dark">Private to counselors and reporter</span>
+                        </div>
+                        <div class="card-body">
+                            <section class="chat" data-chat>
+                                <header class="chat__header">
+                                    <div class="chat__header-main">
+                                        <div class="chat__header-avatar" aria-hidden="true">
+                                            {% if report.reporter %}
+                                                {{ report.reporter.get_full_name|default:report.reporter.username|first|upper }}
+                                            {% else %}
+                                                <i class="fas fa-user-secret" aria-hidden="true"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="chat__header-text">
+                                            <h2 class="chat__header-title">Report #{{ report.id }}</h2>
+                                            <div class="chat__header-status">
+                                                <span><i class="fas fa-comments" aria-hidden="true"></i> Conversation</span>
+                                                {% if chat_messages %}
+                                                    <span>{{ chat_messages|length }} message{% if chat_messages|length != 1 %}s{% endif %}</span>
+                                                {% else %}
+                                                    <span>No messages yet</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="chat__header-meta">
+                                        {% if report.reporter %}
+                                            <span class="badge rounded-pill bg-light text-dark">Tracking {{ report.tracking_code }}</span>
+                                        {% else %}
+                                            <span class="badge rounded-pill bg-warning text-dark">Anonymous reporter</span>
+                                        {% endif %}
+                                        <span>Updated {{ report.updated_at|default:report.created_at|date:"M j, Y" }}</span>
+                                        <span>Status: {{ report.get_status_display }}</span>
+                                    </div>
+                                </header>
+
+                                <div class="chat__scroll" data-chat-scroll aria-live="polite">
+                                    <ul class="chat__list" data-chat-list role="log" aria-live="polite">
+                                        {% if chat_messages %}
+                                            {% for message in chat_messages %}
+                                                {% ifchanged message.timestamp|date:'Y-m-d' %}
+                                                    <li class="chat__divider" role="presentation">
+                                                        <time datetime="{{ message.timestamp|date:'Y-m-d' }}">{{ message.timestamp|date:'l, F j' }}</time>
+                                                    </li>
+                                                {% endifchanged %}
+                                                {% include 'partials/chat_message.html' with message=message viewer=request.user report=report %}
+                                                {% for reply in message.replies.all %}
+                                                    {% ifchanged reply.timestamp|date:'Y-m-d' %}
+                                                        {% if message.timestamp|date:'Y-m-d' != reply.timestamp|date:'Y-m-d' or not forloop.first %}
+                                                            <li class="chat__divider" role="presentation">
+                                                                <time datetime="{{ reply.timestamp|date:'Y-m-d' }}">{{ reply.timestamp|date:'l, F j' }}</time>
+                                                            </li>
+                                                        {% endif %}
+                                                    {% endifchanged %}
+                                                    {% include 'partials/chat_message.html' with message=reply viewer=request.user report=report is_reply=True %}
+                                                {% endfor %}
+                                            {% endfor %}
+                                        {% else %}
+                                            <li class="chat__empty">
+                                                <i class="fas fa-comments" aria-hidden="true"></i>
+                                                <p>No messages yet. Start the conversation below.</p>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+
+                                <footer class="chat__footer">
+                                    {% if report.reporter and can_message_reporter %}
+                                        <form method="post" enctype="multipart/form-data" class="chat__composer" data-chat-composer novalidate>
+                                            {% csrf_token %}
+                                            {% if msg_form.non_field_errors %}
+                                                <div class="chat__errors">
+                                                    {% for error in msg_form.non_field_errors %}
+                                                        <span>{{ error }}</span>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+
+                                            <input
+                                                type="hidden"
+                                                name="{{ msg_form.parent_id.html_name }}"
+                                                id="{{ msg_form.parent_id.id_for_label }}"
+                                                value="{{ msg_form.parent_id.value|default_if_none:'' }}"
+                                            />
+
+                                            <div class="chat__reply-indicator" data-chat-reply-indicator role="status">
+                                                <span data-chat-reply-label></span>
+                                                <button type="button" class="chat__action" data-chat-reply-cancel>Cancel</button>
+                                            </div>
+
+                                            <div class="chat__input">
+                                                <div class="chat__toolbar">
+                                                    <button type="button" class="chat__icon-btn" data-chat-emoji title="Insert emoji" aria-label="Insert emoji">
+                                                        <i class="far fa-face-smile" aria-hidden="true"></i>
+                                                    </button>
+                                                    <button type="button" class="chat__icon-btn" data-chat-attach-trigger aria-controls="{{ msg_form.attachment.id_for_label }}" title="Attach file" aria-label="Attach a file">
+                                                        <i class="fas fa-paperclip" aria-hidden="true"></i>
+                                                    </button>
+                                                </div>
+
+                                                <textarea
+                                                    id="{{ msg_form.message.id_for_label }}"
+                                                    name="{{ msg_form.message.name }}"
+                                                    class="chat__textarea"
+                                                    placeholder="Write a message"
+                                                    aria-label="Type your message"
+                                                    data-chat-textarea="true"
+                                                    {% if msg_form.message.field.required %}required{% endif %}
+                                                    {% if msg_form.message.errors %}aria-invalid="true"{% endif %}
+                                                >{{ msg_form.message.value|default_if_none:"" }}</textarea>
+
+                                                <div class="chat__actions">
+                                                    <button type="submit" class="chat__send" name="send_msg" aria-label="Send message">
+                                                        <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {% with widget=msg_form.attachment.field.widget %}
+                                                <input
+                                                    type="file"
+                                                    id="{{ msg_form.attachment.id_for_label }}"
+                                                    name="{{ msg_form.attachment.name }}"
+                                                    class="visually-hidden"
+                                                    data-chat-attachment="true"
+                                                    {% if widget.attrs.accept %}accept="{{ widget.attrs.accept }}"{% endif %}
+                                                    {% if widget.attrs.multiple %}multiple{% endif %}
+                                                    {% if msg_form.attachment.field.required %}required{% endif %}
+                                                >
+                                            {% endwith %}
+
+                                            <p class="chat__attachment-hint" data-chat-attachment-feedback>Attach documents or images as supporting evidence.</p>
+
+                                            {% if msg_form.message.errors or msg_form.attachment.errors %}
+                                                <div class="chat__errors">
+                                                    {% for error in msg_form.message.errors %}<span>{{ error }}</span>{% endfor %}
+                                                    {% for error in msg_form.attachment.errors %}<span>{{ error }}</span>{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </form>
+                                    {% elif not report.reporter %}
+                                        <p class="text-muted mb-0">Reporter is anonymous; messaging disabled.</p>
+                                    {% else %}
+                                        <p class="text-muted mb-0">Only the assigned counselor can reply to the student from this collaboration workspace.</p>
+                                    {% endif %}
+                                </footer>
+                            </section>
+                        </div>
+                    </div>
+
+                    
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header fw-semibold">Case timeline</div>
+                        <div class="card-body">
+                            {% include 'partials/case_timeline.html' with events=timeline_events %}
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm">
+                        <div class="card-header fw-semibold">Case details</div>
+                        <div class="card-body">
+                            <dl class="row mb-0 small">
+                                <dt class="col-sm-5 text-uppercase text-muted">Status</dt>
+                                <dd class="col-sm-7">{{ report.get_status_display }}</dd>
+
+                                <dt class="col-sm-5 text-uppercase text-muted">Created</dt>
+                                <dd class="col-sm-7">{{ report.created_at|date:"M j, Y g:i a" }}</dd>
+
+                                <dt class="col-sm-5 text-uppercase text-muted">Last updated</dt>
+                                <dd class="col-sm-7">{{ report.updated_at|date:"M j, Y g:i a" }}</dd>
+
+                                <dt class="col-sm-5 text-uppercase text-muted">Risk level</dt>
+                                <dd class="col-sm-7">{{ report.get_risk_level_display|default:'Not assessed' }}</dd>
+
+                                <dt class="col-sm-5 text-uppercase text-muted">Awaiting response</dt>
+                                <dd class="col-sm-7">{% if report.awaiting_response %}Yes{% else %}No{% endif %}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                    
+                    <div class="card shadow-sm">
+                        <div class="card-header fw-semibold">Case notes</div>
+                        <div class="card-body">
+                            {% if is_owner or is_collaborator %}
+                                <form method="post" class="case-note-form mb-4">
+                                    {% csrf_token %}
+                                    {{ note_form.non_field_errors }}
+                                    <div class="mb-3">
+                                        {{ note_form.note.label_tag }}
+                                        {{ note_form.note }}
+                                        {% for error in note_form.note.errors %}
+                                            <div class="invalid-feedback d-block">{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                    <button class="btn btn-primary" name="add_note">
+                                        <i class="fas fa-plus-circle me-1"></i>Add note
+                                    </button>
+                                </form>
+                            {% else %}
+                                <p class="text-muted small mb-3">Join the collaboration to add private counseling notes.</p>
+                            {% endif %}
+
+                            <div class="note-timeline">
+                                {% for note in notes %}
+                                    <div class="note-entry mb-3">
+                                        <div class="small text-muted">{{ note.created_at|date:"M j, Y g:i a" }}</div>
+                                        <div>{{ note.note|linebreaksbr }}</div>
+                                    </div>
+                                {% empty %}
+                                    <p class="text-muted small mb-0">No notes yet.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

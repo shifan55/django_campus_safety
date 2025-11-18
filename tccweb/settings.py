@@ -183,7 +183,10 @@ ACCOUNT_SIGNUP_FIELDS = ["username", "email"]
 ACCOUNT_EMAIL_VERIFICATION = "optional"
 ACCOUNT_LOGOUT_ON_GET = True
 
-ACCOUNT_DEFAULT_HTTP_PROTOCOL = os.environ.get("ACCOUNT_DEFAULT_HTTP_PROTOCOL", "http")
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = os.environ.get(
+    "ACCOUNT_DEFAULT_HTTP_PROTOCOL",
+    "http" if DEBUG else "https",
+)
 
 # Email ----------------------------------------------------------------------
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
