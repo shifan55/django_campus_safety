@@ -1,12 +1,17 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
 from django.urls import NoReverseMatch, reverse
 from django.utils.http import urlencode
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST, require_GET
+from django.views.decorators.http import (
+    require_GET,
+    require_POST,
+    require_http_methods,
+)
+from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.templatetags.static import static
@@ -19,7 +24,14 @@ from allauth.socialaccount.models import SocialApp
 from tccweb.core.models import Report, EducationalResource, SupportContact
 from tccweb.accounts.forms import ProfileForm
 from tccweb.accounts.models import Profile
-from tccweb.core.forms import LoginForm, RegistrationForm, AnonymousReportForm, ReportForm, MessageForm
+from tccweb.core.forms import (
+    LoginForm,
+    RegistrationForm,
+    AnonymousReportForm,
+    ReportForm,
+    MessageForm,
+    PasswordResetRequestForm,
+)
 from tccweb.core.utils import (
     build_two_factor_context,
     user_has_confirmed_2fa,
@@ -205,6 +217,7 @@ def _google_login_metadata():
     return {"google_login_enabled": True, "google_login_url": login_with_process}
 
 def login_view(request):
+    reset_form = PasswordResetRequestForm()
     if request.method == 'POST':
         form = LoginForm(request.POST)
         if form.is_valid():
@@ -247,9 +260,64 @@ def login_view(request):
                 form.add_error(None, 'Invalid username or password.')
     else:
         form = LoginForm()
-    context = {"form": form}
+    context = {"form": form, "reset_form": reset_form}
     context.update(_google_login_metadata())
     return render(request, 'login.html', context)
+
+#  forgot_password
+@require_http_methods(["GET", "POST"])
+def forgot_password(request):
+    reset_form = PasswordResetRequestForm(request.POST or None)
+    context = {"reset_form": reset_form}
+
+    if request.method == "GET":
+        return render(request, "forgot_password.html", context)
+
+    if not reset_form.is_valid():
+        return render(request, "forgot_password.html", context, status=400)
+
+    user = reset_form.get_user()
+    UserModel = get_user_model()
+    try:
+        new_password = UserModel.objects.make_random_password()
+    except AttributeError:
+        # Custom managers may not implement Django's BaseUserManager helper.
+        from django.utils.crypto import get_random_string
+
+        new_password = get_random_string(12)
+    user.set_password(new_password)
+    user.save(update_fields=["password"])
+
+    site_name = getattr(settings, "SITE_NAME", "Safe Campus")
+    reset_message = (
+        f"Hello {user.get_full_name() or user.username},\n\n"
+        f"We received a request to reset your {site_name} password. "
+        f"Use the temporary password below to sign in, then update your password in your profile settings:\n\n"
+        f"{new_password}\n\n"
+        "If you didn't request this reset, please contact the support team immediately."
+    )
+
+    try:
+        send_mail(
+            subject=f"{site_name} password reset",
+            message=reset_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+    except Exception:
+        logger.exception("Failed to send password reset email for %s", user.username)
+        messages.error(
+            request,
+            "We couldn't send the reset email right now. Please try again later.",
+        )
+        return render(request, "forgot_password.html", context, status=503)
+
+    messages.success(
+        request,
+        "We've emailed you a new temporary password. Please check your inbox.",
+    )
+    return redirect("login")
 
 
 def logout_view(request):

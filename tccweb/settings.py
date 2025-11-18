@@ -194,7 +194,19 @@ EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() == "true"
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "no-reply@safecampus.app")
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "no-reply@safecampus.app"
+)
+
+_env_email_backend = os.environ.get("EMAIL_BACKEND", "").strip()
+if _env_email_backend:
+    EMAIL_BACKEND = _env_email_backend
+elif EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+else:
+    # Fall back to the console backend so password resets still complete in
+    # local environments without SMTP credentials configured.
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Google integrations ---------------------------------------------------------
 SOCIALACCOUNT_PROVIDERS = {

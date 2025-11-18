@@ -70,6 +70,35 @@ class LoginForm(forms.Form):
         label="Remember me",
     )
 
+
+class PasswordResetRequestForm(forms.Form):
+    """Collect an email address for issuing a password reset."""
+
+    email = forms.EmailField(
+        widget=forms.EmailInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "you@university.edu",
+                "autocomplete": "email",
+            }
+        ),
+        label="Account email",
+    )
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip()
+        user = User.objects.filter(email__iexact=email, is_active=True).first()
+        if not user:
+            raise forms.ValidationError(
+                "We couldn't find an active account with that email address."
+            )
+        self.user = user
+        return email
+
+    def get_user(self):
+        return getattr(self, "user", None)
+
+
 class RegistrationForm(forms.ModelForm):
     """User registration form with Bootstrap-friendly widgets."""
 
