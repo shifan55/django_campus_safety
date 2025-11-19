@@ -41,6 +41,20 @@ from tccweb.counselor_portal.emotion import analyze_emotion
 from tccweb.counselor_portal.models import ChatMessage, RiskLevel
 import logging
 
+
+def _email_delivery_disabled() -> bool:
+    """Return True when emails are routed to a non-delivering backend."""
+
+    backend = getattr(settings, "EMAIL_BACKEND", "")
+    return any(
+        alias in backend
+        for alias in (
+            "console.EmailBackend",
+            "locmem.EmailBackend",
+            "dummy.EmailBackend",
+        )
+    )
+
 logger = logging.getLogger(__name__)
 
 def _safe_reverse(name: str, *args, **kwargs) -> str:
