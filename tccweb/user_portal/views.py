@@ -299,8 +299,6 @@ def forgot_password(request):
         from django.utils.crypto import get_random_string
 
         new_password = get_random_string(12)
-    user.set_password(new_password)
-    user.save(update_fields=["password"])
 
     site_name = getattr(settings, "SITE_NAME", "Safe Campus")
     reset_message = (
@@ -312,7 +310,7 @@ def forgot_password(request):
     )
 
     try:
-        send_mail(
+        messages_sent = send_mail(
             subject=f"{site_name} password reset",
             message=reset_message,
             from_email=settings.DEFAULT_FROM_EMAIL,
@@ -326,6 +324,23 @@ def forgot_password(request):
             "We couldn't send the reset email right now. Please try again later.",
         )
         return render(request, "forgot_password.html", context, status=503)
+    
+    if messages_sent == 0:
+        logger.error(
+            "Password reset email reported as unsent for %s despite no exception",
+            user.username,
+        )
+        messages.error(
+            request,
+            "We couldn't send the reset email right now. Please try again later.",
+        )
+        return render(request, "forgot_password.html", context, status=503)
+
+    user.set_password(new_password)
+    user.save(update_fields=["password"])
+    
+    user.set_password(new_password)
+    user.save(update_fields=["password"])
 
     messages.success(
         request,
